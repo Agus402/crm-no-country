@@ -1,6 +1,6 @@
-# 📋 Backlog del Proyecto: Startup CRM
+# Backlog del Proyecto: Startup CRM
 
-## 👥 Módulo 1: Gestión de Contactos y Clientes
+## Módulo 1: Gestión de Contactos y Clientes
 Este módulo se centra en la organización de la base de datos de clientes y la colaboración del equipo.
 
 | ID | Historia de Usuario | Criterios de Aceptación (Definición de Hecho) | Prioridad |
@@ -10,7 +10,7 @@ Este módulo se centra en la organización de la base de datos de clientes y la 
 | **HU-03** | **Como** usuario, **quiero** cambiar el **estado del funnel** de un cliente (ej: *Prospecto*, *En Negociación*, *Cerrado*), **para** visualizar en qué etapa del proceso de venta se encuentra. | - El cambio de estado debe quedar registrado en el historial.<br>- Debe reflejarse visualmente en el perfil. | Alta |
 | **HU-04** | **Como** líder de equipo, **quiero** asignar un contacto a un usuario específico (agente), **para** definir la responsabilidad de la cuenta (Colaboración). | - El agente asignado debe recibir una notificación o ver el contacto en su vista de "Mis Leads". | Media |
 
-## 💬 Módulo 2: Comunicación Unificada (Inbox)
+## Módulo 2: Comunicación Unificada (Inbox)
 Este módulo cubre la interacción vía WhatsApp y Email.
 
 | ID | Historia de Usuario | Criterios de Aceptación (Definición de Hecho) | Prioridad |
@@ -21,7 +21,7 @@ Este módulo cubre la interacción vía WhatsApp y Email.
 | **HU-08** | **Como** usuario, **quiero** seleccionar **plantillas de mensajes predefinidas**, **para** responder preguntas frecuentes rápidamente. | - Un selector rápido de plantillas al redactar.<br>- Las plantillas deben permitir variables básicas (ej: `Hola {{nombre}}`). | Media |
 | **HU-09** | **Como** sistema, **quiero** crear un nuevo contacto automáticamente cuando recibo un mensaje de un número desconocido, **para** no perder ningún lead entrante. | - Crear contacto con el número de teléfono como nombre temporal.<br>- Notificar al equipo de un "Nuevo Lead Entrante". | Alta |
 
-## 🤖 Módulo 3: Automatización y Notificaciones
+## Módulo 3: Automatización y Notificaciones
 Funcionalidades inteligentes para el seguimiento asincrónico.
 
 | ID | Historia de Usuario | Criterios de Aceptación (Definición de Hecho) | Prioridad |
@@ -30,7 +30,7 @@ Funcionalidades inteligentes para el seguimiento asincrónico.
 | **HU-11** | **Como** usuario, **quiero** programar **recordatorios de seguimiento** (ej: "Llamar mañana"), **para** que el sistema me alerte y no olvidar la tarea. | - Debe aparecer en un panel de "Tareas del día".<br>- Debe enviar una alerta o email al usuario cuando venza el plazo. | Media |
 | **HU-12** | **Como** usuario, **quiero** configurar reglas de **seguimiento automático** (ej: enviar email si no responde en 3 días), **para** reactivar leads sin intervención manual. | - El sistema debe verificar la última fecha de interacción.<br>- El sistema debe detener la automatización si el cliente responde antes. | Baja (MVP 2) |
 
-## 📊 Módulo 4: Analítica y Reportes
+## Módulo 4: Analítica y Reportes
 Visualización de datos para la toma de decisiones.
 
 | ID | Historia de Usuario | Criterios de Aceptación (Definición de Hecho) | Prioridad |
@@ -39,7 +39,7 @@ Visualización de datos para la toma de decisiones.
 | **HU-14** | **Como** administrador, **quiero** visualizar la distribución de leads por **etapa del funnel**, **para** saber cuántos clientes potenciales están cerca del cierre. | - Gráfico de embudo o torta.<br>- Debe actualizarse en tiempo real o diariamente. | Media |
 | **HU-15** | **Como** usuario, **quiero** exportar los reportes o listas de contactos a **PDF o CSV**, **para** presentar informes externos o analizar datos en Excel. | - El archivo descargado debe tener formato legible.<br>- Respetar los filtros aplicados en la vista actual. | Baja |
 
-## ⚙️ Módulo 5: Configuración (Técnico/Admin)
+## Módulo 5: Configuración (Técnico/Admin)
 
 | ID | Historia de Usuario | Criterios de Aceptación (Definición de Hecho) | Prioridad |
 | :--- | :--- | :--- | :--- |
