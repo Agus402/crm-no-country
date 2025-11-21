@@ -55,7 +55,7 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen w-64 bg-white border-r border-gray-200",
+        "z-40 h-screen w-64 bg-white border-r border-gray-200",
         className
       )}
     >
