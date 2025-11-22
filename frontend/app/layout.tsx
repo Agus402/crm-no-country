@@ -1,21 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { Sidebar } from "@/components/sidebar/sidebar";
+import { Sidebar, MobileSidebar } from "@/components/sidebar/sidebar";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Startup CRM",
-  description: "Smart Contact Management",
+  description: "Manage your contacts efficiently",
 };
 
 export default function RootLayout({
@@ -25,11 +17,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <Sidebar />
-        <main className="ml-64">{children}</main>
+      <body className={`${inter.className} bg-gray-50/50`}>
+        <div className="flex min-h-screen">
+            <Sidebar />
+          <main className="flex-1 md:ml-64 transition-all">
+            <div className="md:hidden p-4 pb-0">
+              <MobileSidebar />
+            </div>
+            {children}       
+          </main>
+        </div>
       </body>
     </html>
   );
