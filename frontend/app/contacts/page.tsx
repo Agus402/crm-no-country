@@ -73,7 +73,7 @@ export default function ContactPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200 p-4 md:px-8 md:py-6">
+      <div className="border-b border-gray-200 p-4 md:px-8 md:py-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
           <div><h1 className="text-2xl md:text-3xl font-bold text-gray-900">Contacts</h1><p className="text-sm md:text-base text-gray-600 mt-1">Manage and segment your contacts across the sales funnel.</p></div>
         </div>
