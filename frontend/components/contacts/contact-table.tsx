@@ -1,7 +1,9 @@
-import { MessageCircle, Mail, MoreVertical } from "lucide-react";
+import { MessageCircle, Mail, MoreVertical, Pencil, Trash, FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DropdownMenu,  DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button"; 
 
-// Copiamos las mismas definiciones para que funcione aislado
 const stageColors: Record<string, string> = {
   "Active Lead": "bg-blue-100 text-blue-700",
   "Follow-up": "bg-orange-100 text-orange-700",
@@ -19,11 +21,10 @@ const tagColors: Record<string, string> = {
   "Meeting Scheduled": "bg-teal-100 text-teal-700",
 };
 
-// Necesitamos recibir los contactos filtrados como "props"
 export function ContactTable({ contacts }: { contacts: any[] }) {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      <div className="px-6 py-4  border-gray-200">
+      <div className="px-6 py-4 border-b border-gray-200">
         <h2 className="text-lg font-semibold text-gray-900">
           All Contacts ({contacts.length})
         </h2>
@@ -31,7 +32,7 @@ export function ContactTable({ contacts }: { contacts: any[] }) {
 
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="border-b  border-gray-200">
+          <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Contact</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Stage</th>
@@ -78,9 +79,36 @@ export function ContactTable({ contacts }: { contacts: any[] }) {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex items-center justify-end gap-2">
-                    <button className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"><MessageCircle className="h-4 w-4" /></button>
-                    <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Mail className="h-4 w-4" /></button>
-                    <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"><MoreVertical className="h-4 w-4" /></button>
+                    {/* Acciones Rápidas */}
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50">
+                      <MessageCircle className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                      <Mail className="h-4 w-4" />
+                    </Button>
+                    
+                    {/* DROPDOWN MENU */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-gray-900">
+                          <MoreVertical className="h-4 w-4" />
+                          <span className="sr-only">Open menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => console.log("Edit clicked", contact.id)}>
+                          <Pencil className="mr-2 h-4 w-4" /> Edit Contact
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => console.log("PDF clicked", contact.id)}>
+                          <FileDown className="mr-2 h-4 w-4" /> Export to PDF
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50" onClick={() => console.log("Delete clicked", contact.id)}>
+                          <Trash className="mr-2 h-4 w-4" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
                   </div>
                 </td>
               </tr>

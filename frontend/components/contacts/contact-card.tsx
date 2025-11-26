@@ -1,8 +1,15 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MessageCircle, Mail, Phone, MoreVertical } from "lucide-react";
+import { MessageCircle, Mail, Phone, MoreVertical, Pencil, Trash, FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const stageColors: Record<string, string> = {
   "Active Lead": "bg-blue-100 text-blue-700",
@@ -10,7 +17,6 @@ const stageColors: Record<string, string> = {
   Client: "bg-green-100 text-green-700",
 };
 
-// Definimos la interfaz 
 interface Contact {
   id: string;
   name: string;
@@ -37,9 +43,28 @@ export function ContactCard({ contact }: { contact: Contact }) {
               <p className="text-sm text-gray-500">{contact.email}</p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <MoreVertical className="h-4 w-4 text-gray-400" />
-          </Button>
+          
+          {/* DROPDOWN MENU EN Celular */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
+                <MoreVertical className="h-4 w-4 text-gray-400" />
+                <span className="sr-only">Actions</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuItem>
+                    <Pencil className="mr-2 h-4 w-4" /> Edit Contact
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                    <FileDown className="mr-2 h-4 w-4" /> Export to PDF
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50">
+                    <Trash className="mr-2 h-4 w-4" /> Delete
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Info Grid */}
@@ -56,7 +81,7 @@ export function ContactCard({ contact }: { contact: Contact }) {
             </div>
         </div>
 
-        {/* Footer*/}
+        {/* Footer */}
         <div className="pt-2 flex items-center justify-between border-t border-gray-100">
              <div className="flex items-center gap-2 text-xs text-gray-500">
                 {contact.channel === "WhatsApp" ? <MessageCircle className="h-3 w-3 text-green-600"/> : <Mail className="h-3 w-3 text-blue-600"/>}
