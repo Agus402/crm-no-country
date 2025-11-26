@@ -7,6 +7,8 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import io.jsonwebtoken.io.Decoders;
+
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
@@ -16,9 +18,7 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    //Generada en https://asecuritysite.com/encryption/plain Key-Size 256-bit
-    private static final String SECRET_KEY = "64efdb1b1b63fa064e61ac1de1234835ba27760e32bf58594067bdda4a711283";
-
+    private static final String SECRET_KEY = "626306b2a19cd2db4e4e4892a4e5bfc6a80aa975753c999797d369e977f13b07";
 
     // MÉTODOS DE EXTRACCION DE CLAIMS
 
@@ -87,21 +87,9 @@ public class JwtService {
     }
 
     //MÉTODO DE CLAVE SECRETA
-
     private Key getSignInKey() {
-        // Obtenemos el array de bytes de la clave Hex y generamos el objeto Key
-        byte[] keyBytes = hexStringToByteArray(SECRET_KEY);
+        byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    // 9. Convierte la clave secreta a un objeto Key usable
-    private static byte[] hexStringToByteArray(String s) {
-        int len = s.length();
-        byte[] data = new byte[len / 2];
-        for (int i = 0; i < len; i += 2) {
-            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
-                    + Character.digit(s.charAt(i+1), 16));
-        }
-        return data;
-    }
 }
