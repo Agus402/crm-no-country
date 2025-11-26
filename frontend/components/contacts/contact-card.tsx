@@ -94,9 +94,6 @@ export function ContactCard({ contact }: { contact: Contact }) {
                  <Button size="icon" variant="outline" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
                     <Mail className="h-4 w-4" />
                  </Button>
-                 <Button size="icon" variant="outline" className="h-8 w-8 text-gray-600 hover:text-gray-700">
-                    <Phone className="h-4 w-4" />
-                 </Button>
              </div>
         </div>
       </CardContent>
