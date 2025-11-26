@@ -31,7 +31,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
-        final String username;
+        final String userEmail;
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
@@ -41,13 +41,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // Extrae el token (quita "Bearer ")
         jwt = authHeader.substring(7);
         // Extrae el username del token (sin validar aún)
-        username = jwtService.extractUsername(jwt);
+        userEmail = jwtService.extractUsername(jwt);
 
         // Si hay username en el token y el contexto de seguridad NO está ya lleno
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
             // Carga el usuario de la DB (necesario para validar expiración/actividad)
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+            UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
             // Valida que el token sea auténtico (firma y expiración)
             if (jwtService.isTokenValid(jwt, userDetails)) {
