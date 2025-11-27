@@ -107,11 +107,21 @@ export function AddContactModal({
     }
 
    
+
     const phoneRegex = /^[+]?[\d\s\-()]*$/;
-    
-    if (formData.phone.trim() && !phoneRegex.test(formData.phone)) {
-        newErrors.phone = "El teléfono solo puede contener números y símbolos (+, -, spaces)";
-        hasError = true;
+    // Sacamos todo lo que no sea número para contar la longitud real
+    const phoneDigits = formData.phone.replace(/\D/g, ''); 
+
+    if (formData.phone.trim()) {
+        if (!phoneRegex.test(formData.phone)) {
+            newErrors.phone = "El formato contiene caracteres inválidos.";
+            hasError = true;
+        } 
+        // Mínimo 7 (ej: +683 4000), Máximo 15 (Estándar E.164)
+        else if (phoneDigits.length < 7 || phoneDigits.length > 15) {
+            newErrors.phone = "El número debe tener entre 7 y 15 dígitos válidos.";
+            hasError = true;
+        }
     }
 
     if (hasError) {
