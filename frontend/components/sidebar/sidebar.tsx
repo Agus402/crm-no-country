@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -9,14 +10,13 @@ import {
   CheckSquare,
   Settings,
   Sparkles,
+  Menu
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
-interface SidebarProps {
-  className?: string;
-}
-
-export function Sidebar({ className }: SidebarProps) {
+function SidebarContent({ onClick }: { onClick?: () => void }) {
   const pathname = usePathname();
 
   const menuItems = [
@@ -53,13 +53,7 @@ export function Sidebar({ className }: SidebarProps) {
   ];
 
   return (
-    <aside
-      className={cn(
-        "z-40 h-screen w-64 bg-white border-r border-gray-200",
-        className
-      )}
-    >
-      <div className="flex h-full flex-col">
+       <div className="flex h-full flex-col bg-white text-gray-900">
         {/* Header with Logo */}
         <div className="flex items-center border-b border-gray-200 px-6 py-5">
           <div className="flex items-center gap-3">
@@ -85,6 +79,7 @@ export function Sidebar({ className }: SidebarProps) {
               <Link
                 key={item.name}
                 href={item.href}
+                onClick={onClick}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors",
                   item.active
@@ -104,7 +99,7 @@ export function Sidebar({ className }: SidebarProps) {
 
         {/* User Profile Section */}
         <div className="border-t border-gray-200 p-4">
-          <div className="flex items-center gap-3 rounded-lg px-4 py-3">
+          <div className="flex items-center gap-3 rounded-lg px-4 py-3 hover:bg-gray-50 transition-colors">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-600 text-sm font-semibold text-white">
               JD
             </div>
@@ -113,11 +108,50 @@ export function Sidebar({ className }: SidebarProps) {
               <p className="truncate text-xs text-gray-500">
                 john@startup.com
               </p>
-            </div>
-          </div>
+           </div>
         </div>
       </div>
-    </aside>
+    </div>
   );
 }
 
+// --- EXPORTACIÓN 1: SIDEBAR DE ESCRITORIO ---
+interface SidebarProps {
+  className?: string;
+}
+
+export function Sidebar({ className }: SidebarProps) {
+  return (
+    <aside
+      className={cn(
+        "hidden md:flex fixed left-0 top-0 z-40 h-screen w-64 bg-white border-r border-gray-200",
+        className
+      )}
+    >
+      <SidebarContent />
+    </aside>
+  );
+}
+// --- EXPORTACIÓN 2: SIDEBAR MÓVIL ---
+export function MobileSidebar() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="outline" size="icon" className="md:hidden bg-white shadow-sm">
+          <Menu className="h-5 w-5" />
+          <span className="sr-only">Open menu</span>
+        </Button>
+      </SheetTrigger>
+      
+       <SheetContent side="left" className="p-0 w-64 border-r">
+        <SheetHeader className="sr-only">
+          <SheetTitle>Menu</SheetTitle>
+        </SheetHeader>
+        
+        <SidebarContent onClick={() => setOpen(false)} />
+      </SheetContent>
+    </Sheet>
+  );
+}

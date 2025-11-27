@@ -6,7 +6,7 @@ import { PreferencesTab } from "@/components/settings/preferences-tab";
 
 export default function SettingsPage() {
   return (
-    <div className="p-6 space-y-6 bg-gray-50/50 min-h-screen">
+    <div className="p-4 md:p-6 space-y-6 bg-gray-50/50 min-h-screen">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Settings</h2>
         <p className="text-muted-foreground">
@@ -15,11 +15,11 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="integrations" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="integrations">Integrations</TabsTrigger>
-          <TabsTrigger value="tags">Tags & Views</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="preferences">Preferences</TabsTrigger>
+        <TabsList className="flex flex-nowrap md:flex-wrap  h-auto justify-start gap-1 p-1 overflow-x-auto ">
+          <TabsTrigger value="integrations" className="flex-1 md:flex-none text-[11px] md:text-sm px-2 py-1">Integrations</TabsTrigger>
+          <TabsTrigger value="tags" className="flex-1 md:flex-none text-[11px] md:text-sm px-2 py-1">Tags & Views</TabsTrigger>
+          <TabsTrigger value="notifications" className="flex-1 md:flex-none text-[11px] md:text-sm px-2 py-1">Notifications</TabsTrigger>
+          <TabsTrigger value="preferences" className="flex-1 md:flex-none text-[11px] md:text-sm px-2 py-1">Preferences</TabsTrigger>
         </TabsList>
 
         <TabsContent value="integrations" className="space-y-6">
