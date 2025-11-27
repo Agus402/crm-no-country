@@ -28,14 +28,6 @@ export function NotificationsTab() {
 
         <div className="flex items-center justify-between space-x-4">
           <div className="flex-1 space-y-1">
-             <Label className="text-sm font-medium leading-none">Daily summary email</Label>
-             <p className="text-xs text-muted-foreground">Get a daily summary of your activity</p>
-          </div>
-          <Switch />
-        </div>
-
-        <div className="flex items-center justify-between space-x-4">
-          <div className="flex-1 space-y-1">
              <Label className="text-sm font-medium leading-none">Contact updates</Label>
              <p className="text-xs text-muted-foreground">Notify when contacts change stages</p>
           </div>
