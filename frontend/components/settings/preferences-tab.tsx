@@ -1,54 +1,73 @@
+"use client";
+
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 
 export function PreferencesTab() {
+  const [isEditing, setIsEditing] = useState(false);
+
   return (
     <div className="space-y-6">
       {/* General Preferences */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">General Preferences</CardTitle>
-          <CardDescription>Customize your CRM experience</CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
+          <div className="space-y-1">
+            <CardTitle className="text-base">General Preferences</CardTitle>
+            <CardDescription>Customize your CRM experience</CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            {!isEditing ? (
+              <Button 
+                variant="outline" 
+                className="w-full md:w-auto" 
+                onClick={() => setIsEditing(true)}
+              >
+                Edit
+              </Button>
+            ) : (
+              <div className="flex gap-2 w-full md:w-auto">
+                <Button size="sm" onClick={() => setIsEditing(false)}>
+                  Save
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setIsEditing(false)}>
+                  Cancel
+                </Button>
+              </div>
+            )}
+          </div>
         </CardHeader>
+
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <Label>Company Name</Label>
-            <Input defaultValue="Startup CRM Inc." className="bg-gray-50" />
+            <Input 
+              defaultValue="Startup CRM Inc." 
+              readOnly={!isEditing}
+              className={!isEditing ? "bg-gray-50 text-gray-500 border-transparent shadow-none" : "bg-white"}
+            />
           </div>
           
           <div className="space-y-2">
             <Label>Time Zone</Label>
-            <Input defaultValue="(UTC-08:00) Pacific Time" className="bg-gray-50" />
+            <Input 
+              defaultValue="(UTC-08:00) Pacific Time" 
+              readOnly={!isEditing}
+              className={!isEditing ? "bg-gray-50 text-gray-500 border-transparent shadow-none" : "bg-white"}
+            />
           </div>
 
           <div className="space-y-2">
             <Label>Date Format</Label>
-            <Input defaultValue="MM/DD/YYYY" className="bg-gray-50" />
-          </div>
-
-          <div className="pt-4 flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Enable analytics tracking</Label>
-              <p className="text-xs text-muted-foreground">Help us improve with anonymous usage data</p>
-            </div>
-            <Switch defaultChecked />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Compact view</Label>
-              <p className="text-xs text-muted-foreground">Show more content in less space</p>
-            </div>
-            <Switch />
-          </div>
-          
-          <div className="pt-4">
-            <Button className="bg-purple-600 hover:bg-purple-700">Save Preferences</Button>
-          </div>
-        </CardContent>
+            <Input 
+              defaultValue="MM/DD/YYYY" 
+              readOnly={!isEditing}
+              className={!isEditing ? "bg-gray-50 text-gray-500 border-transparent shadow-none" : "bg-white"}
+            />
+          </div> 
+            </CardContent>
       </Card>
 
       {/* Export Data */}
