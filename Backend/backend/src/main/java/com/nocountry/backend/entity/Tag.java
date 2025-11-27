@@ -1,11 +1,12 @@
 package com.nocountry.backend.entity;
 
+import com.nocountry.backend.dto.CrmLeadDTO;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.Set;
 
 @Entity
-@Table(name = "tags")
+@Table(name = "tag")
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
 public class Tag {
@@ -17,6 +18,7 @@ public class Tag {
     private String name;
     private String color;
 
-    @ManyToMany(mappedBy = "tags")
-    private Set<Contact> contacts;
+    @ManyToMany(mappedBy = "tag")
+    private Set<CrmLead> crmLeads;
+
 }
