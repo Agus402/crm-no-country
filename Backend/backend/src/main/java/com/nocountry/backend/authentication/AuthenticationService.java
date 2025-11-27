@@ -3,7 +3,7 @@ package com.nocountry.backend.authentication;
 import com.nocountry.backend.configuration.JwtService;
 import com.nocountry.backend.entity.Role;
 import com.nocountry.backend.entity.User;
-import com.nocountry.backend.repository.IUserRepository;
+import com.nocountry.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 
 public class AuthenticationService {
 
-    private final IUserRepository userRepository;
+    private final UserRepository userRepository;
 
     private final PasswordEncoder passwordEncoder;
 
@@ -35,7 +35,8 @@ public class AuthenticationService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.USER)
-                .build();
+                .active(true)
+                .build();;
 
         userRepository.save(user);
 
