@@ -26,11 +26,14 @@ public class CrmLead {
     @Enumerated(EnumType.STRING)
     private Channel channel;
 
-
     private String status;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    @Column(nullable = false)
+    private boolean deleted = false;
+
 
     @ManyToMany
     @JoinTable(

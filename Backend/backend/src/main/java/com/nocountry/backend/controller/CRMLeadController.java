@@ -47,7 +47,10 @@ public class CRMLeadController {
     ) {
         return crmLeadService.getAll(name, email, stage);
     }
-
+    @GetMapping("/deleted")
+    public List<CrmLeadDTO> getDeleted() {
+        return crmLeadService.getDeleted();
+    }
 
 
 
