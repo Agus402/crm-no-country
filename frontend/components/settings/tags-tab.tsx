@@ -2,11 +2,19 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tag, Eye } from "lucide-react";
 import { CreateTagModal } from "@/components/settings/create-tag-modal";
-import ConfirmDeleteModal from "@/components/shared/ConfirmDeleteModal"; 
+import { CreateViewModal } from "@/components/settings/create-view-modal";
+import ConfirmDeleteModal from "@/components/shared/ConfirmDeleteModal";
 
+// --- MOCKS INICIALES ---
 const initialTags = [
   { name: "Enterprise", count: 23, color: "bg-purple-300 text-purple-700" },
   { name: "High Priority", count: 15, color: "bg-orange-300 text-orange-700" },
@@ -16,77 +24,129 @@ const initialTags = [
   { name: "Interested", count: 56, color: "bg-orange-300 text-orange-700" },
 ];
 
-const views = [
-  { name: "High Priority Leads", desc: "Stage: Active Lead + Tag: High Priority", used: "2 hours ago" },
-  { name: "VIP Clients", desc: "Stage: Client + Tag: VIP", used: "1 day ago" },
-  { name: "Pending Demos", desc: "Tag: Demo Requested", used: "3 days ago" },
+// Actualizamos el mock para que tenga la estructura real con 'filters'
+const initialViews = [
+  {
+    name: "High Priority Leads",
+    desc: "Stage: Lead + Tag: High Priority",
+    used: "2 hours ago",
+    filters: { stages: ["lead"], tags: ["High Priority"], isDefault: false },
+  },
+  {
+    name: "VIP Clients",
+    desc: "Stage: Client + Tag: VIP",
+    used: "1 day ago",
+    filters: { stages: ["client"], tags: ["VIP"], isDefault: true },
+  },
 ];
 
 export function TagsTab() {
+  // STATE: Tags
   const [tags, setTags] = useState(initialTags);
-
-  const [modalOpen, setModalOpen] = useState(false);
+  const [tagModalOpen, setTagModalOpen] = useState(false);
   const [editingTagIndex, setEditingTagIndex] = useState<number | null>(null);
 
-  // DELETE TAG STATE
-  const [openDelete, setOpenDelete] = useState(false);
+  // STATE: Views
+  const [viewsList, setViewsList] = useState(initialViews);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [editingViewIndex, setEditingViewIndex] = useState<number | null>(null);
+
+  // STATE: Delete (Compartido lógica, diferente estado para control fino)
+  const [openDeleteTag, setOpenDeleteTag] = useState(false);
   const [selectedTagIndex, setSelectedTagIndex] = useState<number | null>(null);
 
-  // Crear un nuevo tag
+  const [openDeleteView, setOpenDeleteView] = useState(false);
+  const [selectedViewIndex, setSelectedViewIndex] = useState<number | null>(
+    null
+  );
+
+  // --- HANDLERS: TAGS ---
   const handleCreateTag = (newTag: { name: string; color: string }) => {
     setTags([...tags, { ...newTag, count: 0 }]);
-    setModalOpen(false);
+    setTagModalOpen(false);
   };
 
-  // Actualizar un tag existente
   const handleUpdateTag = (updatedTag: { name: string; color: string }) => {
     if (editingTagIndex === null) return;
-
     const updatedList = [...tags];
     updatedList[editingTagIndex] = {
       ...updatedList[editingTagIndex],
       ...updatedTag,
     };
-
     setTags(updatedList);
     setEditingTagIndex(null);
-    setModalOpen(false);
+    setTagModalOpen(false);
   };
 
-  const openEditModal = (index: number) => {
-    setEditingTagIndex(index);
-    setModalOpen(true);
-  };
-
-  // Abrir confirmación de delete
-  const openDeleteModal = (index: number) => {
-    setSelectedTagIndex(index);
-    setOpenDelete(true);
-  };
-  // Confirmar delete
-  const confirmDelete = () => {
+  const confirmDeleteTag = () => {
     if (selectedTagIndex !== null) {
       setTags(tags.filter((_, i) => i !== selectedTagIndex));
     }
-    setOpenDelete(false);
+    setOpenDeleteTag(false);
     setSelectedTagIndex(null);
+  };
+
+  // --- HANDLERS: VIEWS ---
+
+  // Crear nueva vista
+  const handleCreateView = (newView: any) => {
+    setViewsList([{ ...newView, used: "Just now" }, ...viewsList]);
+    setViewModalOpen(false);
+  };
+
+  // Actualizar vista existente
+  const handleUpdateView = (updatedView: any) => {
+    if (editingViewIndex === null) return;
+    const updatedList = [...viewsList];
+
+    // Mantenemos el 'used' antiguo, actualizamos el resto
+    updatedList[editingViewIndex] = {
+      ...updatedList[editingViewIndex],
+      ...updatedView,
+    };
+
+    setViewsList(updatedList);
+    setEditingViewIndex(null);
+    setViewModalOpen(false);
+  };
+
+  // Abrir modal editar vista
+  const openEditViewModal = (index: number) => {
+    setEditingViewIndex(index);
+    setViewModalOpen(true);
+  };
+
+  // Abrir modal borrar vista
+  const openDeleteViewModal = (index: number) => {
+    setSelectedViewIndex(index);
+    setOpenDeleteView(true);
+  };
+
+  // Confirmar borrar vista
+  const confirmDeleteView = () => {
+    if (selectedViewIndex !== null) {
+      setViewsList(viewsList.filter((_, i) => i !== selectedViewIndex));
+    }
+    setOpenDeleteView(false);
+    setSelectedViewIndex(null);
   };
 
   return (
     <div className="space-y-6">
-
-      {/* TAGS SECTION */}
+      {/* --- SECCION TAGS --- */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-base">Contact Tags</CardTitle>
-            <CardDescription>Organize contacts with custom tags</CardDescription>
+            <CardDescription>
+              Organize contacts with custom tags
+            </CardDescription>
           </div>
 
           <Button
             onClick={() => {
               setEditingTagIndex(null);
-              setModalOpen(true);
+              setTagModalOpen(true);
             }}
             className="bg-purple-600 hover:bg-purple-700 gap-2"
           >
@@ -102,11 +162,18 @@ export function TagsTab() {
                 className="flex items-center justify-between p-4 border rounded-lg bg-card transition-all hover:shadow-sm"
               >
                 <div className="flex items-center gap-3">
-                  <div className={`h-3 w-3 shrink-0 rounded-full ${tag.color.split(" ")[0]}`} />
-
+                  <div
+                    className={`h-3 w-3 shrink-0 rounded-full ${
+                      tag.color.split(" ")[0]
+                    }`}
+                  />
                   <div>
-                    <p className="font-medium text-sm text-gray-900">{tag.name}</p>
-                    <p className="text-xs text-muted-foreground">{tag.count} contacts</p>
+                    <p className="font-medium text-sm text-gray-900">
+                      {tag.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {tag.count} contacts
+                    </p>
                   </div>
                 </div>
 
@@ -115,15 +182,20 @@ export function TagsTab() {
                     variant="ghost"
                     size="sm"
                     className="h-8 px-2"
-                    onClick={() => openEditModal(i)}
+                    onClick={() => {
+                      setEditingTagIndex(i);
+                      setTagModalOpen(true);
+                    }}
                   >
                     Edit
                   </Button>
-
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => openDeleteModal(i)}
+                    onClick={() => {
+                      setSelectedTagIndex(i);
+                      setOpenDeleteTag(true);
+                    }}
                     className="h-8 px-2 text-red-500 hover:text-red-600"
                   >
                     Delete
@@ -135,45 +207,67 @@ export function TagsTab() {
         </CardContent>
       </Card>
 
-      {/* CREATE or EDIT MODAL */}
-      <CreateTagModal
-        isOpen={modalOpen}
-        onClose={() => {
-          setEditingTagIndex(null);
-          setModalOpen(false);
-        }}
-        onSave={editingTagIndex === null ? handleCreateTag : handleUpdateTag}
-        editingTag={editingTagIndex !== null ? tags[editingTagIndex] : null}
-      />
-
-      {/* VIEWS SECTION*/}
+      {/* --- SECCION VIEWS --- */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-base">Saved Views</CardTitle>
-            <CardDescription>Quick access to filtered contact lists</CardDescription>
+            <CardDescription>
+              Quick access to filtered contact lists
+            </CardDescription>
           </div>
-          <Button className="bg-purple-600 hover:bg-purple-700 gap-2">
+          <Button
+            onClick={() => {
+              setEditingViewIndex(null); // Asegurar que no editamos
+              setViewModalOpen(true);
+            }}
+            className="bg-purple-600 hover:bg-purple-700 gap-2"
+          >
             <Eye className="h-4 w-4" /> New View
           </Button>
         </CardHeader>
 
         <CardContent className="space-y-4">
           <div className="flex flex-col gap-4">
-            {views.map((view, i) => (
+            {viewsList.map((view, i) => (
               <div
                 key={i}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <div>
-                  <p className="font-medium text-sm">{view.name}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{view.desc}</p>
-                  <p className="text-[10px] text-muted-foreground mt-1">Last used {view.used}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-sm">{view.name}</p>
+                    {view.filters?.isDefault && (
+                      <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-medium">
+                        Default
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {view.desc}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Last used {view.used}
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" className="h-8 px-2">Edit</Button>
-                  <Button variant="ghost" size="sm" className="h-8 px-2 text-red-500 hover:text-red-600">Delete</Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2"
+                    onClick={() => openEditViewModal(i)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-red-500 hover:text-red-600"
+                    onClick={() => openDeleteViewModal(i)}
+                  >
+                    Delete
+                  </Button>
                 </div>
               </div>
             ))}
@@ -181,15 +275,49 @@ export function TagsTab() {
         </CardContent>
       </Card>
 
-      {/* CONFIRM DELETE MODAL*/}
-      <ConfirmDeleteModal
-        open={openDelete}
-        title="Delete Tag"
-        message="Are you sure you want to delete this tag?"
-        onCancel={() => setOpenDelete(false)}
-        onConfirm={confirmDelete}
+      {/* --- MODALES --- */}
+
+      {/* Modal Crear/Editar Tag */}
+      <CreateTagModal
+        isOpen={tagModalOpen}
+        onClose={() => {
+          setEditingTagIndex(null);
+          setTagModalOpen(false);
+        }}
+        onSave={editingTagIndex === null ? handleCreateTag : handleUpdateTag}
+        editingTag={editingTagIndex !== null ? tags[editingTagIndex] : null}
       />
 
+      {/* Modal Crear/Editar View (CON DATA PASADA) */}
+      <CreateViewModal
+        isOpen={viewModalOpen}
+        onClose={() => {
+          setEditingViewIndex(null);
+          setViewModalOpen(false);
+        }}
+        onSave={editingViewIndex === null ? handleCreateView : handleUpdateView}
+        editingView={
+          editingViewIndex !== null ? viewsList[editingViewIndex] : null
+        }
+      />
+
+      {/* Confirmar Delete Tag */}
+      <ConfirmDeleteModal
+        open={openDeleteTag}
+        title="Delete Tag"
+        message="Are you sure you want to delete this tag?"
+        onCancel={() => setOpenDeleteTag(false)}
+        onConfirm={confirmDeleteTag}
+      />
+
+      {/* Confirmar Delete View (REUTILIZAMOS COMPONENTE) */}
+      <ConfirmDeleteModal
+        open={openDeleteView}
+        title="Delete View"
+        message="Are you sure you want to delete this  view?"
+        onCancel={() => setOpenDeleteView(false)}
+        onConfirm={confirmDeleteView}
+      />
     </div>
   );
 }
