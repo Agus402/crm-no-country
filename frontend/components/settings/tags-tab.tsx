@@ -6,14 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tag, Eye } from "lucide-react";
 import { CreateTagModal } from "@/components/settings/create-tag-modal";
 
-// Datos iniciales
 const initialTags = [
-  { name: "Enterprise", count: 23, color: "bg-purple-300" }, 
-  { name: "High Priority", count: 15, color: "bg-orange-300" },
-  { name: "Demo Requested", count: 31, color: "bg-purple-300" },
-  { name: "Paid", count: 42, color: "bg-green-300" },
-  { name: "VIP", count: 8, color: "bg-orange-300" },
-  { name: "Interested", count: 56, color: "bg-orange-300" },
+  { name: "Enterprise", count: 23, color: "bg-purple-300 text-purple-700" },
+  { name: "High Priority", count: 15, color: "bg-orange-300 text-orange-700" },
+  { name: "Demo Requested", count: 31, color: "bg-purple-300 text-purple-700" },
+  { name: "Paid", count: 42, color: "bg-green-300 text-green-700" },
+  { name: "VIP", count: 8, color: "bg-orange-300 text-orange-700" },
+  { name: "Interested", count: 56, color: "bg-orange-300 text-orange-700" },
 ];
 
 const views = [
@@ -24,62 +23,119 @@ const views = [
 
 export function TagsTab() {
   const [tags, setTags] = useState(initialTags);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const [isModalOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const [editingTagIndex, setEditingTagIndex] = useState<number | null>(null);
+
+  // Crear un nuevo tag
   const handleCreateTag = (newTag: { name: string; color: string }) => {
-    setTags([...tags, { ...newTag, count: 0 }]); 
-    setIsModalOpen(false);
+    setTags([...tags, { ...newTag, count: 0 }]);
+    setModalOpen(false);
+  };
+
+  // Actualizar un tag existente
+  const handleUpdateTag = (updatedTag: { name: string; color: string }) => {
+    if (editingTagIndex === null) return;
+
+    const updatedList = [...tags];
+    updatedList[editingTagIndex] = {
+      ...updatedList[editingTagIndex],
+      ...updatedTag,
+    };
+
+    setTags(updatedList);
+    setEditingTagIndex(null);
+    setModalOpen(false);
+  };
+
+  // Abrir modal en modo edición con datos cargados
+  const openEditModal = (index: number) => {
+    setEditingTagIndex(index);
+    setModalOpen(true);
+  };
+
+  // Eliminación
+  const handleDeleteTag = (index: number) => {
+    setTags(tags.filter((_, i) => i !== index));
   };
 
   return (
     <div className="space-y-6">
-      
-      {/* --- TAGS SECTION --- */}
+
+      {/* TAGS SECTION */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-base">Contact Tags</CardTitle>
             <CardDescription>Organize contacts with custom tags</CardDescription>
           </div>
-          
-          <Button 
-            onClick={() => setIsModalOpen(true)}
+
+          <Button
+            onClick={() => {
+              setEditingTagIndex(null);
+              setModalOpen(true);
+            }}
             className="bg-purple-600 hover:bg-purple-700 gap-2"
           >
             <Tag className="h-4 w-4" /> New Tag
           </Button>
-
-          <CreateTagModal 
-            isOpen={isModalOpen} 
-            onClose={() => setIsModalOpen(false)} 
-            onSave={handleCreateTag} 
-          />
         </CardHeader>
 
         <CardContent>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             {tags.map((tag, i) => (
-              <div key={i} className="flex items-center justify-between p-4 border rounded-lg bg-card transition-all hover:shadow-sm">
+              <div
+                key={i}
+                className="flex items-center justify-between p-4 border rounded-lg bg-card transition-all hover:shadow-sm"
+              >
                 <div className="flex items-center gap-3">
-                  {tag.color !== "bg-transparent" && (
-                    <div 
-                      className={`h-3 w-3 shrink-0 rounded-full ${tag.color.split(" ")[0]}`} 
-                    />
-                  )}
-                  
+                  <div
+                    className={`h-3 w-3 shrink-0 rounded-full ${tag.color.split(" ")[0]}`}
+                  />
+
                   <div>
                     <p className="font-medium text-sm text-gray-900">{tag.name}</p>
                     <p className="text-xs text-muted-foreground">{tag.count} contacts</p>
                   </div>
                 </div>
+
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" className="h-8 px-2">Edit</Button>
-                  <Button variant="ghost" size="sm" className="h-8 px-2 text-red-500 hover:text-red-600">Delete</Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2"
+                    onClick={() => openEditModal(i)}
+                  >
+                    Edit
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteTag(i)}
+                    className="h-8 px-2 text-red-500 hover:text-red-600"
+                  >
+                    Delete
+                  </Button>
                 </div>
               </div>
             ))}
           </div>
         </CardContent>
       </Card>
+
+      {/* --- MODAL (CREAR O EDITAR) --- */}
+      <CreateTagModal
+        isOpen={modalOpen}
+        onClose={() => {
+          setEditingTagIndex(null);
+          setModalOpen(false);
+        }}
+        onSave={editingTagIndex === null ? handleCreateTag : handleUpdateTag}
+        editingTag={editingTagIndex !== null ? tags[editingTagIndex] : null}
+      />
 
       {/* --- VIEWS SECTION --- */}
       <Card>
@@ -89,27 +145,39 @@ export function TagsTab() {
             <CardDescription>Quick access to filtered contact lists</CardDescription>
           </div>
           <Button className="bg-purple-600 hover:bg-purple-700 gap-2">
-             <Eye className="h-4 w-4" /> New View
+            <Eye className="h-4 w-4" /> New View
           </Button>
         </CardHeader>
+
         <CardContent className="space-y-4">
-           <div className="flex flex-col gap-4"> 
+          <div className="flex flex-col gap-4">
             {views.map((view, i) => (
-                <div key={i} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                    <div>
-                        <p className="font-medium text-sm">{view.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{view.desc}</p>
-                        <p className="text-[10px] text-muted-foreground mt-1">Last used {view.used}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" className="h-8 px-2">Edit</Button>
-                        <Button variant="ghost" size="sm" className="h-8 px-2 text-red-500 hover:text-red-600">Delete</Button>
-                    </div>
+              <div
+                key={i}
+                className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <div>
+                  <p className="font-medium text-sm">{view.name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{view.desc}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Last used {view.used}</p>
                 </div>
+
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" className="h-8 px-2">Edit</Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-red-500 hover:text-red-600"
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
             ))}
-           </div>
+          </div>
         </CardContent>
       </Card>
+
     </div>
   );
 }

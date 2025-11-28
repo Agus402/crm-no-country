@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Definimos los colores disponibles tal cual tu imagen
+// Definimos los colores disponibles 
 const AVAILABLE_COLORS = [
   { name: "Slate", bg: "bg-slate-300", text: "text-slate-700", border: "border-slate-200" },
   { name: "Red", bg: "bg-red-300", text: "text-red-700", border: "border-red-200" },
@@ -34,48 +34,64 @@ interface CreateTagModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (tag: { name: string; color: string }) => void;
+  editingTag?: { name: string; color: string } | null;
 }
 
-export function CreateTagModal({ isOpen, onClose, onSave }: CreateTagModalProps) {
-  const [tagName, setTagName] = useState("");
-  const [selectedColor, setSelectedColor] = useState(AVAILABLE_COLORS[0]);
+export function CreateTagModal({ isOpen, onClose, onSave, editingTag }: CreateTagModalProps) {
+  const isEditing = !!editingTag;
+
+  const initialColor = isEditing
+    ? AVAILABLE_COLORS.find(c => editingTag.color.includes(c.bg)) || AVAILABLE_COLORS[0]
+    : AVAILABLE_COLORS[0];
+
+  const [tagName, setTagName] = useState(editingTag?.name || "");
+  const [selectedColor, setSelectedColor] = useState(initialColor);
+
+  // reset cuando abre/cierra
+  useEffect(() => {
+    if (editingTag) {
+      setTagName(editingTag.name);
+      setSelectedColor(
+        AVAILABLE_COLORS.find(c => editingTag.color.includes(c.bg)) || AVAILABLE_COLORS[0]
+      );
+    } else {
+      setTagName("");
+      setSelectedColor(AVAILABLE_COLORS[0]);
+    }
+  }, [editingTag, isOpen]);
+
   const handleSave = () => {
     if (!tagName.trim()) return;
-        onSave({ 
-      name: tagName, 
-      color: `${selectedColor.bg} ${selectedColor.text}` 
+
+    onSave({
+      name: tagName,
+      color: `${selectedColor.bg} ${selectedColor.text}`,
     });
-        setTagName("");
-    setSelectedColor(AVAILABLE_COLORS[0]);
+
     onClose();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[500px]">
+
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Tag className="h-5 w-5 text-purple-600" />
-            Create New Tag
+            {isEditing ? "Edit Tag" : "Create New Tag"}
           </DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            Create a custom tag to organize and categorize your contacts.
-          </p>
         </DialogHeader>
 
         <div className="grid gap-6 py-4">
-          {/* Nombre del Tag */}
           <div className="space-y-2">
             <Label htmlFor="tagName">Tag Name *</Label>
             <Input
               id="tagName"
-              placeholder="e.g., Hot Lead, VIP, Enterprise"
               value={tagName}
               onChange={(e) => setTagName(e.target.value)}
             />
           </div>
 
-          {/* Selección de Color */}
           <div className="space-y-3">
             <Label>Color</Label>
             <div className="grid grid-cols-4 gap-3">
@@ -87,7 +103,7 @@ export function CreateTagModal({ isOpen, onClose, onSave }: CreateTagModalProps)
                     "flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all",
                     selectedColor.name === color.name
                       ? "border-purple-500 bg-purple-50/50"
-                      : "border-gray-100 hover:border-gray-200 bg-white"
+                      : "border-gray-100 bg-white hover:border-gray-200"
                   )}
                 >
                   <div className={cn("w-full h-6 rounded-md mb-2", color.bg)}></div>
@@ -97,11 +113,11 @@ export function CreateTagModal({ isOpen, onClose, onSave }: CreateTagModalProps)
             </div>
           </div>
 
+          {/* Preview */}
           <div className="space-y-2">
             <Label>Preview</Label>
             <div className="h-16 border rounded-lg bg-gray-50/50 flex items-center justify-center border-dashed">
               {tagName ? (
-                // Así se verá el tag
                 <span className={cn(
                   "inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium border",
                   selectedColor.bg,
@@ -121,14 +137,15 @@ export function CreateTagModal({ isOpen, onClose, onSave }: CreateTagModalProps)
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
+
           <Button 
-            onClick={handleSave} 
+            onClick={handleSave}
             className="bg-purple-600 hover:bg-purple-700"
-            disabled={!tagName.trim()} 
           >
-            Create Tag
+            {isEditing ? "Save Changes" : "Create Tag"}
           </Button>
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );
