@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tag, Eye } from "lucide-react";
 import { CreateTagModal } from "@/components/settings/create-tag-modal";
+import ConfirmDeleteModal from "@/components/shared/ConfirmDeleteModal"; 
 
 const initialTags = [
   { name: "Enterprise", count: 23, color: "bg-purple-300 text-purple-700" },
@@ -24,10 +25,12 @@ const views = [
 export function TagsTab() {
   const [tags, setTags] = useState(initialTags);
 
-  const [isModalOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-
   const [editingTagIndex, setEditingTagIndex] = useState<number | null>(null);
+
+  // DELETE TAG STATE
+  const [openDelete, setOpenDelete] = useState(false);
+  const [selectedTagIndex, setSelectedTagIndex] = useState<number | null>(null);
 
   // Crear un nuevo tag
   const handleCreateTag = (newTag: { name: string; color: string }) => {
@@ -50,15 +53,23 @@ export function TagsTab() {
     setModalOpen(false);
   };
 
-  // Abrir modal en modo edición con datos cargados
   const openEditModal = (index: number) => {
     setEditingTagIndex(index);
     setModalOpen(true);
   };
 
-  // Eliminación
-  const handleDeleteTag = (index: number) => {
-    setTags(tags.filter((_, i) => i !== index));
+  // Abrir confirmación de delete
+  const openDeleteModal = (index: number) => {
+    setSelectedTagIndex(index);
+    setOpenDelete(true);
+  };
+  // Confirmar delete
+  const confirmDelete = () => {
+    if (selectedTagIndex !== null) {
+      setTags(tags.filter((_, i) => i !== selectedTagIndex));
+    }
+    setOpenDelete(false);
+    setSelectedTagIndex(null);
   };
 
   return (
@@ -91,9 +102,7 @@ export function TagsTab() {
                 className="flex items-center justify-between p-4 border rounded-lg bg-card transition-all hover:shadow-sm"
               >
                 <div className="flex items-center gap-3">
-                  <div
-                    className={`h-3 w-3 shrink-0 rounded-full ${tag.color.split(" ")[0]}`}
-                  />
+                  <div className={`h-3 w-3 shrink-0 rounded-full ${tag.color.split(" ")[0]}`} />
 
                   <div>
                     <p className="font-medium text-sm text-gray-900">{tag.name}</p>
@@ -114,7 +123,7 @@ export function TagsTab() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDeleteTag(i)}
+                    onClick={() => openDeleteModal(i)}
                     className="h-8 px-2 text-red-500 hover:text-red-600"
                   >
                     Delete
@@ -126,7 +135,7 @@ export function TagsTab() {
         </CardContent>
       </Card>
 
-      {/* --- MODAL (CREAR O EDITAR) --- */}
+      {/* CREATE or EDIT MODAL */}
       <CreateTagModal
         isOpen={modalOpen}
         onClose={() => {
@@ -137,7 +146,7 @@ export function TagsTab() {
         editingTag={editingTagIndex !== null ? tags[editingTagIndex] : null}
       />
 
-      {/* --- VIEWS SECTION --- */}
+      {/* VIEWS SECTION*/}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -164,19 +173,22 @@ export function TagsTab() {
 
                 <div className="flex items-center gap-2">
                   <Button variant="ghost" size="sm" className="h-8 px-2">Edit</Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-2 text-red-500 hover:text-red-600"
-                  >
-                    Delete
-                  </Button>
+                  <Button variant="ghost" size="sm" className="h-8 px-2 text-red-500 hover:text-red-600">Delete</Button>
                 </div>
               </div>
             ))}
           </div>
         </CardContent>
       </Card>
+
+      {/* CONFIRM DELETE MODAL*/}
+      <ConfirmDeleteModal
+        open={openDelete}
+        title="Delete Tag"
+        message="Are you sure you want to delete this tag?"
+        onCancel={() => setOpenDelete(false)}
+        onConfirm={confirmDelete}
+      />
 
     </div>
   );
