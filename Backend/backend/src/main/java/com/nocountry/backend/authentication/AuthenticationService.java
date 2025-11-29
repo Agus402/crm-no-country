@@ -1,14 +1,20 @@
 package com.nocountry.backend.authentication;
 
 import com.nocountry.backend.configuration.JwtService;
+import com.nocountry.backend.dto.CreateOnBoardingDTO;
+import com.nocountry.backend.entity.Account;
 import com.nocountry.backend.entity.Role;
 import com.nocountry.backend.entity.User;
+import com.nocountry.backend.repository.AccountRepository;
 import com.nocountry.backend.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -16,6 +22,8 @@ import org.springframework.stereotype.Service;
 public class AuthenticationService {
 
     private final UserRepository userRepository;
+
+    private final AccountRepository accountRepository;
 
     private final PasswordEncoder passwordEncoder;
 
@@ -65,6 +73,56 @@ public class AuthenticationService {
                 .orElseThrow();
 
         var jwt = jwtService.generateToken(user);
+
+        return AuthenticationResponse.builder()
+                .token(jwt)
+                .build();
+    }
+
+    /**
+     * ONBOARDING: Registra una nueva empresa y su usuario administrador inicial.
+     * Este método reemplaza el flujo manual de crear cuenta -> crear usuario.
+     */
+    @Transactional // Importante: Si falla el usuario, se hace rollback de la cuenta
+    public AuthenticationResponse registerAccount(CreateOnBoardingDTO request) {
+
+        // 1. Validar si el usuario o la empresa ya existen (Opcional pero recomendado)
+        if (userRepository.findByEmail(request.userEmail()).isPresent()) {
+            throw new RuntimeException("El email del usuario ya está registrado.");
+        }
+        if (accountRepository.findByName(request.companyName()).isPresent()) {
+            throw new RuntimeException("El nombre de la empresa ya está registrado.");
+        }
+
+        // 2. Crear y Guardar la Cuenta (Empresa)
+        Account newAccount = Account.builder()
+                .name(request.companyName())
+                .industry(request.industry())
+                .createdAt(LocalDateTime.now())
+                // .isActive(true) // Si decides volver a usar este campo
+                .build();
+
+        Account savedAccount = accountRepository.save(newAccount);
+
+        // 3. Crear y Guardar el Usuario Admin vinculado a la Cuenta
+        User newUser = User.builder()
+                .name(request.userName())
+                .email(request.userEmail())
+                .password(passwordEncoder.encode(request.password()))
+                .role(Role.ADMIN) // El creador es siempre ADMIN
+                .active(true)
+                .createdAt(LocalDateTime.now())
+                .account(savedAccount) // Vinculación Clave
+                .build();
+
+        User savedUser = userRepository.save(newUser);
+
+        // 4. Asignar al usuario como 'owner' de la cuenta y actualizar (Cierra el círculo)
+        savedAccount.setOwner(savedUser);
+        accountRepository.save(savedAccount);
+
+        // 5. Generar Token JWT para el nuevo usuario
+        var jwt = jwtService.generateToken(savedUser);
 
         return AuthenticationResponse.builder()
                 .token(jwt)

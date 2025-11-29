@@ -11,12 +11,17 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
 @Service
 @RequiredArgsConstructor
 public class CrmLeadService {
+
     private final CrmLeadRepository crmLeadRepository;
+
     private final TagRepository tagRepository;
+
     private final CrmLeadMapper crmLeadMapper;
+
     public CrmLeadDTO create(CreateCrmLeadDTO dto) {
         CrmLead crmLead = crmLeadMapper.toEntity(dto);
         crmLead.setCreatedAt(LocalDateTime.now());
@@ -25,9 +30,11 @@ public class CrmLeadService {
         crmLead.setTag(tags);
         return crmLeadMapper.toDTO(crmLeadRepository.save(crmLead));
     }
+
     public CrmLeadDTO getById(Long id) {
         return crmLeadRepository.findById(id) .map(crmLeadMapper::toDTO) .orElseThrow(() -> new RuntimeException("Crm Lead not found"));
     }
+
     public CrmLeadDTO update(Long id, UpdateCrmLeadDTO dto) {
         CrmLead crmLead = crmLeadRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Crm Lead not found"));
@@ -48,6 +55,7 @@ public class CrmLeadService {
         CrmLead crmLead = crmLeadRepository.findById(id) .orElseThrow(() -> new RuntimeException("Crm Lead not found"));
         crmLeadRepository.delete(crmLead);
     }
+
     public List<CrmLeadDTO> getAll(String name, String email, Stage stage) {
 
         List<CrmLead> crmLeads;

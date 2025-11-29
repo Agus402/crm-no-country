@@ -44,20 +44,20 @@ public class User implements UserDetails {
     private LocalDateTime createdAt;
 
     // Relación N:1 con ACCOUNT (Empresa a la que pertenece el equipo)
-    // @ManyToOne(fetch = FetchType.LAZY)
-    // @JoinColumn(name = "account_id")
-    // private Account account;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id")
+    private Account account;
 
-    // @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    // private UserPreferences preferences;
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private UserPreferences preferences;
 
     // Relación 1:N con TAREAS (Tareas que el usuario crea o le son asignadas)
-    // @OneToMany(mappedBy = "assignedTo", cascade = CascadeType.ALL)
-    // private List<Task> assigned_to;
+    @OneToMany(mappedBy = "assignedTo", cascade = CascadeType.ALL)
+    private List<Task> assigned_to;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(role.name()));
+        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
 
     @Override

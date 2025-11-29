@@ -1,13 +1,13 @@
 package com.nocountry.backend.repository;
 
-import com.nocountry.backend.entity.User;
+import com.nocountry.backend.entity.Account;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
 @Repository
-public interface IUserRepository extends JpaRepository<User, Long> {
+public interface AccountRepository extends JpaRepository<Account, Long> {
 
-    Optional<User> findByEmail(String email);
+    Optional<Object> findByName(String name);
 }
