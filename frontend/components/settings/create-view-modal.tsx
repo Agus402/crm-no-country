@@ -31,6 +31,7 @@ const AVAILABLE_TAGS = [
   "Healthcare",
   "Education",
   "Marketing",
+  "Onboarding",
 ];
 
 const STAGES = [
