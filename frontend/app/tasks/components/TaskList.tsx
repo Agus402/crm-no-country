@@ -1,0 +1,104 @@
+import React from "react";
+import { Filter, ChevronDown, Clock, Bell } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+
+export interface Task {
+  id: string;
+  title: string;
+  contactName: string;
+  contactInitials: string;
+  priority: "high" | "medium" | "low";
+  dueDate: string;
+  dueTime: string;
+  type: "message" | "email" | "call";
+  isAuto?: boolean;
+  completed: boolean;
+}
+
+interface TaskListProps {
+  tasks: Task[];
+  onToggleTask: (id: string) => void;
+}
+
+export default function TaskList({ tasks, onToggleTask }: TaskListProps) {
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "high":
+        return "text-red-600 bg-red-50 border-red-200";
+      case "medium":
+        return "text-orange-600 bg-orange-50 border-orange-200";
+      case "low":
+        return "text-blue-600 bg-blue-50 border-blue-200";
+      default:
+        return "text-gray-600 bg-gray-50 border-gray-200";
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold">Your Tasks</h2>
+        <Button variant="outline" size="sm" className="text-sm">
+          <Filter className="h-4 w-4 mr-2" />
+          All Tasks
+          <ChevronDown className="h-4 w-4 ml-2" />
+        </Button>
+      </div>
+
+      <div className="space-y-3">
+        {tasks.map((task) => (
+          <Card
+            key={task.id}
+            className={`p-4 transition-all ${
+              task.completed ? "opacity-60 bg-gray-50" : ""
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={task.completed}
+                onChange={() => onToggleTask(task.id)}
+                className="h-4 w-4 mt-1 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+              />
+              <div className="flex-1">
+                <h3
+                  className={`font-medium text-sm mb-2 ${
+                    task.completed ? "line-through text-gray-500" : ""
+                  }`}
+                >
+                  {task.title}
+                </h3>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Clock className="h-3 w-3" />
+                  <span>
+                    {task.dueDate}, {task.dueTime}
+                  </span>
+                  <span className="mx-2">•</span>
+                  <span>{task.contactName}</span>
+                  {task.isAuto && (
+                    <>
+                      <span className="mx-2">•</span>
+                      <Badge variant="secondary" className="text-xs">
+                        <Bell className="h-3 w-3 mr-1" />
+                        Automated
+                      </Badge>
+                    </>
+                  )}
+                </div>
+              </div>
+              <Badge
+                variant="outline"
+                className={`text-xs ${getPriorityColor(task.priority)}`}
+              >
+                {task.priority}
+              </Badge>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
