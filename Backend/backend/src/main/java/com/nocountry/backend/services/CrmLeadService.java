@@ -14,23 +14,44 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class CrmLeadService {
+
     private final CrmLeadRepository crmLeadRepository;
     private final TagRepository tagRepository;
     private final CrmLeadMapper crmLeadMapper;
+
     public CrmLeadDTO create(CreateCrmLeadDTO dto) {
+
+        if (crmLeadRepository.existsByEmailIgnoreCase(dto.email())) {
+            throw new RuntimeException("A lead with this email already exists");
+        }
+
         CrmLead crmLead = crmLeadMapper.toEntity(dto);
         crmLead.setCreatedAt(LocalDateTime.now());
         crmLead.setUpdatedAt(LocalDateTime.now());
+
         Set<Tag> tags = new HashSet<>(tagRepository.findAllById(dto.tagIds()));
         crmLead.setTag(tags);
+
         return crmLeadMapper.toDTO(crmLeadRepository.save(crmLead));
     }
+
     public CrmLeadDTO getById(Long id) {
-        return crmLeadRepository.findById(id) .map(crmLeadMapper::toDTO) .orElseThrow(() -> new RuntimeException("Crm Lead not found"));
+        CrmLead lead = crmLeadRepository.findById(id)
+                .filter(l -> !l.isDeleted())
+                .orElseThrow(() -> new RuntimeException("Crm Lead not found or deleted"));
+
+        return crmLeadMapper.toDTO(lead);
     }
+
     public CrmLeadDTO update(Long id, UpdateCrmLeadDTO dto) {
         CrmLead crmLead = crmLeadRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Crm Lead not found"));
+
+        if (dto.email() != null && !dto.email().equalsIgnoreCase(crmLead.getEmail())) {
+            if (crmLeadRepository.existsByEmailIgnoreCase(dto.email())) {
+                throw new RuntimeException("A lead with this email already exists");
+            }
+        }
 
         crmLeadMapper.updateCrmLeadFromDto(dto, crmLead);
 
@@ -44,45 +65,41 @@ public class CrmLeadService {
     }
 
 
-    public void delete(Long id) {
-        CrmLead crmLead = crmLeadRepository.findById(id) .orElseThrow(() -> new RuntimeException("Crm Lead not found"));
-        crmLeadRepository.delete(crmLead);
-    }
-    public List<CrmLeadDTO> getAll(String name, String email, Stage stage) {
 
-        List<CrmLead> crmLeads;
+    public void delete(Long id) {
+        CrmLead crmLead = crmLeadRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Crm Lead not found"));
+
+        crmLead.setDeleted(true);
+        crmLead.setStage(Stage.LOST);
+        crmLead.setUpdatedAt(LocalDateTime.now());
+
+        crmLeadRepository.save(crmLead);
+    }
+
+    public List<CrmLeadDTO> getAll(String name, String email, Stage stage) {
 
         boolean hasName = name != null && !name.isBlank();
         boolean hasEmail = email != null && !email.isBlank();
         boolean hasStage = stage != null;
 
+        List<CrmLead> crmLeads;
+
         if (hasStage) {
-
             if (hasName) {
-                crmLeads = crmLeadRepository
-                        .findByNameContainingIgnoreCaseAndStage(name, stage);
-
+                crmLeads = crmLeadRepository.findByDeletedFalseAndNameContainingIgnoreCaseAndStage(name, stage);
             } else if (hasEmail) {
-                crmLeads = crmLeadRepository
-                        .findByEmailContainingIgnoreCaseAndStage(email, stage);
-
+                crmLeads = crmLeadRepository.findByDeletedFalseAndEmailContainingIgnoreCaseAndStage(email, stage);
             } else {
-                crmLeads = crmLeadRepository
-                        .findByStage(stage);
+                crmLeads = crmLeadRepository.findByDeletedFalseAndStage(stage);
             }
-
         } else {
-            // No stage, búsqueda libre
             if (hasName) {
-                crmLeads = crmLeadRepository
-                        .findByNameContainingIgnoreCase(name);
-
+                crmLeads = crmLeadRepository.findByDeletedFalseAndNameContainingIgnoreCase(name);
             } else if (hasEmail) {
-                crmLeads = crmLeadRepository
-                        .findByEmailContainingIgnoreCase(email);
-
+                crmLeads = crmLeadRepository.findByDeletedFalseAndEmailContainingIgnoreCase(email);
             } else {
-                crmLeads = crmLeadRepository.findAll();
+                crmLeads = crmLeadRepository.findByDeletedFalse();
             }
         }
 
@@ -90,5 +107,13 @@ public class CrmLeadService {
                 .map(crmLeadMapper::toDTO)
                 .toList();
     }
+
+    public List<CrmLeadDTO> getDeleted() {
+        return crmLeadRepository.findByDeletedTrue()
+                .stream()
+                .map(crmLeadMapper::toDTO)
+                .toList();
+    }
+
 
 }
