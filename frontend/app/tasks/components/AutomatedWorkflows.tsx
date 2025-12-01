@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import CreateAutomationRuleModal from "@/components/tasks/CreateAutomationRuleModal";
 
 export interface Workflow {
   id: string;
@@ -13,11 +14,22 @@ export interface Workflow {
 
 interface AutomatedWorkflowsProps {
   workflows: Workflow[];
+  onCreateRule?: (rule: any) => void;
 }
 
 export default function AutomatedWorkflows({
   workflows,
+  onCreateRule,
 }: AutomatedWorkflowsProps) {
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const handleCreateRule = (rule: any) => {
+    if (onCreateRule) {
+      onCreateRule(rule);
+    }
+    console.log("New automation rule:", rule);
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -25,6 +37,7 @@ export default function AutomatedWorkflows({
         <Button
           variant="outline"
           size="sm"
+          onClick={() => setShowCreateModal(true)}
           className="bg-purple-600 text-white hover:bg-purple-700"
         >
           <Plus className="h-4 w-4 mr-1" />
@@ -51,6 +64,12 @@ export default function AutomatedWorkflows({
           </Card>
         ))}
       </div>
+
+      <CreateAutomationRuleModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        onCreateRule={handleCreateRule}
+      />
     </div>
   );
 }
