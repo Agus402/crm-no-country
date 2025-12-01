@@ -30,17 +30,30 @@ export default function Message() {
   const [selectedConversation, setSelectedConversation] = useState(conversations[0]);
   const [messageInput, setMessageInput] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [search, setSearch] = useState("");
+  const [isMobileView, setIsMobileView] = useState(false);
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('');
   };
 
-  const filteredConversations = conversations.filter(conv => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'whatsapp') return conv.channel === 'whatsapp';
-    if (activeTab === 'email') return conv.channel === 'email';
-    return true;
-  });
+ const filteredConversations = conversations.filter((conv) => {
+  const matchTab =
+    activeTab === "all" ||
+    (activeTab === "whatsapp" && conv.channel === "whatsapp") ||
+    (activeTab === "email" && conv.channel === "email");
+
+  const searchText = search.toLowerCase();
+
+  const matchSearch =
+    conv.name.toLowerCase().includes(searchText) ||
+    conv.lastMessage.toLowerCase().includes(searchText) ||
+    conv.stage.toLowerCase().includes(searchText);
+
+  return matchTab && matchSearch;
+});
+
+  
 
   return (
     <div className="p-8">
@@ -55,8 +68,13 @@ export default function Message() {
           <CardHeader className="pb-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input placeholder="Buscar conversaciones..." className="pl-10" />
-            </div>
+              <Input
+                placeholder="Buscar conversaciones..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10"
+              />            
+            </div>  
           </CardHeader>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="px-6">
             <TabsList className="w-full">
@@ -203,7 +221,7 @@ export default function Message() {
               <Button className="bg-purple-600 hover:bg-purple-700">
                 <Send className="h-4 w-4" />
               </Button>
-            </div>
+            </div>         
             <div className="flex items-center gap-2 mt-3">
               <Badge variant="outline" className="text-xs cursor-pointer hover:bg-slate-100">Respuesta Rápida: Precio</Badge>
               <Badge variant="outline" className="text-xs cursor-pointer hover:bg-slate-100">Respuesta Rápida: Demo</Badge>
