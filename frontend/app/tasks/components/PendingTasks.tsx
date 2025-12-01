@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Clock, Calendar, MessageSquare, Mail, Bell } from "lucide-react";
+import React from "react";
+import { Clock, Calendar, MessageSquare, Mail, Bell, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -19,79 +19,12 @@ interface Task {
   section: "today" | "upcoming";
 }
 
-export default function PendingTasks() {
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: "1",
-      title: "Follow up with Sarah Chen - Enterprise plan discussion",
-      contactName: "Sarah Chen",
-      contactInitials: "SC",
-      priority: "high",
-      dueDate: "Today",
-      dueTime: "2:00 PM",
-      type: "message",
-      completed: false,
-      section: "today",
-    },
-    {
-      id: "2",
-      title: "Send product demo link to Marcus Brown",
-      contactName: "Marcus Brown",
-      contactInitials: "MB",
-      priority: "medium",
-      dueDate: "Today",
-      dueTime: "4:30 PM",
-      type: "email",
-      isAuto: true,
-      completed: false,
-      section: "today",
-    },
-    {
-      id: "3",
-      title: "Check payment status - Jessica Park",
-      contactName: "Jessica Park",
-      contactInitials: "JP",
-      priority: "high",
-      dueDate: "Tomorrow",
-      dueTime: "10:00 AM",
-      type: "message",
-      completed: false,
-      section: "upcoming",
-    },
-    {
-      id: "4",
-      title: "Send onboarding materials to Emily Rodriguez",
-      contactName: "Emily Rodriguez",
-      contactInitials: "ER",
-      priority: "medium",
-      dueDate: "Tomorrow",
-      dueTime: "2:00 PM",
-      type: "email",
-      isAuto: true,
-      completed: false,
-      section: "upcoming",
-    },
-    {
-      id: "5",
-      title: "Schedule meeting with Thomas Anderson",
-      contactName: "Thomas Anderson",
-      contactInitials: "TA",
-      priority: "medium",
-      dueDate: "Nov 15",
-      dueTime: "9:00 AM",
-      type: "email",
-      completed: false,
-      section: "upcoming",
-    },
-  ]);
+interface PendingTasksProps {
+  tasks: Task[];
+  onToggleTask: (id: string) => void;
+}
 
-  const toggleTask = (id: string) => {
-    setTasks(
-      tasks.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    );
-  };
+export default function PendingTasks({ tasks, onToggleTask }: PendingTasksProps) {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -140,54 +73,56 @@ export default function PendingTasks() {
     return taskList.map((task) => (
       <div
         key={task.id}
-        className="bg-white border rounded-lg p-4 flex items-center gap-4 hover:shadow-md transition-shadow"
+        className="bg-white border rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow"
       >
-        <input
-          type="checkbox"
-          checked={task.completed}
-          onChange={() => toggleTask(task.id)}
-          className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-        />
-        <div className="flex-1">
-          <h3 className="font-medium text-sm mb-2">{task.title}</h3>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div
-              className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${getInitialsColor(
-                task.contactInitials
-              )}`}
-            >
-              <span className="font-semibold">{task.contactInitials}</span>
-              <span>{task.contactName}</span>
-            </div>
-            <Badge
-              variant="secondary"
-              className={`text-xs ${getPriorityColor(task.priority)}`}
-            >
-              {task.priority}
-            </Badge>
-            {task.isAuto && (
-              <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
-                <Bell className="h-3 w-3 mr-1" />
-                Auto
+        <div className="flex items-start gap-3 sm:gap-4">
+          <input
+            type="checkbox"
+            checked={task.completed}
+            onChange={() => onToggleTask(task.id)}
+            className="h-4 w-4 mt-0.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 flex-shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <h3 className="font-medium text-sm mb-2 break-words">{task.title}</h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div
+                className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${getInitialsColor(
+                  task.contactInitials
+                )}`}
+              >
+                <span className="font-semibold">{task.contactInitials}</span>
+                <span className="hidden sm:inline">{task.contactName}</span>
+              </div>
+              <Badge
+                variant="secondary"
+                className={`text-xs ${getPriorityColor(task.priority)}`}
+              >
+                {task.priority}
               </Badge>
-            )}
+              {task.isAuto && (
+                <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
+                  <Bell className="h-3 w-3 mr-1" />
+                  Auto
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2 mt-2 text-xs text-gray-600">
+              <Clock className="h-3 w-3 flex-shrink-0" />
+              <span>
+                {task.dueDate}, {task.dueTime}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-2 mt-2 text-xs text-gray-600">
-            <Clock className="h-3 w-3" />
-            <span>
-              {task.dueDate}, {task.dueTime}
-            </span>
+          <div className="flex flex-col sm:flex-row items-center gap-2 flex-shrink-0">
+            {getTaskIcon(task.type)}
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs px-2 sm:px-3 py-1 h-auto hidden sm:flex"
+            >
+              Start
+            </Button>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {getTaskIcon(task.type)}
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs px-3 py-1 h-auto"
-          >
-            Start
-          </Button>
         </div>
       </div>
     ));
