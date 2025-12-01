@@ -7,18 +7,18 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface CrmLeadRepository extends JpaRepository<CrmLead, Long> {
-    List<CrmLead> findByNameContainingIgnoreCase(String name);
-    List<CrmLead> findByEmailContainingIgnoreCase(String email);
-    List<CrmLead> findByStage(Stage stage);
+    List<CrmLead> findByDeletedFalse();
+    List<CrmLead> findByDeletedFalseAndNameContainingIgnoreCase(String name);
+    List<CrmLead> findByDeletedFalseAndEmailContainingIgnoreCase(String email);
+
+    List<CrmLead> findByDeletedFalseAndStage(Stage stage);
+    List<CrmLead> findByDeletedFalseAndNameContainingIgnoreCaseAndStage(String name, Stage stage);
+    List<CrmLead> findByDeletedFalseAndEmailContainingIgnoreCaseAndStage(String email, Stage stage);
+
+    List<CrmLead> findByDeletedTrue();
+    boolean existsByEmailIgnoreCase(String email);
 
 
-    List<CrmLead> findByNameContainingIgnoreCaseAndStage(
-            String name, Stage stage
-    );
-
-    List<CrmLead> findByEmailContainingIgnoreCaseAndStage(
-            String email, Stage stage
-    );
 
 
 }

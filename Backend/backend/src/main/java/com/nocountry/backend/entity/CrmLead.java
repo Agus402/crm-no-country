@@ -17,7 +17,10 @@ public class CrmLead {
     private Long id;
 
     private String name;
+
+    @Column(unique = true, nullable = false)
     private String email;
+
     private String phone;
 
     @Enumerated(EnumType.STRING)
@@ -26,11 +29,14 @@ public class CrmLead {
     @Enumerated(EnumType.STRING)
     private Channel channel;
 
-
     private String status;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    @Column(nullable = false)
+    private boolean deleted = false;
+
 
     @ManyToMany
     @JoinTable(
