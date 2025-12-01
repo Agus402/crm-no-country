@@ -55,6 +55,10 @@ public class User implements UserDetails {
     @OneToMany(mappedBy = "assignedTo", cascade = CascadeType.ALL)
     private List<Task> assigned_to;
 
+    // Relación 1:N con REGLAS DE AUTOMATIZACIÓN (Reglas creadas por el usuario)
+    @OneToMany(mappedBy = "createdBy", cascade = CascadeType.ALL)
+    private List<AutomationRule> createdRules;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
