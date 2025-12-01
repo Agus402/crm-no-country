@@ -43,7 +43,7 @@ const ConfirmDeleteModal: React.FC<Props> = ({
             onClick={onConfirm}
             className="flex-1 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white"
           >
-            delete
+            Delete
           </button>
         </div>
       </div>

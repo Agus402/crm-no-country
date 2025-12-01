@@ -10,20 +10,64 @@ import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Mail, Eye, EyeOff } from "lucide-react";
 
 export function IntegrationsTab() {
-  const [editWhatsApp, setEditWhatsApp] = useState<boolean>(false);
-  const [editEmail, setEditEmail] = useState<boolean>(false);
+  // --- WHATSAPP ---
+  const [editWhatsApp, setEditWhatsApp] = useState(false);
 
-  const [showApiKey, setShowApiKey] = useState<boolean>(false);
+  const [whatsappForm, setWhatsappForm] = useState({
+    phone: "+1 (555) 900-0000",
+    accountId: "wa_12345678901234567",
+    autoSync: true,
+  });
 
+  const [whatsappBackup, setWhatsappBackup] = useState(whatsappForm);
+
+  const handleWhatsAppEdit = () => {
+    setWhatsappBackup(whatsappForm); 
+    setEditWhatsApp(true);
+  };
+
+  const handleWhatsAppCancel = () => {
+    setWhatsappForm(whatsappBackup); 
+    setEditWhatsApp(false);
+  };
+
+  const handleWhatsAppSave = () => {
+    setEditWhatsApp(false);
+  };
+
+  // Status connect/disconnect
   const [whatsappStatus, setWhatsappStatus] = useState<"connected" | "disconnected">("connected");
 
-  const handleDisconnect = () => {
-    setWhatsappStatus("disconnected");
+  const handleDisconnect = () => setWhatsappStatus("disconnected");
+  const handleReconnect = () => setWhatsappStatus("connected");
+
+  // --- EMAIL ---
+  const [editEmail, setEditEmail] = useState(false);
+
+  const [emailForm, setEmailForm] = useState({
+    smtp: "smtp.brevo.com",
+    port: "587",
+    email: "hello@startupcrm.com",
+    apiKey: "2x9bAjD7Pw8LkH92YtF0QsDm",
+  });
+
+  const [emailBackup, setEmailBackup] = useState(emailForm);
+
+  const handleEmailEdit = () => {
+    setEmailBackup(emailForm);
+    setEditEmail(true);
   };
 
-  const handleReconnect = () => {
-    setWhatsappStatus("connected");
+  const handleEmailCancel = () => {
+    setEmailForm(emailBackup);
+    setEditEmail(false);
   };
+
+  const handleEmailSave = () => {
+    setEditEmail(false);
+  };
+
+  const [showApiKey, setShowApiKey] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -42,35 +86,21 @@ export function IntegrationsTab() {
               </div>
             </div>
 
-            <div className="flex md:items-center">
-              {!editWhatsApp ? (
-                <Button
-                  variant="outline"
-                  className="w-full md:w-auto"
-                  onClick={() => setEditWhatsApp(true)}
-                >
-                  Edit
-                </Button>
-              ) : (
-                <div className="flex gap-2 w-full md:w-auto">
-                  <Button size="sm" onClick={() => setEditWhatsApp(false)}>Save</Button>
-                  <Button size="sm" variant="outline" onClick={() => setEditWhatsApp(false)}>
-                    Cancel
-                  </Button>
-                </div>
-              )}
-            </div>
+            {!editWhatsApp ? (
+              <Button variant="outline" onClick={handleWhatsAppEdit}>
+                Edit
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleWhatsAppSave}>Save</Button>
+                <Button size="sm" variant="outline" onClick={handleWhatsAppCancel}>Cancel</Button>
+              </div>
+            )}
           </div>
 
-          {/* BADGE DE STATUS */}
+          {/* Status Badge */}
           <div className="pt-3">
-            <Badge
-              className={
-                whatsappStatus === "connected"
-                  ? "bg-green-500 hover:bg-green-600"
-                  : "bg-red-500 hover:bg-red-600"
-              }
-            >
+            <Badge className={whatsappStatus === "connected" ? "bg-green-500" : "bg-red-500"}>
               {whatsappStatus === "connected" ? "Connected" : "Disconnected"}
             </Badge>
           </div>
@@ -78,47 +108,54 @@ export function IntegrationsTab() {
 
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+
+            {/* Phone */}
             <div className="space-y-2">
               <Label>Business Phone Number</Label>
               <Input
-                defaultValue="+1 (555) 900-0000"
+                value={whatsappForm.phone}
                 readOnly={!editWhatsApp}
+                onChange={(e) => setWhatsappForm({ ...whatsappForm, phone: e.target.value })}
                 className={!editWhatsApp ? "bg-gray-50" : ""}
               />
             </div>
 
+            {/* Account ID */}
             <div className="space-y-2">
               <Label>Account ID</Label>
               <Input
-                defaultValue="wa_12345678901234567"
+                value={whatsappForm.accountId}
                 readOnly={!editWhatsApp}
+                onChange={(e) => setWhatsappForm({ ...whatsappForm, accountId: e.target.value })}
                 className={!editWhatsApp ? "bg-gray-50" : ""}
               />
             </div>
           </div>
 
+          {/* Switch */}
           <div className="flex items-center justify-between pt-2">
             <div>
               <Label>Enable automatic message sync</Label>
               <p className="text-xs text-muted-foreground">Sync messages every minute</p>
             </div>
-            <Switch defaultChecked disabled={!editWhatsApp} />
+
+            <Switch
+              checked={whatsappForm.autoSync}
+              disabled={!editWhatsApp}
+              onCheckedChange={(v) => setWhatsappForm({ ...whatsappForm, autoSync: v })}
+            />
           </div>
 
-          {/* BOTONES DE CONECTAR/DESCONECTAR */}
+          {/* Connect / Disconnect */}
           <div className="flex flex-col gap-2 pt-2 md:flex-row">
-            <Button
-              variant="outline"
-              className="w-full md:w-auto"
-              onClick={handleReconnect}
-            >
+            <Button variant="outline" onClick={handleReconnect} className="w-full md:w-auto">
               Reconnect
             </Button>
 
             <Button
               variant="outline"
-              className="w-full text-red-500 hover:text-red-600 md:w-auto"
               onClick={handleDisconnect}
+              className="w-full md:w-auto text-red-500"
             >
               Disconnect
             </Button>
@@ -130,7 +167,6 @@ export function IntegrationsTab() {
       <Card>
         <CardHeader className="pb-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-
             <div className="flex items-center gap-4">
               <div className="h-10 w-10 flex items-center justify-center rounded-full bg-blue-100">
                 <Mail className="h-6 w-6 text-blue-600" />
@@ -142,57 +178,64 @@ export function IntegrationsTab() {
             </div>
 
             {!editEmail ? (
-              <Button variant="outline" className="w-full md:w-auto" onClick={() => setEditEmail(true)}>
+              <Button variant="outline" onClick={handleEmailEdit}>
                 Edit
               </Button>
             ) : (
-              <div className="flex gap-2 w-full md:w-auto">
-                <Button size="sm" onClick={() => setEditEmail(false)}>Save</Button>
-                <Button size="sm" variant="outline" onClick={() => setEditEmail(false)}>
-                  Cancel
-                </Button>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleEmailSave}>Save</Button>
+                <Button size="sm" variant="outline" onClick={handleEmailCancel}>Cancel</Button>
               </div>
             )}
           </div>
         </CardHeader>
 
         <CardContent className="space-y-4">
+
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 
+            {/* SMTP */}
             <div className="space-y-2">
               <Label>SMTP Server</Label>
               <Input
-                defaultValue="smtp.brevo.com"
+                value={emailForm.smtp}
                 readOnly={!editEmail}
+                onChange={(e) => setEmailForm({ ...emailForm, smtp: e.target.value })}
                 className={!editEmail ? "bg-gray-50" : ""}
               />
             </div>
 
+            {/* Port */}
             <div className="space-y-2">
               <Label>Port</Label>
               <Input
-                defaultValue="587"
+                value={emailForm.port}
                 readOnly={!editEmail}
+                onChange={(e) => setEmailForm({ ...emailForm, port: e.target.value })}
                 className={!editEmail ? "bg-gray-50" : ""}
               />
             </div>
 
+            {/* Email */}
             <div className="space-y-2">
               <Label>Email Address</Label>
               <Input
-                defaultValue="hello@startupcrm.com"
+                value={emailForm.email}
                 readOnly={!editEmail}
+                onChange={(e) => setEmailForm({ ...emailForm, email: e.target.value })}
                 className={!editEmail ? "bg-gray-50" : ""}
               />
             </div>
 
+            {/* API KEY */}
             <div className="space-y-2">
               <Label>API Key</Label>
               <div className="relative">
                 <Input
                   type={showApiKey ? "text" : "password"}
-                  defaultValue="2x9bAjD7Pw8LkH92YtF0QsDm"
+                  value={emailForm.apiKey}
                   readOnly={!editEmail}
+                  onChange={(e) => setEmailForm({ ...emailForm, apiKey: e.target.value })}
                   className={!editEmail ? "bg-gray-50 pr-10" : "pr-10"}
                 />
 

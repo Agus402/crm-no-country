@@ -29,3 +29,19 @@ export const INITIAL_VIEWS = [
     filters: { stages: ["client"], tags: ["VIP"], isDefault: false } 
   },
 ];
+
+export const DATE_FORMATS = [
+   "MM/DD/YYYY",
+    "DD/MM/YYYY",
+    "YYYY-MM-DD",
+];
+
+export const TIME_ZONES = [
+  "(UTC-08:00) Pacific Time",
+    "(UTC-07:00) Mountain Time",
+    "(UTC-06:00) Central Time",
+    "(UTC-05:00) Eastern Time",
+    "(UTC-03:00) Argentina Time",
+    "(UTC+00:00) UTC",
+    "(UTC+01:00) Central European Time",
+];
