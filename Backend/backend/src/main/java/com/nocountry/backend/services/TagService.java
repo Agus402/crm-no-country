@@ -18,6 +18,9 @@ public class TagService {
     private final TagMapper tagMapper;
 
     public TagDTO create(CreateTagDTO dto) {
+        if (tagRepository.existsByNameIgnoreCase(dto.name())) {
+            throw new RuntimeException("A tag with that name already exists");
+        }
         Tag tag = tagMapper.toEntity(dto);
         return tagMapper.toDTO(tagRepository.save(tag));
     }
@@ -47,7 +50,16 @@ public class TagService {
         Tag tag = tagRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Tag not found"));
 
-        if (dto.name() != null) tag.setName(dto.name());
+        if (dto.name() != null) {
+            boolean exists = tagRepository.existsByNameIgnoreCase(dto.name());
+
+            if (exists && !tag.getName().equalsIgnoreCase(dto.name())) {
+                throw new RuntimeException("A tag with that name already exists");
+            }
+
+            tag.setName(dto.name());
+        }
+
         if (dto.color() != null) tag.setColor(dto.color());
 
         return tagMapper.toDTO(tagRepository.save(tag));
