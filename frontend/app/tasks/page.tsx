@@ -20,7 +20,7 @@ export default function TasksPage() {
       priority: "high",
       dueDate: "Today",
       dueTime: "2:00 PM",
-      type: "message",
+      type: "follow-up-call",
       completed: false,
     },
     {
@@ -31,7 +31,7 @@ export default function TasksPage() {
       priority: "high",
       dueDate: "Today",
       dueTime: "4:30 PM",
-      type: "email",
+      type: "send-proposal",
       completed: false,
     },
     {
@@ -42,7 +42,7 @@ export default function TasksPage() {
       priority: "medium",
       dueDate: "Tomorrow",
       dueTime: "10:00 AM",
-      type: "call",
+      type: "schedule-demo",
       completed: false,
     },
     {
@@ -53,7 +53,7 @@ export default function TasksPage() {
       priority: "low",
       dueDate: "Tomorrow",
       dueTime: "9:00 AM",
-      type: "message",
+      type: "send-email",
       isAuto: true,
       completed: false,
     },
@@ -65,7 +65,7 @@ export default function TasksPage() {
       priority: "medium",
       dueDate: "Dec 12",
       dueTime: "2:00 PM",
-      type: "email",
+      type: "client-onboarding",
       completed: true,
     },
     {
@@ -76,7 +76,7 @@ export default function TasksPage() {
       priority: "low",
       dueDate: "Dec 15",
       dueTime: "9:00 AM",
-      type: "email",
+      type: "send-email",
       isAuto: true,
       completed: false,
     },
