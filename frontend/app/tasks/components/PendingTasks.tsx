@@ -140,46 +140,48 @@ export default function PendingTasks() {
     return taskList.map((task) => (
       <div
         key={task.id}
-        className="bg-white border rounded-lg p-4 flex items-center gap-4 hover:shadow-md transition-shadow"
+        className="bg-white border rounded-lg p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 hover:shadow-md transition-shadow"
       >
-        <input
-          type="checkbox"
-          checked={task.completed}
-          onChange={() => toggleTask(task.id)}
-          className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-        />
-        <div className="flex-1">
-          <h3 className="font-medium text-sm mb-2">{task.title}</h3>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div
-              className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${getInitialsColor(
-                task.contactInitials
-              )}`}
-            >
-              <span className="font-semibold">{task.contactInitials}</span>
-              <span>{task.contactName}</span>
-            </div>
-            <Badge
-              variant="secondary"
-              className={`text-xs ${getPriorityColor(task.priority)}`}
-            >
-              {task.priority}
-            </Badge>
-            {task.isAuto && (
-              <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
-                <Bell className="h-3 w-3 mr-1" />
-                Auto
+        <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1">
+          <input
+            type="checkbox"
+            checked={task.completed}
+            onChange={() => toggleTask(task.id)}
+            className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 mt-1 sm:mt-0 flex-shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <h3 className="font-medium text-sm mb-2 break-words">{task.title}</h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div
+                className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${getInitialsColor(
+                  task.contactInitials
+                )}`}
+              >
+                <span className="font-semibold">{task.contactInitials}</span>
+                <span className="hidden xs:inline">{task.contactName}</span>
+              </div>
+              <Badge
+                variant="secondary"
+                className={`text-xs ${getPriorityColor(task.priority)}`}
+              >
+                {task.priority}
               </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-2 mt-2 text-xs text-gray-600">
-            <Clock className="h-3 w-3" />
-            <span>
-              {task.dueDate}, {task.dueTime}
-            </span>
+              {task.isAuto && (
+                <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
+                  <Bell className="h-3 w-3 mr-1" />
+                  Auto
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2 mt-2 text-xs text-gray-600">
+              <Clock className="h-3 w-3 flex-shrink-0" />
+              <span>
+                {task.dueDate}, {task.dueTime}
+              </span>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 justify-end sm:justify-start pl-7 sm:pl-0">
           {getTaskIcon(task.type)}
           <Button
             variant="outline"

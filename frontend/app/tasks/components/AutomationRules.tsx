@@ -74,12 +74,12 @@ export default function AutomationRules() {
         {rules.map((rule) => (
           <div
             key={rule.id}
-            className={`bg-white border rounded-lg p-5 hover:shadow-md transition-shadow ${
+            className={`bg-white border rounded-lg p-4 sm:p-5 hover:shadow-md transition-shadow ${
               rule.status === "inactive" ? "opacity-60" : ""
             }`}
           >
-            <div className="flex items-start gap-4">
-              <div className="mt-1">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+              <div className="flex-shrink-0 hidden sm:block">
                 {rule.status === "active" ? (
                   <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
                     <Bell className="h-5 w-5 text-green-600" />
@@ -90,9 +90,20 @@ export default function AutomationRules() {
                   </div>
                 )}
               </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="font-semibold">{rule.name}</h3>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <div className="sm:hidden flex-shrink-0">
+                    {rule.status === "active" ? (
+                      <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                        <Bell className="h-4 w-4 text-green-600" />
+                      </div>
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
+                        <BellOff className="h-4 w-4 text-gray-600" />
+                      </div>
+                    )}
+                  </div>
+                  <h3 className="font-semibold break-words">{rule.name}</h3>
                   <Badge
                     variant={rule.status === "active" ? "default" : "secondary"}
                     className={
@@ -105,35 +116,36 @@ export default function AutomationRules() {
                   </Badge>
                 </div>
                 <div className="space-y-1 text-sm">
-                  <div className="flex items-start gap-2">
-                    <span className="text-gray-500 font-medium min-w-[60px]">
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
+                    <span className="text-gray-500 font-medium sm:min-w-[60px]">
                       Trigger
                     </span>
-                    <span className="text-gray-700">{rule.trigger}</span>
+                    <span className="text-gray-700 break-words">{rule.trigger}</span>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-gray-500 font-medium min-w-[60px]">
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
+                    <span className="text-gray-500 font-medium sm:min-w-[60px]">
                       Action
                     </span>
-                    <span className="text-gray-700">{rule.action}</span>
+                    <span className="text-gray-700 break-words">{rule.action}</span>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 justify-end sm:justify-start flex-shrink-0">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => toggleRuleStatus(rule.id)}
+                  className="text-xs sm:text-sm"
                 >
                   {rule.status === "active" ? (
                     <>
-                      <BellOff className="h-4 w-4 mr-1" />
-                      Pause
+                      <BellOff className="h-4 w-4 sm:mr-1" />
+                      <span className="hidden sm:inline">Pause</span>
                     </>
                   ) : (
                     <>
-                      <Bell className="h-4 w-4 mr-1" />
-                      Activate
+                      <Bell className="h-4 w-4 sm:mr-1" />
+                      <span className="hidden sm:inline">Activate</span>
                     </>
                   )}
                 </Button>

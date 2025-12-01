@@ -68,30 +68,30 @@ export default function CompletedTasks() {
           completedTasks.map((task) => (
             <div
               key={task.id}
-              className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow"
+              className="bg-white border rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow"
             >
-              <div className="flex items-start gap-4">
-                <div className="mt-1">
+              <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+                <div className="flex-shrink-0">
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-medium mb-1 line-through text-gray-500">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium mb-1 line-through text-gray-500 break-words">
                     {task.title}
                   </h3>
-                  <div className="flex items-center gap-3 text-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm">
                     <div className="flex items-center gap-1">
                       {getTaskIcon(task.type)}
                       <span className="text-blue-600 hover:underline cursor-pointer">
                         {task.contactName}
                       </span>
                     </div>
-                    <span className="text-gray-500">•</span>
-                    <span className="text-gray-500">
+                    <span className="text-gray-500 hidden sm:inline">•</span>
+                    <span className="text-gray-500 text-xs sm:text-sm">
                       Completed {task.completedDate}, {task.completedTime}
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   {task.type === "email" && (
                     <button className="text-gray-400 hover:text-gray-600">
                       <Mail className="h-4 w-4" />
