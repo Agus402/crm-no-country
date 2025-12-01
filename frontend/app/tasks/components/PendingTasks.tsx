@@ -158,7 +158,7 @@ export default function PendingTasks() {
                 )}`}
               >
                 <span className="font-semibold">{task.contactInitials}</span>
-                <span className="hidden xs:inline">{task.contactName}</span>
+                <span className="hidden sm:inline">{task.contactName}</span>
               </div>
               <Badge
                 variant="secondary"
