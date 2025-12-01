@@ -16,6 +16,8 @@ public interface CrmLeadRepository extends JpaRepository<CrmLead, Long> {
     List<CrmLead> findByDeletedFalseAndEmailContainingIgnoreCaseAndStage(String email, Stage stage);
 
     List<CrmLead> findByDeletedTrue();
+    boolean existsByEmailIgnoreCase(String email);
+
 
 
 

@@ -14,17 +14,27 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class CrmLeadService {
+
     private final CrmLeadRepository crmLeadRepository;
     private final TagRepository tagRepository;
     private final CrmLeadMapper crmLeadMapper;
+
     public CrmLeadDTO create(CreateCrmLeadDTO dto) {
+
+        if (crmLeadRepository.existsByEmailIgnoreCase(dto.email())) {
+            throw new RuntimeException("A lead with this email already exists");
+        }
+
         CrmLead crmLead = crmLeadMapper.toEntity(dto);
         crmLead.setCreatedAt(LocalDateTime.now());
         crmLead.setUpdatedAt(LocalDateTime.now());
+
         Set<Tag> tags = new HashSet<>(tagRepository.findAllById(dto.tagIds()));
         crmLead.setTag(tags);
+
         return crmLeadMapper.toDTO(crmLeadRepository.save(crmLead));
     }
+
     public CrmLeadDTO getById(Long id) {
         CrmLead lead = crmLeadRepository.findById(id)
                 .filter(l -> !l.isDeleted())
@@ -37,6 +47,12 @@ public class CrmLeadService {
         CrmLead crmLead = crmLeadRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Crm Lead not found"));
 
+        if (dto.email() != null && !dto.email().equalsIgnoreCase(crmLead.getEmail())) {
+            if (crmLeadRepository.existsByEmailIgnoreCase(dto.email())) {
+                throw new RuntimeException("A lead with this email already exists");
+            }
+        }
+
         crmLeadMapper.updateCrmLeadFromDto(dto, crmLead);
 
         if (dto.tagIds() != null) {
@@ -47,6 +63,7 @@ public class CrmLeadService {
 
         return crmLeadMapper.toDTO(crmLeadRepository.save(crmLead));
     }
+
 
 
     public void delete(Long id) {
