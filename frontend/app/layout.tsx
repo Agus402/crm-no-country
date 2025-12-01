@@ -16,8 +16,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={`${inter.className} bg-gray-50/50`}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.className} bg-gray-50/50`} suppressHydrationWarning>
         <div className="flex min-h-screen">
             <Sidebar />
           <main className="flex-1 md:ml-64 transition-all">
