@@ -23,7 +23,7 @@ public class Account {
     private Long id;
 
     @Column(nullable = false)
-    private String name;
+    private String companyName;
 
     private String industry;
 

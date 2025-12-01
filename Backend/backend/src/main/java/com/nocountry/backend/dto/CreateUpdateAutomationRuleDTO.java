@@ -13,11 +13,9 @@ public record CreateUpdateAutomationRuleDTO(
         @NotNull(message = "El evento disparador es obligatorio.")
         TriggerEvent triggerEvent,
 
-        // El valor del disparador puede ser nulo (ej: si el evento es genérico)
         @Nullable
         String triggerValue,
 
-        // La acción se guarda como JSON String
         @NotBlank(message = "La definición de acciones (JSON) es obligatoria.")
         String actions,
 

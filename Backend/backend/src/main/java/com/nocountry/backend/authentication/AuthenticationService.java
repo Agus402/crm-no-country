@@ -90,13 +90,13 @@ public class AuthenticationService {
         if (userRepository.findByEmail(request.userEmail()).isPresent()) {
             throw new RuntimeException("El email del usuario ya está registrado.");
         }
-        if (accountRepository.findByName(request.companyName()).isPresent()) {
+        if (accountRepository.findByCompanyName(request.companyName()).isPresent()) {
             throw new RuntimeException("El nombre de la empresa ya está registrado.");
         }
 
         // 2. Crear y Guardar la Cuenta (Empresa)
         Account newAccount = Account.builder()
-                .name(request.companyName())
+                .companyName(request.companyName())
                 .industry(request.industry())
                 .createdAt(LocalDateTime.now())
                 // .isActive(true) // Si decides volver a usar este campo

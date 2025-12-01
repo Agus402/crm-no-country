@@ -24,4 +24,4 @@ public record TaskDTO(
 
         UserDTO assignedTo
 
-         ) {}
+) {}

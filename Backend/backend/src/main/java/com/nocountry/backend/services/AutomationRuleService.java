@@ -24,7 +24,6 @@ public class AutomationRuleService {
     private final UserRepository userRepository;
     private final AutomationRuleMapper ruleMapper;
 
-    // --- C. CREATE ---
     @Transactional
     public AutomationRuleDTO createRule(CreateUpdateAutomationRuleDTO dto, Long creatorId) {
         User creator = userRepository.findById(creatorId)
@@ -38,36 +37,29 @@ public class AutomationRuleService {
         return ruleMapper.toDTO(rule);
     }
 
-    // --- R. READ (Find All) ---
     public List<AutomationRuleDTO> findAll() {
         return ruleRepository.findAll().stream()
                 .map(ruleMapper::toDTO)
                 .toList();
     }
 
-    // --- R. READ (Find By ID) ---
     public AutomationRuleDTO findById(Long id) {
         AutomationRule rule = ruleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Regla de automatización no encontrada."));
         return ruleMapper.toDTO(rule);
     }
 
-    // --- U. UPDATE ---
     @Transactional
     public AutomationRuleDTO updateRule(Long id, CreateUpdateAutomationRuleDTO dto) {
         AutomationRule rule = ruleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Regla de automatización a actualizar no encontrada."));
 
-        // Uso del mapper con nullValuePropertyMappingStrategy = IGNORE
         ruleMapper.updateEntityFromDto(dto, rule);
-
-        // La actualización de createdBy se ignora, manteniendo el original.
 
         rule = ruleRepository.save(rule);
         return ruleMapper.toDTO(rule);
     }
 
-    // --- D. DELETE ---
     @Transactional
     public void deleteRule(Long id) {
         if (!ruleRepository.existsById(id)) {

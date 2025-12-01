@@ -2,6 +2,7 @@ package com.nocountry.backend.services;
 
 import com.nocountry.backend.dto.AccountDTO;
 import com.nocountry.backend.entity.Account;
+import com.nocountry.backend.entity.User;
 import com.nocountry.backend.mappers.AccountMapper;
 import com.nocountry.backend.repository.AccountRepository;
 import com.nocountry.backend.repository.UserRepository;
@@ -9,6 +10,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -30,12 +32,11 @@ public class AccountService {
         return accountMapper.toDTO(account);
     }
 
-    // Consultar si un Account puede crear otros Accounts
-    /*@Transactional
+    @Transactional
     public AccountDTO createAccount(Account account, Long ownerId) {
 
         // 1. Validación de unicidad
-        if (accountRepository.findByName(account.getName()).isPresent()) {
+        if (accountRepository.findByCompanyName(account.getCompanyName()).isPresent()) {
             throw new RuntimeException("El nombre de la cuenta ya existe.");
         }
 
@@ -50,14 +51,14 @@ public class AccountService {
 
         Account savedAccount = accountRepository.save(account);
         return accountMapper.toDTO(savedAccount);
-    }*/
+    }
 
     @Transactional
     public AccountDTO updateAccount(Long id, Account updatedAccount) {
         Account account = accountRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cuenta no encontrada con ID: " + id));
 
-        account.setName(updatedAccount.getName());
+        account.setCompanyName(updatedAccount.getCompanyName());
         account.setIndustry(updatedAccount.getIndustry());
         account.setWebsite(updatedAccount.getWebsite());
         account.setPhone(updatedAccount.getPhone());

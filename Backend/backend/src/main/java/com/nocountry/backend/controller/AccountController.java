@@ -41,17 +41,15 @@ public class AccountController {
         return ResponseEntity.ok(accountService.getAccountById(id));
     }
 
-    // Consultar si un Account puede crear otros Accounts
-
-    /*@PostMapping
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')") // Solo un admin puede crear cuentas fuera del flujo de Onboarding
+    @PostMapping
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<AccountDTO> createAccount(@Valid @RequestBody Account account) {
 
         Long ownerId = getCurrentUserId();
 
         AccountDTO newAccount = accountService.createAccount(account, ownerId);
         return new ResponseEntity<>(newAccount, HttpStatus.CREATED);
-    }*/
+    }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')") // o 'isOwner(id)' en un sistema real
@@ -66,6 +64,5 @@ public class AccountController {
     public void deleteAccount(@PathVariable Long id) {
         accountService.deleteAccount(id);
     }
-
 
 }

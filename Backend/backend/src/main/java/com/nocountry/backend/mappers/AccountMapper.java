@@ -36,7 +36,7 @@ public class AccountMapper {
 
         return new AccountDTO(
                 account.getId(),
-                account.getName(),
+                account.getCompanyName(),
                 account.getIndustry(),
                 account.getWebsite(),
                 account.getPhone(),

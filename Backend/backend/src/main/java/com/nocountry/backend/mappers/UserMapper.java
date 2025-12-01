@@ -27,7 +27,7 @@ public class UserMapper {
         if (user.getAccount() != null) {
             accountDTO = new AccountDTO(
                     user.getAccount().getId(),
-                    user.getAccount().getName(),
+                    user.getAccount().getCompanyName(),
                     user.getAccount().getIndustry(),
                     user.getAccount().getWebsite(),
                     user.getAccount().getPhone(),

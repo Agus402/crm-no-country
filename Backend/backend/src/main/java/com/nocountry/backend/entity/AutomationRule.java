@@ -14,7 +14,7 @@ public class AutomationRule {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; // id BIGINT
+    private Long id;
 
     @Column(name = "name", nullable = false)
     private String name;
