@@ -3,7 +3,7 @@ package com.nocountry.backend.authentication;
 import com.nocountry.backend.configuration.JwtService;
 import com.nocountry.backend.dto.CreateOnBoardingDTO;
 import com.nocountry.backend.entity.Account;
-import com.nocountry.backend.entity.Role;
+import com.nocountry.backend.enums.Role;
 import com.nocountry.backend.entity.User;
 import com.nocountry.backend.repository.AccountRepository;
 import com.nocountry.backend.repository.UserRepository;

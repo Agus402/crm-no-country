@@ -1,5 +1,6 @@
 package com.nocountry.backend.entity;
 
+import com.nocountry.backend.enums.Role;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

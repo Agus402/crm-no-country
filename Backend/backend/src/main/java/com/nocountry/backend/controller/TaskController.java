@@ -27,7 +27,7 @@ public class TaskController {
         if (authentication != null && authentication.getPrincipal() instanceof User user) {
             return user.getId();
         }
-        throw new IllegalStateException("Usuario no autenticado");
+        throw new IllegalStateException("User not found");
     }
 
     /**

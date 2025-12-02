@@ -30,7 +30,7 @@ public class TaskService {
     @Transactional
     public TaskDTO findTaskById(Long id) {
         Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Tarea no encontrada con ID: " + id));
+                .orElseThrow(() -> new RuntimeException("Task not found with ID: " + id));
         return taskMapper.toDTO(task);
     }
 
@@ -59,16 +59,15 @@ public class TaskService {
 
         // 1. Validar existencia del usuario asignado
         User assignedTo = userRepository.findById(assignedToId)
-                .orElseThrow(() -> new RuntimeException("Usuario asignado no encontrado con ID: " + assignedToId));
+                .orElseThrow(() -> new RuntimeException("Assigned user not found with ID: " + assignedToId));
 
         // 2. Validar existencia del contacto asociado
         CrmLead crmLead = crmLeadRepository.findById(taskDTO.crmLead_Id())
-                .orElseThrow(() -> new RuntimeException("Contacto no encontrado con ID: " + taskDTO.crmLead_Id()));
+                .orElseThrow(() -> new RuntimeException("Contact assigned not found with ID " + taskDTO.crmLead_Id()));
 
         // 3. Crear la entidad usando el Builder
         Task task = Task.builder()
                 .title(taskDTO.title())
-                .description(taskDTO.description())
                 .dueDate(taskDTO.dueDate())
                 .priority(taskDTO.priority())
                 .isCompleted(false)
@@ -85,7 +84,7 @@ public class TaskService {
     @Transactional
     public void deleteTask(Long taskId) {
         if (!taskRepository.existsById(taskId)) {
-            throw new RuntimeException("Tarea no encontrada con ID: " + taskId);
+            throw new RuntimeException("Task not found with ID: " + taskId);
         }
         taskRepository.deleteById(taskId);
     }
@@ -95,18 +94,17 @@ public class TaskService {
 
         // 1. Buscar la tarea existente
         Task taskToUpdate = taskRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Tarea no encontrada con ID: " + id));
+                .orElseThrow(() -> new RuntimeException("Task not found with ID: " + id));
 
         // 2. Validar y actualizar el contacto asociado (si el ID es diferente)
         if (!taskToUpdate.getCrmLead().getId().equals(taskDTO.crmLead_Id())) {
             CrmLead crmLead = crmLeadRepository.findById(taskDTO.crmLead_Id())
-                    .orElseThrow(() -> new RuntimeException("Contacto no encontrado con ID: " + taskDTO.crmLead_Id()));
+                    .orElseThrow(() -> new RuntimeException("Contact not found with ID: " + taskDTO.crmLead_Id()));
             taskToUpdate.setCrmLead(crmLead);
         }
 
         // 3. Actualizar campos básicos
         taskToUpdate.setTitle(taskDTO.title());
-        taskToUpdate.setDescription(taskDTO.description());
         taskToUpdate.setDueDate(taskDTO.dueDate());
         taskToUpdate.setPriority(taskDTO.priority());
 
@@ -118,7 +116,7 @@ public class TaskService {
     @Transactional
     public TaskDTO toggleCompletedStatus(Long taskId) {
         Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new RuntimeException("Tarea no encontrada con ID: " + taskId));
+                .orElseThrow(() -> new RuntimeException("Task not found with ID: " + taskId));
 
         // Invertir estado: Si es true pasa a false, y viceversa
         task.setCompleted(!task.isCompleted());

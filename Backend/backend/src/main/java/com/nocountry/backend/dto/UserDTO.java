@@ -1,7 +1,6 @@
 package com.nocountry.backend.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.nocountry.backend.entity.Role;
+import com.nocountry.backend.enums.Role;
 
 import java.time.LocalDateTime;
 
