@@ -8,14 +8,47 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const api_url = "http://localhost:8080/api";
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`${api_url}/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!response.ok) {
+        throw new Error("Error al registrar");
+      }
+      const data = await response.json();
+      console.log(data);
+      router.push("/login");
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (email === "admin@example.com" && password === "123456") {
-      document.cookie = "auth=true; path=/";
+    try {
+      const response = await fetch(`${api_url}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!response.ok) {
+        throw new Error("Error al iniciar sesión");
+      }
+      const data = await response.json();
+      console.log(data);
       router.push("/");
-    } else {
-      alert("Credenciales incorrectas");
+    } catch (error) {
+      console.error(error);
     }
   };
 
