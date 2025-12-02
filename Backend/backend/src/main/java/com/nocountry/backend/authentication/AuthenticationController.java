@@ -1,6 +1,7 @@
 package com.nocountry.backend.authentication;
 
 import com.nocountry.backend.dto.CreateOnBoardingDTO;
+import com.nocountry.backend.entity.User;
 import lombok.RequiredArgsConstructor;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
@@ -55,14 +56,11 @@ public class AuthenticationController {
 
     @GetMapping("/me")
     public ResponseEntity<AuthenticationResponse> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
-        // Si llega aquí, el filtro ya validó el token (cookie o header) y puso el
-        // usuario en el contexto
-        // Podemos devolver un token nuevo (refresh implícito) o simplemente info del
-        // usuario
-        // Por ahora devolvemos una estructura simple, el frontend usará esto para saber
-        // que está logueado
+        User user = (User) userDetails;
         return ResponseEntity.ok(AuthenticationResponse.builder()
-                .token("valid-session") // No necesitamos devolver el token real si ya está en la cookie
+                .token("valid-session")
+                .name(user.getName())
+                .email(user.getEmail())
                 .build());
     }
 
