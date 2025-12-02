@@ -8,7 +8,7 @@ import { ArrowLeft, ArrowRight, Building2, User, Briefcase } from "lucide-react"
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register } = useAuth();
+  const { registerAccount } = useAuth();
   const [step, setStep] = useState(1);
 
   // Estado para datos
@@ -102,11 +102,13 @@ export default function RegisterPage() {
       const payload = {
         companyName: formData.companyName,
         industry: formData.industry,
+        website: formData.website, // Incluir website
+        phone: formData.phone,     // Incluir phone
         userName: formData.fullName,
         userEmail: formData.email,
         password: formData.password
       };
-      await register(payload);
+      await registerAccount(payload);
     } catch (error) {
       console.error("Registration failed", error);
       // Handle error (show message to user)

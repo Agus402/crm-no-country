@@ -8,6 +8,7 @@ interface AuthContextType {
     user: any;
     login: (email: string, password: string) => Promise<void>;
     register: (data: any) => Promise<void>;
+    registerAccount: (data: any) => Promise<void>;
     logout: () => void;
     isAuthenticated: boolean;
 }
@@ -61,6 +62,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
+    const registerAccount = async (data: any) => {
+        try {
+            await authService.registerAccount(data);
+            // El token ya está en la cookie
+            const userData = await authService.getCurrentUser();
+            setIsAuthenticated(true);
+            setUser(userData);
+            router.push("/");
+        } catch (error) {
+            console.error("Account Registration failed:", error);
+            throw error;
+        }
+    };
+
     const logout = () => {
         // Idealmente llamar a un endpoint de logout para borrar la cookie en el servidor
         // Por ahora borramos el estado local. La cookie persistirá hasta que expire o se borre.
@@ -71,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, register, logout, isAuthenticated }}>
+        <AuthContext.Provider value={{ user, login, register, registerAccount, logout, isAuthenticated }}>
             {children}
         </AuthContext.Provider>
     );

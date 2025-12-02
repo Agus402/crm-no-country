@@ -35,6 +35,23 @@ export const authService = {
         return response.json();
     },
 
+    async registerAccount(data: any) {
+        const response = await fetch(`${API_URL}/auth/onboarding`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+            credentials: "include",
+        });
+
+        if (!response.ok) {
+            throw new Error("Error al registrar cuenta");
+        }
+
+        return response.json();
+    },
+
     async getCurrentUser() {
         const response = await fetch(`${API_URL}/auth/me`, {
             method: "GET",
