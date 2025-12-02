@@ -21,16 +21,28 @@ import {
 import { Zap, Filter, Clock, Plus, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
+type TriggerType = "new-lead" | "demo-completed" | "invoice-sent" | "no-response" | "contract-signed" | "payment-received";
+type ActionType = "send-email" | "send-whatsapp" | "create-task" | "move-segment" | "send-sms";
+type TemplateType = "welcome" | "follow-up" | "reminder" | "thank-you";
+
 interface Action {
   id: string;
-  type: string;
-  template?: string;
+  type: ActionType | "";
+  template?: TemplateType | "";
+}
+
+export interface AutomationRule {
+  name: string;
+  trigger: TriggerType | "";
+  waitDays: number;
+  waitHours: number;
+  actions: Action[];
 }
 
 interface CreateAutomationRuleModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreateRule: (rule: any) => void;
+  onCreateRule: (rule: AutomationRule) => void;
 }
 
 export default function CreateAutomationRuleModal({
@@ -39,7 +51,7 @@ export default function CreateAutomationRuleModal({
   onCreateRule,
 }: CreateAutomationRuleModalProps) {
   const [ruleName, setRuleName] = useState("");
-  const [trigger, setTrigger] = useState("");
+  const [trigger, setTrigger] = useState<TriggerType | "">("");
   const [waitDays, setWaitDays] = useState("0");
   const [waitHours, setWaitHours] = useState("0");
   const [actions, setActions] = useState<Action[]>([
@@ -77,7 +89,7 @@ export default function CreateAutomationRuleModal({
     }
   };
 
-  const updateAction = (id: string, field: string, value: string) => {
+  const updateAction = (id: string, field: keyof Action, value: string) => {
     setActions(
       actions.map((action) =>
         action.id === id ? { ...action, [field]: value } : action
@@ -85,8 +97,8 @@ export default function CreateAutomationRuleModal({
     );
   };
 
-  const getTriggerDisplay = () => {
-    const triggers: { [key: string]: string } = {
+  const getTriggerDisplay = (): string => {
+    const triggers: Record<TriggerType, string> = {
       "new-lead": "New Lead Created",
       "demo-completed": "Demo Completed",
       "invoice-sent": "Invoice Sent",
@@ -94,37 +106,27 @@ export default function CreateAutomationRuleModal({
       "contract-signed": "Contract Signed",
       "payment-received": "Payment Received",
     };
-    return triggers[trigger] || trigger;
+    return trigger ? triggers[trigger as TriggerType] || trigger : "a trigger occurs";
   };
 
-  const getActionDisplay = (type: string) => {
-    const actionTypes: { [key: string]: string } = {
-      "send-email": "Send Email",
-      "send-whatsapp": "Send WhatsApp",
-      "create-task": "Create Task",
-      "move-segment": "Move to Segment",
-      "send-sms": "Send SMS",
-    };
-    return actionTypes[type] || type;
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[680px]">
+      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-[90vw] md:max-w-[680px]">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-purple-600" />
-            <DialogTitle>Create Automation Rule</DialogTitle>
+            <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+            <DialogTitle className="text-base sm:text-lg">Create Automation Rule</DialogTitle>
           </div>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">
             Automate your workflow with triggers and actions
           </p>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-3 mt-2">
+        <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-3 mt-1 sm:mt-2 overflow-y-auto max-h-[calc(95vh-180px)] scrollbar-hide">
           {/* Rule Name */}
-          <div className="space-y-2">
-            <Label htmlFor="ruleName" className="text-sm font-medium">
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="ruleName" className="text-xs sm:text-sm font-medium">
               Rule Name
             </Label>
             <Input
@@ -133,22 +135,23 @@ export default function CreateAutomationRuleModal({
               value={ruleName}
               onChange={(e) => setRuleName(e.target.value)}
               required
+              className="text-sm"
             />
           </div>
 
           {/* When this happens (Trigger) */}
-          <Card className="p-3 bg-purple-50 border-purple-200">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-purple-700 font-medium">
-                <Filter className="h-4 w-4" />
-                <span className="text-sm">When this happens (Trigger)</span>
+          <Card className="p-2 sm:p-3 bg-purple-50 border-purple-200">
+            <div className="space-y-1 sm:space-y-2">
+              <div className="flex items-center gap-1 sm:gap-2 text-purple-700 font-medium">
+                <Filter className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="text-[11px] sm:text-sm">When this happens (Trigger)</span>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="trigger" className="text-sm">
+              <div className="space-y-1">
+                <Label htmlFor="trigger" className="text-xs sm:text-sm">
                   Trigger Event
                 </Label>
-                <Select value={trigger} onValueChange={setTrigger} required>
-                  <SelectTrigger id="trigger" className="bg-white">
+                <Select value={trigger} onValueChange={(value) => setTrigger(value as TriggerType)} required>
+                  <SelectTrigger id="trigger" className="bg-white text-sm">
                     <SelectValue placeholder="Select a trigger" />
                   </SelectTrigger>
                   <SelectContent>
@@ -173,15 +176,15 @@ export default function CreateAutomationRuleModal({
           </Card>
 
           {/* Wait (Optional) */}
-          <Card className="p-3 bg-blue-50 border-blue-200">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-blue-700 font-medium">
-                <Clock className="h-4 w-4" />
-                <span className="text-sm">Wait (Optional)</span>
+          <Card className="p-2 sm:p-3 bg-blue-50 border-blue-200">
+            <div className="space-y-1 sm:space-y-2">
+              <div className="flex items-center gap-1 sm:gap-2 text-blue-700 font-medium">
+                <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="text-[11px] sm:text-sm">Wait (Optional)</span>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="waitDays" className="text-sm">
+              <div className="grid grid-cols-2 gap-1 sm:gap-2">
+                <div className="space-y-1">
+                  <Label htmlFor="waitDays" className="text-xs sm:text-sm">
                     Days
                   </Label>
                   <Input
@@ -190,11 +193,11 @@ export default function CreateAutomationRuleModal({
                     min="0"
                     value={waitDays}
                     onChange={(e) => setWaitDays(e.target.value)}
-                    className="bg-white"
+                    className="bg-white text-sm"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="waitHours" className="text-sm">
+                <div className="space-y-1">
+                  <Label htmlFor="waitHours" className="text-xs sm:text-sm">
                     Hours
                   </Label>
                   <Input
@@ -204,7 +207,7 @@ export default function CreateAutomationRuleModal({
                     max="23"
                     value={waitHours}
                     onChange={(e) => setWaitHours(e.target.value)}
-                    className="bg-white"
+                    className="bg-white text-sm"
                   />
                 </div>
               </div>
@@ -212,29 +215,29 @@ export default function CreateAutomationRuleModal({
           </Card>
 
           {/* Do this (Actions) */}
-          <Card className="p-3 bg-green-50 border-green-200">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-green-700 font-medium">
-                  <Zap className="h-4 w-4" />
-                  <span className="text-sm">Do this (Actions)</span>
+          <Card className="p-2 sm:p-3 bg-green-50 border-green-200">
+            <div className="space-y-1 sm:space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1 sm:gap-2 text-green-700 font-medium">
+                  <Zap className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="text-[11px] sm:text-sm">Do this (Actions)</span>
                 </div>
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
                   onClick={addAction}
-                  className="text-xs h-7 bg-white hover:bg-green-100 border-green-300"
+                  className="text-[10px] sm:text-xs h-6 sm:h-7 px-2 bg-white hover:bg-green-100 border-green-300"
                 >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Add Action
+                  <Plus className="h-3 w-3 mr-0.5 sm:mr-1" />
+                  Add
                 </Button>
               </div>
 
               {actions.map((action, index) => (
-                <div key={action.id} className="space-y-2 p-2.5 bg-white rounded-lg border border-green-200">
+                <div key={action.id} className="space-y-1 sm:space-y-1.5 p-1.5 sm:p-2.5 bg-white rounded-lg border border-green-200">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-gray-600">
+                    <span className="text-[10px] sm:text-xs font-medium text-gray-600">
                       Step {index + 1}
                     </span>
                     {actions.length > 1 && (
@@ -243,15 +246,15 @@ export default function CreateAutomationRuleModal({
                         size="sm"
                         variant="ghost"
                         onClick={() => removeAction(action.id)}
-                        className="h-5 w-5 p-0 hover:bg-red-100"
+                        className="h-4 w-4 sm:h-5 sm:w-5 p-0 hover:bg-red-100"
                       >
-                        <X className="h-3 w-3 text-red-600" />
+                        <X className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-600" />
                       </Button>
                     )}
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-sm">Action Type</Label>
+                  <div className="space-y-1">
+                    <Label className="text-xs sm:text-sm">Action Type</Label>
                     <Select
                       value={action.type}
                       onValueChange={(value) =>
@@ -259,7 +262,7 @@ export default function CreateAutomationRuleModal({
                       }
                       required
                     >
-                      <SelectTrigger className="bg-white">
+                      <SelectTrigger className="bg-white text-sm">
                         <SelectValue placeholder="Select action" />
                       </SelectTrigger>
                       <SelectContent>
@@ -279,15 +282,15 @@ export default function CreateAutomationRuleModal({
                   {(action.type === "send-email" ||
                     action.type === "send-whatsapp" ||
                     action.type === "send-sms") && (
-                    <div className="space-y-1.5">
-                      <Label className="text-sm">Message Template</Label>
+                    <div className="space-y-1">
+                      <Label className="text-xs sm:text-sm">Message Template</Label>
                       <Select
                         value={action.template}
                         onValueChange={(value) =>
                           updateAction(action.id, "template", value)
                         }
                       >
-                        <SelectTrigger className="bg-white">
+                        <SelectTrigger className="bg-white text-sm">
                           <SelectValue placeholder="Select template" />
                         </SelectTrigger>
                         <SelectContent>
@@ -313,12 +316,12 @@ export default function CreateAutomationRuleModal({
           </Card>
 
           {/* Rule Summary */}
-          <Card className="p-3 bg-gray-50 border-gray-200">
-            <div className="space-y-1.5">
-              <h4 className="text-sm font-semibold text-gray-900">
+          <Card className="p-2 sm:p-3 bg-gray-50 border-gray-200">
+            <div className="space-y-1 sm:space-y-1.5">
+              <h4 className="text-xs sm:text-sm font-semibold text-gray-900">
                 Rule Summary
               </h4>
-              <p className="text-xs text-gray-700">
+              <p className="text-[10px] sm:text-xs text-gray-700">
                 When{" "}
                 <span className="font-semibold text-purple-600">
                   {getTriggerDisplay() || "a trigger occurs"}
@@ -349,7 +352,7 @@ export default function CreateAutomationRuleModal({
           </Card>
 
           {/* Footer Buttons */}
-          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-1">
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-1.5 sm:gap-3 pt-1 mt-2">
             <Button
               type="button"
               variant="outline"

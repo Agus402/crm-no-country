@@ -34,6 +34,8 @@ interface CreateTaskModalProps {
   onCreateTask: (task: NewTask) => void;
 }
 
+type TaskType = "follow-up-call" | "send-email" | "schedule-demo" | "send-proposal" | "client-onboarding" | "other";
+
 export interface NewTask {
   title: string;
   contactName: string;
@@ -41,7 +43,7 @@ export interface NewTask {
   priority: "high" | "medium" | "low";
   dueDate: string;
   dueTime: string;
-  type: "follow-up-call" | "send-email" | "schedule-demo" | "send-proposal" | "client-onboarding" | "other";
+  type: TaskType;
   description?: string;
   enableReminder?: boolean;
   isAutomated?: boolean;
@@ -112,21 +114,21 @@ export default function CreateTaskModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[650px]">
+      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-[90vw] md:max-w-[650px]">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <CheckSquare className="h-5 w-5 text-purple-600" />
-            <DialogTitle>Create New Task</DialogTitle>
+            <CheckSquare className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+            <DialogTitle className="text-base sm:text-lg">Create New Task</DialogTitle>
           </div>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">
             Create a task to manage your follow-ups and workflow.
           </p>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+        <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-3 mt-1 sm:mt-2 overflow-y-auto max-h-[calc(95vh-180px)] scrollbar-hide">
           {/* Task Title */}
-          <div className="space-y-2">
-            <Label htmlFor="title" className="text-sm font-medium">
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="title" className="text-xs sm:text-sm font-medium">
               Task Title <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -137,16 +139,16 @@ export default function CreateTaskModal({
                 setFormData({ ...formData, title: e.target.value })
               }
               required
-              className="w-full"
+              className="w-full text-sm"
             />
           </div>
 
           {/* Task Type */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">
+          <div className="space-y-1 sm:space-y-2">
+            <Label className="text-xs sm:text-sm font-medium">
               Task Type <span className="text-red-500">*</span>
             </Label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2">
               {taskTypes.map((type) => {
                 const Icon = type.icon;
                 return (
@@ -154,16 +156,19 @@ export default function CreateTaskModal({
                     key={type.value}
                     type="button"
                     onClick={() =>
-                      setFormData({ ...formData, type: type.value as any })
+                      setFormData({ 
+                        ...formData, 
+                        type: type.value as TaskType
+                      })
                     }
-                    className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border transition-all text-xs ${
+                    className={`flex items-center justify-center sm:justify-start gap-1 sm:gap-2 px-2 py-1 sm:py-1.5 rounded-lg border transition-all text-[11px] sm:text-xs ${
                       formData.type === type.value
                         ? "border-purple-600 bg-purple-50 text-purple-700"
                         : "border-gray-200 hover:border-gray-300 text-gray-700"
                     }`}
                   >
-                    <Icon className="h-3.5 w-3.5" />
-                    <span>{type.label}</span>
+                    <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
+                    <span className="truncate text-[10px] sm:text-xs">{type.label}</span>
                   </button>
                 );
               })}
@@ -171,9 +176,9 @@ export default function CreateTaskModal({
           </div>
 
           {/* Assign to Contact */}
-          <div className="space-y-2">
-            <Label htmlFor="contact" className="text-sm font-medium flex items-center gap-1">
-              <UserPlus className="h-4 w-4" />
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="contact" className="text-xs sm:text-sm font-medium flex items-center gap-1">
+              <UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Assign to Contact
             </Label>
             <Select
@@ -182,7 +187,7 @@ export default function CreateTaskModal({
                 setFormData({ ...formData, contactName: value })
               }
             >
-              <SelectTrigger id="contact">
+              <SelectTrigger id="contact" className="text-sm">
                 <SelectValue placeholder="Select a contact" />
               </SelectTrigger>
               <SelectContent>
@@ -195,12 +200,12 @@ export default function CreateTaskModal({
           </div>
 
           {/* Priority */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium flex items-center gap-1">
-              <FileText className="h-4 w-4" />
+          <div className="space-y-1 sm:space-y-2">
+            <Label className="text-xs sm:text-sm font-medium flex items-center gap-1">
+              <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Priority
             </Label>
-            <div className="flex gap-2">
+            <div className="flex gap-1 sm:gap-2">
               {["low", "medium", "high"].map((priority) => (
                 <button
                   key={priority}
@@ -211,7 +216,7 @@ export default function CreateTaskModal({
                       priority: priority as "low" | "medium" | "high",
                     })
                   }
-                  className={`flex-1 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all ${
+                  className={`flex-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border text-[11px] sm:text-sm font-medium transition-all ${
                     formData.priority === priority
                       ? priority === "high"
                         ? "border-red-500 bg-red-50 text-red-700"
@@ -228,10 +233,10 @@ export default function CreateTaskModal({
           </div>
 
           {/* Due Date & Time */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="dueDate" className="text-sm font-medium flex items-center gap-1">
-                <Calendar className="h-4 w-4" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+            <div className="space-y-1 sm:space-y-2">
+              <Label htmlFor="dueDate" className="text-xs sm:text-sm font-medium flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Due Date <span className="text-red-500">*</span>
               </Label>
               <Input
@@ -242,13 +247,13 @@ export default function CreateTaskModal({
                   setFormData({ ...formData, dueDate: e.target.value })
                 }
                 required
-                className="w-full"
+                className="w-full text-sm"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="dueTime" className="text-sm font-medium flex items-center gap-1">
-                <Calendar className="h-4 w-4" />
+            <div className="space-y-1 sm:space-y-2">
+              <Label htmlFor="dueTime" className="text-xs sm:text-sm font-medium flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Time
               </Label>
               <Input
@@ -258,30 +263,30 @@ export default function CreateTaskModal({
                 onChange={(e) =>
                   setFormData({ ...formData, dueTime: e.target.value })
                 }
-                className="w-full"
+                className="w-full text-sm"
               />
             </div>
           </div>
 
           {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description" className="text-sm font-medium">
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="description" className="text-xs sm:text-sm font-medium">
               Description (optional)
             </Label>
             <textarea
               id="description"
-              placeholder="Add any additional details about this task..."
+              placeholder="Add details..."
               value={formData.description}
               onChange={(e) =>
                 setFormData({ ...formData, description: e.target.value })
               }
-              rows={2}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-sm"
+              rows={1}
+              className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-xs sm:text-sm"
             />
           </div>
 
           {/* Checkboxes */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-6">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-6">
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -290,9 +295,9 @@ export default function CreateTaskModal({
                 onChange={(e) =>
                   setFormData({ ...formData, enableReminder: e.target.checked })
                 }
-                className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
               />
-              <Label htmlFor="reminder" className="text-sm font-medium cursor-pointer flex items-center gap-1">
+              <Label htmlFor="reminder" className="text-xs sm:text-sm font-medium cursor-pointer flex items-center gap-1">
                 <span className="text-red-500">🔔</span>
                 Enable Reminder
               </Label>
@@ -306,16 +311,16 @@ export default function CreateTaskModal({
                 onChange={(e) =>
                   setFormData({ ...formData, isAutomated: e.target.checked })
                 }
-                className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
               />
-              <Label htmlFor="automated" className="text-sm font-medium cursor-pointer">
+              <Label htmlFor="automated" className="text-xs sm:text-sm font-medium cursor-pointer">
                 Make this an automated task
               </Label>
             </div>
           </div>
 
           {/* Footer Buttons */}
-          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-2">
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-1.5 sm:gap-3 pt-1 sm:pt-2 mt-2">
             <Button
               type="button"
               variant="outline"
