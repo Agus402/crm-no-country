@@ -3,7 +3,7 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import CreateAutomationRuleModal from "@/components/tasks/CreateAutomationRuleModal";
+import CreateAutomationRuleModal, { AutomationRule } from "@/components/tasks/CreateAutomationRuleModal";
 
 export interface Workflow {
   id: string;
@@ -14,7 +14,7 @@ export interface Workflow {
 
 interface AutomatedWorkflowsProps {
   workflows: Workflow[];
-  onCreateRule?: (rule: any) => void;
+  onCreateRule?: (rule: AutomationRule) => void;
 }
 
 export default function AutomatedWorkflows({
@@ -23,11 +23,10 @@ export default function AutomatedWorkflows({
 }: AutomatedWorkflowsProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  const handleCreateRule = (rule: any) => {
+  const handleCreateRule = (rule: AutomationRule) => {
     if (onCreateRule) {
       onCreateRule(rule);
     }
-    console.log("New automation rule:", rule);
   };
 
   return (

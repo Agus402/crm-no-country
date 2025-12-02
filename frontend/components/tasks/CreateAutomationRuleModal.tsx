@@ -60,6 +60,18 @@ export default function CreateAutomationRuleModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Manual validation
+    if (!trigger) {
+      alert("Please select a trigger event");
+      return;
+    }
+    
+    if (actions.some(action => !action.type)) {
+      alert("Please select an action type for all actions");
+      return;
+    }
+    
     onCreateRule({
       name: ruleName,
       trigger,
@@ -150,7 +162,7 @@ export default function CreateAutomationRuleModal({
                 <Label htmlFor="trigger" className="text-xs sm:text-sm">
                   Trigger Event
                 </Label>
-                <Select value={trigger} onValueChange={(value) => setTrigger(value as TriggerType)} required>
+                <Select value={trigger} onValueChange={(value) => setTrigger(value as TriggerType)}>
                   <SelectTrigger id="trigger" className="bg-white text-sm">
                     <SelectValue placeholder="Select a trigger" />
                   </SelectTrigger>
@@ -260,7 +272,6 @@ export default function CreateAutomationRuleModal({
                       onValueChange={(value) =>
                         updateAction(action.id, "type", value)
                       }
-                      required
                     >
                       <SelectTrigger className="bg-white text-sm">
                         <SelectValue placeholder="Select action" />
