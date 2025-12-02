@@ -46,4 +46,8 @@ public class CrmLead {
     )
     private Set<Tag> tag;
 
+    @ManyToOne
+    @JoinColumn(name = "account_id")
+    private Account account;
+
 }

@@ -12,6 +12,6 @@ public record UpdateCrmLeadDTO(
         String phone,
         Stage stage,
         Channel channel,
-        Set<Long> tagIds
-
+        Set<Long> tagIds,
+        Long accountId
 ) {}
