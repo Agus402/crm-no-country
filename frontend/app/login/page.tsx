@@ -16,8 +16,8 @@ export default function LoginPage() {
     setError("");
     try {
       await login(email, password);
-    } catch (err) {
-      setError("Credenciales incorrectas o error en el servidor");
+    } catch (err: any) {
+      setError(err.message || "Credenciales incorrectas o error en el servidor");
     }
   };
 
@@ -39,6 +39,12 @@ export default function LoginPage() {
       <p className="text-gray-600 mb-2">
         Accede a tu panel para gestionar contactos y clientes.
       </p>
+
+      {error && (
+        <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-200">
+          {error}
+        </div>
+      )}
 
       <div className="flex flex-col gap-1">
         <label className="text-sm text-gray-600">Email</label>

@@ -28,7 +28,10 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState({
     password: "",
     phone: "",
-    email: ""
+    email: "",
+    companyName: "",
+    industry: "",
+    submit: ""
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -38,7 +41,7 @@ export default function RegisterPage() {
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
 
-    let newErrors = { password: "", phone: "", email: "" };
+    let newErrors = { password: "", phone: "", email: "", companyName: "", industry: "", submit: "" };
     let hasError = false;
 
     // VALIDACIONES STEP 1
@@ -47,17 +50,17 @@ export default function RegisterPage() {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
       if (!emailRegex.test(formData.email)) {
-        newErrors.email = "Enter a valid email address.";
+        newErrors.email = "Ingrese una dirección de correo válida.";
         hasError = true;
       }
 
       if (formData.password.length < 6) {
-        newErrors.password = "Password must be at least 6 characters long";
+        newErrors.password = "La contraseña debe tener al menos 6 caracteres.";
         hasError = true;
       }
 
       if (formData.password !== formData.confirmPassword) {
-        newErrors.password = "Passwords do not match";
+        newErrors.password = "Las contraseñas no coinciden.";
         hasError = true;
       }
 
@@ -65,7 +68,7 @@ export default function RegisterPage() {
       if (hasError) return;
 
       // Si todo ok → avanzar
-      setErrors({ password: "", phone: "", email: "" });
+      setErrors({ password: "", phone: "", email: "", companyName: "", industry: "", submit: "" });
       setStep(2);
       return;
     }
@@ -77,15 +80,27 @@ export default function RegisterPage() {
 
       const phoneDigits = formData.phone.replace(/\D/g, ""); // solo números reales
 
+      // VALIDACIÓN NOMBRE EMPRESA
+      if (formData.accountType === "company" && !formData.companyName.trim()) {
+        newErrors.companyName = "El nombre de la empresa es obligatorio.";
+        hasError = true;
+      }
+
+      // VALIDACIÓN INDUSTRIA
+      if (!formData.industry) {
+        newErrors.industry = "Debe seleccionar una industria.";
+        hasError = true;
+      }
+
       // TELÉFONO OBLIGATORIO
       if (!formData.phone.trim()) {
-        newErrors.phone = "Phone number is required.";
+        newErrors.phone = "El número de teléfono es obligatorio.";
         hasError = true;
       } else if (!phoneRegex.test(formData.phone)) {
-        newErrors.phone = "Phone number contains invalid characters.";
+        newErrors.phone = "El número de teléfono contiene caracteres inválidos.";
         hasError = true;
       } else if (phoneDigits.length < 7 || phoneDigits.length > 15) {
-        newErrors.phone = "Phone number must have between 7 and 15 digits.";
+        newErrors.phone = "El número de teléfono debe tener entre 7 y 15 dígitos.";
         hasError = true;
       }
 
@@ -109,9 +124,9 @@ export default function RegisterPage() {
         password: formData.password
       };
       await registerAccount(payload);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Registration failed", error);
-      // Handle error (show message to user)
+      setErrors(prev => ({ ...prev, submit: error.message || "Error al registrar la cuenta. Intente nuevamente." }));
     }
   };
 
@@ -133,6 +148,12 @@ export default function RegisterPage() {
         <div className={`h-1.5 w-16 rounded-full transition-colors duration-300 ${step >= 1 ? "bg-purple-600" : "bg-gray-200"}`} />
         <div className={`h-1.5 w-16 rounded-full transition-colors duration-300 ${step >= 2 ? "bg-purple-600" : "bg-gray-200"}`} />
       </div>
+
+      {errors.submit && (
+        <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-200 mb-6">
+          {errors.submit}
+        </div>
+      )}
 
       <form onSubmit={handleNext} className="flex flex-col gap-4">
 
@@ -246,6 +267,7 @@ export default function RegisterPage() {
                   required={formData.accountType === "company"}
                 />
               </div>
+              {errors.companyName && <p className="text-sm text-red-500">{errors.companyName}</p>}
             </div>
 
             {/* INDUSTRY */}
@@ -265,6 +287,7 @@ export default function RegisterPage() {
                 <option value="finance">Finance</option>
                 <option value="other">Other</option>
               </select>
+              {errors.industry && <p className="text-sm text-red-500">{errors.industry}</p>}
             </div>
 
             {/* WEBSITE + PHONE */}

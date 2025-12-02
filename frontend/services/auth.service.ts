@@ -8,11 +8,24 @@ export const authService = {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({ email, password }),
-            credentials: "include", // Importante para enviar/recibir cookies
+            credentials: "include",
         });
 
         if (!response.ok) {
-            throw new Error("Error al iniciar sesión");
+            const errorBody = await response.text();
+            let errorMessage = "Error al iniciar sesión";
+            try {
+                const errorJson = JSON.parse(errorBody);
+                if (errorJson.message === "Bad credentials") {
+                    errorMessage = "Credenciales incorrectas. Verifique su email y contraseña.";
+                } else if (errorJson.message) {
+                    errorMessage = errorJson.message;
+                }
+            } catch {
+                // Si no es JSON, usar el texto plano si existe
+                if (errorBody) errorMessage = errorBody;
+            }
+            throw new Error(errorMessage);
         }
 
         return response.json();
@@ -29,7 +42,17 @@ export const authService = {
         });
 
         if (!response.ok) {
-            throw new Error("Error al registrarse");
+            const errorBody = await response.text();
+            let errorMessage = "Error al registrarse";
+            try {
+                const errorJson = JSON.parse(errorBody);
+                if (errorJson.message) {
+                    errorMessage = errorJson.message;
+                }
+            } catch {
+                if (errorBody) errorMessage = errorBody;
+            }
+            throw new Error(errorMessage);
         }
 
         return response.json();
@@ -46,7 +69,17 @@ export const authService = {
         });
 
         if (!response.ok) {
-            throw new Error("Error al registrar cuenta");
+            const errorBody = await response.text();
+            let errorMessage = "Error al registrar cuenta";
+            try {
+                const errorJson = JSON.parse(errorBody);
+                if (errorJson.message) {
+                    errorMessage = errorJson.message;
+                }
+            } catch {
+                if (errorBody) errorMessage = errorBody;
+            }
+            throw new Error(errorMessage);
         }
 
         return response.json();
