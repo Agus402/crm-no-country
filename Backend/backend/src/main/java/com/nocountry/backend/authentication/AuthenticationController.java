@@ -64,6 +64,17 @@ public class AuthenticationController {
                 .build());
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletResponse response) {
+        Cookie cookie = new Cookie("jwt", null);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(secureCookie);
+        cookie.setPath("/");
+        cookie.setMaxAge(0); // Eliminar cookie
+        response.addCookie(cookie);
+        return ResponseEntity.ok().build();
+    }
+
     private void setJwtCookie(HttpServletResponse response, String token) {
         Cookie cookie = new Cookie("jwt", token);
         cookie.setHttpOnly(true);

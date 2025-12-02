@@ -11,6 +11,7 @@ interface AuthContextType {
     registerAccount: (data: any) => Promise<void>;
     logout: () => void;
     isAuthenticated: boolean;
+    isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,17 +19,20 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<any>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
 
     useEffect(() => {
         const checkAuth = async () => {
             try {
                 const userData = await authService.getCurrentUser();
-                setUser(userData); // O lo que devuelva el endpoint /me
+                setUser(userData);
                 setIsAuthenticated(true);
             } catch (error) {
                 setIsAuthenticated(false);
                 setUser(null);
+            } finally {
+                setIsLoading(false);
             }
         };
         checkAuth();
@@ -37,7 +41,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const login = async (email: string, password: string) => {
         try {
             await authService.login(email, password);
-            // El token ya está en la cookie, validamos sesión
             const userData = await authService.getCurrentUser();
             setIsAuthenticated(true);
             setUser(userData);
@@ -51,7 +54,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const register = async (data: any) => {
         try {
             await authService.register(data);
-            // El token ya está en la cookie
             const userData = await authService.getCurrentUser();
             setIsAuthenticated(true);
             setUser(userData);
@@ -65,7 +67,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const registerAccount = async (data: any) => {
         try {
             await authService.registerAccount(data);
-            // El token ya está en la cookie
             const userData = await authService.getCurrentUser();
             setIsAuthenticated(true);
             setUser(userData);
@@ -76,17 +77,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const logout = () => {
-        // Idealmente llamar a un endpoint de logout para borrar la cookie en el servidor
-        // Por ahora borramos el estado local. La cookie persistirá hasta que expire o se borre.
-        // TODO: Implementar endpoint de logout en backend
+    const logout = async () => {
+        try {
+            await authService.logout();
+        } catch (error) {
+            console.error("Logout failed", error);
+        }
         setIsAuthenticated(false);
         setUser(null);
         router.push("/login");
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, register, registerAccount, logout, isAuthenticated }}>
+        <AuthContext.Provider value={{ user, login, register, registerAccount, logout, isAuthenticated, isLoading }}>
             {children}
         </AuthContext.Provider>
     );
