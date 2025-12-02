@@ -2,26 +2,28 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (email === "admin@example.com" && password === "123456") {
-      document.cookie = "auth=true; path=/";
-      router.push("/");
-    } else {
-      alert("Credenciales incorrectas");
+    setError("");
+    try {
+      await login(email, password);
+    } catch (err: any) {
+      setError(err.message || "Credenciales incorrectas o error en el servidor");
     }
   };
 
   return (
     <form onSubmit={handleLogin} className="flex flex-col gap-4 w-full">
-      
+
       {/* LOGO */}
       <div className="flex items-center gap-3 mb-4">
         <div className="w-10 h-10 bg-linear-to-br from-purple-600 via-orange-500 to-purple-600 flex items-center justify-center rounded-lg text-white text-xl">
@@ -37,6 +39,12 @@ export default function LoginPage() {
       <p className="text-gray-600 mb-2">
         Accede a tu panel para gestionar contactos y clientes.
       </p>
+
+      {error && (
+        <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-200">
+          {error}
+        </div>
+      )}
 
       <div className="flex flex-col gap-1">
         <label className="text-sm text-gray-600">Email</label>

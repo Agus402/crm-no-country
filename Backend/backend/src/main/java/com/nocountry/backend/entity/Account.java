@@ -1,6 +1,7 @@
 package com.nocountry.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -44,6 +45,7 @@ public class Account {
     // El 'owner_user_id' es la clave foránea en la tabla 'account'
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_user_id")
+    @JsonIgnoreProperties("account")
     private User owner;
 
     // Relación 1:N con USER (Miembros del equipo)
