@@ -102,6 +102,9 @@ public class AuthenticationService {
                 Account newAccount = Account.builder()
                                 .companyName(request.companyName())
                                 .industry(request.industry())
+                                .website(request.website())
+                                .phone(request.phone())
+                                .address(request.address())
                                 .createdAt(LocalDateTime.now())
                                 // .isActive(true) // Si decides volver a usar este campo
                                 .build();
