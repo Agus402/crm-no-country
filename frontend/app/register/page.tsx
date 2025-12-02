@@ -3,10 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import { ArrowLeft, ArrowRight, Building2, User, Briefcase } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { register } = useAuth();
   const [step, setStep] = useState(1);
 
   // Estado para datos
@@ -95,10 +97,20 @@ export default function RegisterPage() {
     }
   };
 
-  const handleSubmit = () => {
-    console.log("Datos de registro:", formData);
-    document.cookie = "auth=true; path=/"; // Simulación login
-    router.push("/");
+  const handleSubmit = async () => {
+    try {
+      const payload = {
+        companyName: formData.companyName,
+        industry: formData.industry,
+        userName: formData.fullName,
+        userEmail: formData.email,
+        password: formData.password
+      };
+      await register(payload);
+    } catch (error) {
+      console.error("Registration failed", error);
+      // Handle error (show message to user)
+    }
   };
 
   return (

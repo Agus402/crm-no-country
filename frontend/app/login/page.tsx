@@ -2,59 +2,28 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  const api_url = "http://localhost:8080/api";
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const response = await fetch(`${api_url}/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-      if (!response.ok) {
-        throw new Error("Error al registrar");
-      }
-      const data = await response.json();
-      console.log(data);
-      router.push("/login");
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  const [error, setError] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     try {
-      const response = await fetch(`${api_url}/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-      if (!response.ok) {
-        throw new Error("Error al iniciar sesión");
-      }
-      const data = await response.json();
-      console.log(data);
-      router.push("/");
-    } catch (error) {
-      console.error(error);
+      await login(email, password);
+    } catch (err) {
+      setError("Credenciales incorrectas o error en el servidor");
     }
   };
 
   return (
     <form onSubmit={handleLogin} className="flex flex-col gap-4 w-full">
-      
+
       {/* LOGO */}
       <div className="flex items-center gap-3 mb-4">
         <div className="w-10 h-10 bg-linear-to-br from-purple-600 via-orange-500 to-purple-600 flex items-center justify-center rounded-lg text-white text-xl">
