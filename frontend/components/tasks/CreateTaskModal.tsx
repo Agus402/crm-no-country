@@ -18,12 +18,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  CheckSquare,
+  Phone,
+  Mail,
+  Calendar,
+  FileText,
+  UserPlus,
+  MoreHorizontal,
+} from "lucide-react";
 
 interface CreateTaskModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreateTask: (task: NewTask) => void;
 }
+
+type TaskType = "follow-up-call" | "send-email" | "schedule-demo" | "send-proposal" | "client-onboarding" | "other";
 
 export interface NewTask {
   title: string;
@@ -32,7 +43,10 @@ export interface NewTask {
   priority: "high" | "medium" | "low";
   dueDate: string;
   dueTime: string;
-  type: "message" | "email" | "call";
+  type: TaskType;
+  description?: string;
+  enableReminder?: boolean;
+  isAutomated?: boolean;
 }
 
 export default function CreateTaskModal({
@@ -47,7 +61,10 @@ export default function CreateTaskModal({
     priority: "medium",
     dueDate: "",
     dueTime: "",
-    type: "message",
+    type: "follow-up-call",
+    description: "",
+    enableReminder: false,
+    isAutomated: false,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -56,12 +73,14 @@ export default function CreateTaskModal({
     // Generate initials from contact name if not provided
     const initials =
       formData.contactInitials ||
-      formData.contactName
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2);
+      (formData.contactName
+        ? formData.contactName
+            .split(" ")
+            .map((n) => n[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 2)
+        : "");
 
     onCreateTask({
       ...formData,
@@ -76,21 +95,42 @@ export default function CreateTaskModal({
       priority: "medium",
       dueDate: "",
       dueTime: "",
-      type: "message",
+      type: "follow-up-call",
+      description: "",
+      enableReminder: false,
+      isAutomated: false,
     });
     onOpenChange(false);
   };
 
+  const taskTypes = [
+    { value: "follow-up-call", label: "Follow-up Call", icon: Phone },
+    { value: "send-email", label: "Send Email", icon: Mail },
+    { value: "schedule-demo", label: "Schedule Demo", icon: Calendar },
+    { value: "send-proposal", label: "Send Proposal", icon: FileText },
+    { value: "client-onboarding", label: "Client Onboarding", icon: UserPlus },
+    { value: "other", label: "Other", icon: MoreHorizontal },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-[90vw] md:max-w-[650px]">
         <DialogHeader>
-          <DialogTitle>Create New Task</DialogTitle>
+          <div className="flex items-center gap-2">
+            <CheckSquare className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+            <DialogTitle className="text-base sm:text-lg">Create New Task</DialogTitle>
+          </div>
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">
+            Create a task to manage your follow-ups and workflow.
+          </p>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Task Title *</Label>
+        <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-3 mt-1 sm:mt-2 overflow-y-auto max-h-[calc(95vh-180px)] scrollbar-hide">
+          {/* Task Title */}
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="title" className="text-xs sm:text-sm font-medium">
+              Task Title <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="title"
               placeholder="e.g., Follow up with client about proposal"
@@ -99,71 +139,106 @@ export default function CreateTaskModal({
                 setFormData({ ...formData, title: e.target.value })
               }
               required
+              className="w-full text-sm"
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="contactName">Contact Name *</Label>
-              <Input
-                id="contactName"
-                placeholder="e.g., John Doe"
-                value={formData.contactName}
-                onChange={(e) =>
-                  setFormData({ ...formData, contactName: e.target.value })
-                }
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="type">Task Type *</Label>
-              <Select
-                value={formData.type}
-                onValueChange={(value) =>
-                  setFormData({
-                    ...formData,
-                    type: value as "message" | "email" | "call",
-                  })
-                }
-              >
-                <SelectTrigger id="type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="message">Message</SelectItem>
-                  <SelectItem value="email">Email</SelectItem>
-                  <SelectItem value="call">Call</SelectItem>
-                </SelectContent>
-              </Select>
+          {/* Task Type */}
+          <div className="space-y-1 sm:space-y-2">
+            <Label className="text-xs sm:text-sm font-medium">
+              Task Type <span className="text-red-500">*</span>
+            </Label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2">
+              {taskTypes.map((type) => {
+                const Icon = type.icon;
+                return (
+                  <button
+                    key={type.value}
+                    type="button"
+                    onClick={() =>
+                      setFormData({ 
+                        ...formData, 
+                        type: type.value as TaskType
+                      })
+                    }
+                    className={`flex items-center justify-center sm:justify-start gap-1 sm:gap-2 px-2 py-1 sm:py-1.5 rounded-lg border transition-all text-[11px] sm:text-xs ${
+                      formData.type === type.value
+                        ? "border-purple-600 bg-purple-50 text-purple-700"
+                        : "border-gray-200 hover:border-gray-300 text-gray-700"
+                    }`}
+                  >
+                    <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
+                    <span className="truncate text-[10px] sm:text-xs">{type.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="priority">Priority *</Label>
+          {/* Assign to Contact */}
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="contact" className="text-xs sm:text-sm font-medium flex items-center gap-1">
+              <UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Assign to Contact
+            </Label>
             <Select
-              value={formData.priority}
+              value={formData.contactName}
               onValueChange={(value) =>
-                setFormData({
-                  ...formData,
-                  priority: value as "high" | "medium" | "low",
-                })
+                setFormData({ ...formData, contactName: value })
               }
             >
-              <SelectTrigger id="priority">
-                <SelectValue />
+              <SelectTrigger id="contact" className="text-sm">
+                <SelectValue placeholder="Select a contact" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="John Martinez">John Martinez</SelectItem>
+                <SelectItem value="Emma Wilson">Emma Wilson</SelectItem>
+                <SelectItem value="Michael Chen">Michael Chen</SelectItem>
+                <SelectItem value="Sofia Rodriguez">Sofia Rodriguez</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="dueDate">Due Date *</Label>
+          {/* Priority */}
+          <div className="space-y-1 sm:space-y-2">
+            <Label className="text-xs sm:text-sm font-medium flex items-center gap-1">
+              <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Priority
+            </Label>
+            <div className="flex gap-1 sm:gap-2">
+              {["low", "medium", "high"].map((priority) => (
+                <button
+                  key={priority}
+                  type="button"
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      priority: priority as "low" | "medium" | "high",
+                    })
+                  }
+                  className={`flex-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border text-[11px] sm:text-sm font-medium transition-all ${
+                    formData.priority === priority
+                      ? priority === "high"
+                        ? "border-red-500 bg-red-50 text-red-700"
+                        : priority === "medium"
+                        ? "border-orange-500 bg-orange-50 text-orange-700"
+                        : "border-gray-400 bg-gray-50 text-gray-700"
+                      : "border-gray-200 hover:border-gray-300 text-gray-600"
+                  }`}
+                >
+                  {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Due Date & Time */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+            <div className="space-y-1 sm:space-y-2">
+              <Label htmlFor="dueDate" className="text-xs sm:text-sm font-medium flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Due Date <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="dueDate"
                 type="date"
@@ -172,11 +247,15 @@ export default function CreateTaskModal({
                   setFormData({ ...formData, dueDate: e.target.value })
                 }
                 required
+                className="w-full text-sm"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="dueTime">Due Time *</Label>
+            <div className="space-y-1 sm:space-y-2">
+              <Label htmlFor="dueTime" className="text-xs sm:text-sm font-medium flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Time
+              </Label>
               <Input
                 id="dueTime"
                 type="time"
@@ -184,12 +263,64 @@ export default function CreateTaskModal({
                 onChange={(e) =>
                   setFormData({ ...formData, dueTime: e.target.value })
                 }
-                required
+                className="w-full text-sm"
               />
             </div>
           </div>
 
-          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+          {/* Description */}
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="description" className="text-xs sm:text-sm font-medium">
+              Description (optional)
+            </Label>
+            <textarea
+              id="description"
+              placeholder="Add details..."
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              rows={1}
+              className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-xs sm:text-sm"
+            />
+          </div>
+
+          {/* Checkboxes */}
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-6">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="reminder"
+                checked={formData.enableReminder}
+                onChange={(e) =>
+                  setFormData({ ...formData, enableReminder: e.target.checked })
+                }
+                className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+              />
+              <Label htmlFor="reminder" className="text-xs sm:text-sm font-medium cursor-pointer flex items-center gap-1">
+                <span className="text-red-500">🔔</span>
+                Enable Reminder
+              </Label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="automated"
+                checked={formData.isAutomated}
+                onChange={(e) =>
+                  setFormData({ ...formData, isAutomated: e.target.checked })
+                }
+                className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+              />
+              <Label htmlFor="automated" className="text-xs sm:text-sm font-medium cursor-pointer">
+                Make this an automated task
+              </Label>
+            </div>
+          </div>
+
+          {/* Footer Buttons */}
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-1.5 sm:gap-3 pt-1 sm:pt-2 mt-2">
             <Button
               type="button"
               variant="outline"
