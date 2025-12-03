@@ -25,9 +25,6 @@ public interface TaskMapper {
 
     @Named("mapUserSummary")
     @Mapping(target = "account", ignore = true)
-    @Mapping(target = "role", ignore = true)
-    @Mapping(target = "active", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
     UserDTO toUserDTO(User user);
 
     @Named("mapContactSummary")

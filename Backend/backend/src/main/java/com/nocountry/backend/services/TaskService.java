@@ -24,7 +24,7 @@ public class TaskService {
 
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
-    private final CrmLeadRepository crmLeadRepository; // Asegúrate de importar el repo correcto
+    private final CrmLeadRepository crmLeadRepository;
     private final TaskMapper taskMapper;
 
     @Transactional
@@ -48,8 +48,6 @@ public class TaskService {
 
     @Transactional
     public List<TaskDTO> findAutomatedTasks(Long userId) {
-        // Usa el método derivado para el filtro específico:
-        // isCompleted = false, isAutomated = true
         List<Task> tasks = taskRepository.findByAssignedToIdAndIsCompletedAndIsAutomated(userId, false, true);
         return taskMapper.toDTOList(tasks);
     }

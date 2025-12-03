@@ -92,10 +92,10 @@ public class AuthenticationService {
 
                 // 1. Validar si el usuario o la empresa ya existen (Opcional pero recomendado)
                 if (userRepository.findByEmail(request.userEmail()).isPresent()) {
-                        throw new RuntimeException("El email del usuario ya está registrado.");
+                        throw new RuntimeException("User email is already registered.");
                 }
                 if (accountRepository.findByCompanyName(request.companyName()).isPresent()) {
-                        throw new RuntimeException("El nombre de la empresa ya está registrado.");
+                        throw new RuntimeException("Company name is already registered.");
                 }
 
                 // 2. Crear y Guardar la Cuenta (Empresa)
