@@ -8,6 +8,7 @@ import StatsCards from "./components/StatsCards";
 import TaskList, { Task } from "./components/TaskList";
 import SmartReminders, { Reminder } from "./components/SmartReminders";
 import AutomatedWorkflows, { Workflow } from "./components/AutomatedWorkflows";
+import { AutomationRule } from "@/components/tasks/CreateAutomationRuleModal";
 
 export default function TasksPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -20,7 +21,7 @@ export default function TasksPage() {
       priority: "high",
       dueDate: "Today",
       dueTime: "2:00 PM",
-      type: "message",
+      type: "follow-up-call",
       completed: false,
     },
     {
@@ -31,7 +32,7 @@ export default function TasksPage() {
       priority: "high",
       dueDate: "Today",
       dueTime: "4:30 PM",
-      type: "email",
+      type: "send-proposal",
       completed: false,
     },
     {
@@ -42,7 +43,7 @@ export default function TasksPage() {
       priority: "medium",
       dueDate: "Tomorrow",
       dueTime: "10:00 AM",
-      type: "call",
+      type: "schedule-demo",
       completed: false,
     },
     {
@@ -53,7 +54,7 @@ export default function TasksPage() {
       priority: "low",
       dueDate: "Tomorrow",
       dueTime: "9:00 AM",
-      type: "message",
+      type: "send-email",
       isAuto: true,
       completed: false,
     },
@@ -65,7 +66,7 @@ export default function TasksPage() {
       priority: "medium",
       dueDate: "Dec 12",
       dueTime: "2:00 PM",
-      type: "email",
+      type: "client-onboarding",
       completed: true,
     },
     {
@@ -76,7 +77,7 @@ export default function TasksPage() {
       priority: "low",
       dueDate: "Dec 15",
       dueTime: "9:00 AM",
-      type: "email",
+      type: "send-email",
       isAuto: true,
       completed: false,
     },
@@ -89,11 +90,11 @@ export default function TasksPage() {
     { id: "4", text: "5 leads need follow-up this week", time: "1 day ago" },
   ];
 
-  const workflows: Workflow[] = [
+  const [workflows, setWorkflows] = useState<Workflow[]>([
     { id: "1", name: "Lead Nurture Sequence", contactCount: "5 contacts in sequence", status: "Active" },
     { id: "2", name: "Inactive Lead Re-engagement", contactCount: "12 contacts in sequence", status: "Active" },
     { id: "3", name: "Client Onboarding", contactCount: "0 contacts in sequence", status: "Paused" },
-  ];
+  ]);
 
   const handleCreateTask = (newTask: NewTask) => {
     const task: Task = {
@@ -116,6 +117,16 @@ export default function TasksPage() {
         return task;
       })
     );
+  };
+
+  const handleCreateRule = (rule: AutomationRule) => {
+    const newWorkflow: Workflow = {
+      id: Date.now().toString(),
+      name: rule.name,
+      contactCount: "0 contacts in sequence",
+      status: "Active",
+    };
+    setWorkflows([...workflows, newWorkflow]);
   };
 
   const pendingTasks = tasks.filter((t) => !t.completed);
@@ -160,7 +171,7 @@ export default function TasksPage() {
         {/* Right Column - Smart Reminders & Automated Workflows */}
         <div className="space-y-6">
           <SmartReminders reminders={reminders} />
-          <AutomatedWorkflows workflows={workflows} />
+          <AutomatedWorkflows workflows={workflows} onCreateRule={handleCreateRule} />
         </div>
       </div>
 

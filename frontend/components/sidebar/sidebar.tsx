@@ -1,17 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation"; 
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import {LayoutDashboard,Users, MessageSquare, CheckSquare, Settings, Sparkles, Menu, LogOut,  ChevronsUpDown } from "lucide-react";
+import { LayoutDashboard, Users, MessageSquare, CheckSquare, Settings, Sparkles, Menu, LogOut, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
 
+// ... imports
+import { useAuth } from "@/context/AuthContext";
+
 function SidebarContent({ onClick }: { onClick?: () => void }) {
   const pathname = usePathname();
-  const router = useRouter(); // Inicializamos el router
+  const router = useRouter();
+  const { user, logout } = useAuth(); // Usar hook de autenticación
 
   const menuItems = [
     {
@@ -21,36 +25,43 @@ function SidebarContent({ onClick }: { onClick?: () => void }) {
       active: pathname === "/",
     },
     {
-      name: "Contacts",
+      name: "Contactos",
       href: "/contacts",
       icon: Users,
       active: pathname === "/contacts",
     },
     {
-      name: "Messages",
+      name: "Mensajes",
       href: "/messages",
       icon: MessageSquare,
       active: pathname === "/messages",
     },
     {
-      name: "Tasks",
+      name: "Tareas",
       href: "/tasks",
       icon: CheckSquare,
       active: pathname === "/tasks",
     },
     {
-      name: "Settings",
+      name: "Configuración",
       href: "/settings",
       icon: Settings,
       active: pathname === "/settings",
     },
   ];
 
-  // Función para cerrar sesión
   const handleLogout = () => {
-    // Aquí podrías limpiar cookies o tokens si tuvieras lógica real
-    console.log("Cerrando sesión..."); 
-    router.push("/login"); // Redirige al login
+    logout(); // Usar función logout del contexto
+  };
+
+  // Obtener iniciales del usuario
+  const getInitials = (name: string) => {
+    return name
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .substring(0, 2) || "U";
   };
 
   return (
@@ -103,31 +114,31 @@ function SidebarContent({ onClick }: { onClick?: () => void }) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             {/* Convertimos el div en un botón interactivo */}
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               className="w-full flex items-center justify-between gap-3 h-auto px-2 py-3 hover:bg-gray-100 rounded-lg group"
             >
               <div className="flex items-center gap-3 text-left">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-600 text-sm font-semibold text-white">
-                  JD
+                  {getInitials(user?.name)}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-900 group-hover:text-gray-900">John Doe</p>
+                  <p className="text-sm font-medium text-gray-900 group-hover:text-gray-900">{user?.name || "Usuario"}</p>
                   <p className="truncate text-xs text-gray-500 font-normal">
-                    john@startup.com
+                    {user?.email || "email@example.com"}
                   </p>
                 </div>
               </div>
               <ChevronsUpDown className="h-4 w-4 text-gray-400" />
             </Button>
           </DropdownMenuTrigger>
-          
+
           <DropdownMenuContent align="end" className="w-56" side="top" sideOffset={10}>
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            
+
             {/* Botón de Log out */}
-            <DropdownMenuItem 
+            <DropdownMenuItem
               onClick={handleLogout}
               className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
             >
@@ -171,12 +182,12 @@ export function MobileSidebar() {
           <span className="sr-only">Open menu</span>
         </Button>
       </SheetTrigger>
-      
+
       <SheetContent side="left" className="p-0 w-64 border-r">
         <SheetHeader className="sr-only">
           <SheetTitle>Menu</SheetTitle>
         </SheetHeader>
-        
+
         <SidebarContent onClick={() => setOpen(false)} />
       </SheetContent>
     </Sheet>

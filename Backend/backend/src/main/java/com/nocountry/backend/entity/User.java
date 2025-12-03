@@ -1,6 +1,7 @@
 package com.nocountry.backend.entity;
 
 import com.nocountry.backend.enums.Role;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -47,6 +48,7 @@ public class User implements UserDetails {
     // Relación N:1 con ACCOUNT (Empresa a la que pertenece el equipo)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id")
+    @JsonIgnoreProperties({ "owner", "users" })
     private Account account;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -66,10 +68,14 @@ public class User implements UserDetails {
     }
 
     @Override
-    public String getUsername() { return email; }
+    public String getUsername() {
+        return email;
+    }
 
     @Override
-    public String getPassword() { return password; }
+    public String getPassword() {
+        return password;
+    }
 
     @Override
     public boolean isAccountNonExpired() {
