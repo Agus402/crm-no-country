@@ -20,6 +20,7 @@ public interface TaskMapper {
     // Especificamos métodos "Named" para las relaciones para controlar qué campos se llenan (y romper ciclos).
     @Mapping(target = "crmLeadDTO", source = "crmLead", qualifiedByName = "mapContactSummary")
     @Mapping(target = "assignedTo", source = "assignedTo", qualifiedByName = "mapUserSummary")
+    @Mapping(target = "completed", source = "isCompleted")
     // Si tu campo en el DTO se llama 'crmLeadDTO' en vez de 'contact', usa: @Mapping(target = "crmLeadDTO", source = "contact", ...)
     TaskDTO toDTO(Task task);
 
