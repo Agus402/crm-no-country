@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CreateTaskModal, { NewTask } from "@/components/tasks/CreateTaskModal";
@@ -9,79 +9,76 @@ import TaskList, { Task } from "./components/TaskList";
 import SmartReminders, { Reminder } from "./components/SmartReminders";
 import AutomatedWorkflows, { Workflow } from "./components/AutomatedWorkflows";
 import { AutomationRule } from "@/components/tasks/CreateAutomationRuleModal";
+import { taskService, TaskDTO, Priority } from "@/services/task.service";
+
+// Helper function to convert TaskDTO to Task
+function mapTaskDTOToTask(dto: TaskDTO): Task {
+  const dueDate = new Date(dto.dueDate);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const taskDate = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+  
+  let dueDateStr = "";
+  if (taskDate.getTime() === today.getTime()) {
+    dueDateStr = "Today";
+  } else if (taskDate.getTime() === today.getTime() + 86400000) {
+    dueDateStr = "Tomorrow";
+  } else {
+    dueDateStr = dueDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
+
+  const dueTimeStr = dueDate.toLocaleTimeString("en-US", { 
+    hour: "numeric", 
+    minute: "2-digit",
+    hour12: true 
+  });
+
+  const initials = dto.crmLeadDTO.name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  return {
+    id: dto.id.toString(),
+    title: dto.title,
+    contactName: dto.crmLeadDTO.name,
+    contactInitials: initials,
+    priority: dto.priority.toLowerCase() as "high" | "medium" | "low",
+    dueDate: dueDateStr,
+    dueTime: dueTimeStr,
+    type: "other" as const,
+    completed: dto.completed,
+    description: dto.description || undefined,
+  };
+}
 
 export default function TasksPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: "1",
-      title: "Follow up with John Martinez about Enterprise plan",
-      contactName: "John Martinez",
-      contactInitials: "JM",
-      priority: "high",
-      dueDate: "Today",
-      dueTime: "2:00 PM",
-      type: "follow-up-call",
-      completed: false,
-    },
-    {
-      id: "2",
-      title: "Send pricing proposal to Emma Wilson",
-      contactName: "Emma Wilson",
-      contactInitials: "EW",
-      priority: "high",
-      dueDate: "Today",
-      dueTime: "4:30 PM",
-      type: "send-proposal",
-      completed: false,
-    },
-    {
-      id: "3",
-      title: "Schedule demo with Michael Chen",
-      contactName: "Michael Chen",
-      contactInitials: "MC",
-      priority: "medium",
-      dueDate: "Tomorrow",
-      dueTime: "10:00 AM",
-      type: "schedule-demo",
-      completed: false,
-    },
-    {
-      id: "4",
-      title: "Check in with inactive leads",
-      contactName: "Multiple contacts",
-      contactInitials: "MC",
-      priority: "low",
-      dueDate: "Tomorrow",
-      dueTime: "9:00 AM",
-      type: "send-email",
-      isAuto: true,
-      completed: false,
-    },
-    {
-      id: "5",
-      title: "Send onboarding materials to Sofia Rodriguez",
-      contactName: "Sofia Rodriguez",
-      contactInitials: "SR",
-      priority: "medium",
-      dueDate: "Dec 12",
-      dueTime: "2:00 PM",
-      type: "client-onboarding",
-      completed: true,
-    },
-    {
-      id: "6",
-      title: "Weekly performance report",
-      contactName: "Team",
-      contactInitials: "TM",
-      priority: "low",
-      dueDate: "Dec 15",
-      dueTime: "9:00 AM",
-      type: "send-email",
-      isAuto: true,
-      completed: false,
-    },
-  ]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load tasks from backend
+  useEffect(() => {
+    const loadTasks = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const taskDTOs = await taskService.getAll();
+        const mappedTasks = taskDTOs.map(mapTaskDTOToTask);
+        setTasks(mappedTasks);
+      } catch (err) {
+        console.error("Error loading tasks:", err);
+        setError(err instanceof Error ? err.message : "Error al cargar las tareas");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadTasks();
+  }, []);
 
   const reminders: Reminder[] = [
     { id: "1", text: "John Martinez hasn't responded in 3 days", time: "2 hours ago" },
@@ -96,27 +93,55 @@ export default function TasksPage() {
     { id: "3", name: "Client Onboarding", contactCount: "0 contacts in sequence", status: "Paused" },
   ]);
 
-  const handleCreateTask = (newTask: NewTask) => {
-    const task: Task = {
-      id: Date.now().toString(),
-      ...newTask,
-      completed: false,
-    };
-    setTasks([...tasks, task]);
+  const handleCreateTask = async (newTask: NewTask) => {
+    try {
+      // Combine date and time in ISO format for backend
+      // Format: YYYY-MM-DDTHH:mm:ss
+      let dueDateTime: string;
+      if (newTask.dueTime) {
+        // Convert time from HH:mm to proper format
+        const [hours, minutes] = newTask.dueTime.split(':');
+        dueDateTime = `${newTask.dueDate}T${hours}:${minutes}:00`;
+      } else {
+        dueDateTime = `${newTask.dueDate}T00:00:00`;
+      }
+
+      const taskDTO: {
+        title: string;
+        description?: string;
+        dueDate: string;
+        priority: Priority;
+        crmLead_Id: number;
+      } = {
+        title: newTask.title,
+        description: newTask.description,
+        dueDate: dueDateTime,
+        priority: newTask.priority.toUpperCase() as Priority,
+        crmLead_Id: newTask.contactId,
+      };
+
+      const createdTask = await taskService.create(taskDTO);
+      const mappedTask = mapTaskDTOToTask(createdTask);
+      setTasks([...tasks, mappedTask]);
+    } catch (err) {
+      console.error("Error creating task:", err);
+      setError(err instanceof Error ? err.message : "Error al crear la tarea");
+      throw err;
+    }
   };
 
-  const handleToggleTask = (id: string) => {
-    setTasks(
-      tasks.map((task) => {
-        if (task.id === id) {
-          return {
-            ...task,
-            completed: !task.completed,
-          };
-        }
-        return task;
-      })
-    );
+  const handleToggleTask = async (id: string) => {
+    try {
+      const taskId = parseInt(id);
+      const updatedTask = await taskService.toggleComplete(taskId);
+      const mappedTask = mapTaskDTOToTask(updatedTask);
+      setTasks(
+        tasks.map((task) => (task.id === id ? mappedTask : task))
+      );
+    } catch (err) {
+      console.error("Error toggling task:", err);
+      setError(err instanceof Error ? err.message : "Error al actualizar la tarea");
+    }
   };
 
   const handleCreateRule = (rule: AutomationRule) => {
@@ -133,6 +158,26 @@ export default function TasksPage() {
   const completedTasks = tasks.filter((t) => t.completed);
   const automatedTasks = tasks.filter((t) => t.isAuto);
   const dueTodayTasks = tasks.filter((t) => t.dueDate === "Today" && !t.completed);
+
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-6 md:p-8">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-gray-500">Cargando tareas...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 sm:p-6 md:p-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 md:p-8">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +27,7 @@ import {
   UserPlus,
   MoreHorizontal,
 } from "lucide-react";
+import { contactService, CrmLeadDTO } from "@/services/contact.service";
 
 interface CreateTaskModalProps {
   open: boolean;
@@ -39,6 +40,7 @@ type TaskType = "follow-up-call" | "send-email" | "schedule-demo" | "send-propos
 export interface NewTask {
   title: string;
   contactName: string;
+  contactId: number; // Add contact ID
   contactInitials: string;
   priority: "high" | "medium" | "low";
   dueDate: string;
@@ -54,9 +56,12 @@ export default function CreateTaskModal({
   onOpenChange,
   onCreateTask,
 }: CreateTaskModalProps) {
+  const [contacts, setContacts] = useState<CrmLeadDTO[]>([]);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
   const [formData, setFormData] = useState<NewTask>({
     title: "",
     contactName: "",
+    contactId: 0,
     contactInitials: "",
     priority: "medium",
     dueDate: "",
@@ -67,23 +72,45 @@ export default function CreateTaskModal({
     isAutomated: false,
   });
 
+  // Load contacts when modal opens
+  useEffect(() => {
+    if (open) {
+      const loadContacts = async () => {
+        try {
+          setIsLoadingContacts(true);
+          const contactsData = await contactService.getAll();
+          setContacts(contactsData);
+        } catch (error) {
+          console.error("Error loading contacts:", error);
+        } finally {
+          setIsLoadingContacts(false);
+        }
+      };
+      loadContacts();
+    }
+  }, [open]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Generate initials from contact name if not provided
-    const initials =
-      formData.contactInitials ||
-      (formData.contactName
-        ? formData.contactName
-            .split(" ")
-            .map((n) => n[0])
-            .join("")
-            .toUpperCase()
-            .slice(0, 2)
-        : "");
+    if (!formData.contactId) {
+      alert("Por favor selecciona un contacto");
+      return;
+    }
+
+    const selectedContact = contacts.find(c => c.id === formData.contactId);
+    const initials = selectedContact
+      ? selectedContact.name
+          .split(" ")
+          .map((n) => n[0])
+          .join("")
+          .toUpperCase()
+          .slice(0, 2)
+      : "";
 
     onCreateTask({
       ...formData,
+      contactName: selectedContact?.name || "",
       contactInitials: initials,
     });
 
@@ -91,6 +118,7 @@ export default function CreateTaskModal({
     setFormData({
       title: "",
       contactName: "",
+      contactId: 0,
       contactInitials: "",
       priority: "medium",
       dueDate: "",
@@ -179,22 +207,34 @@ export default function CreateTaskModal({
           <div className="space-y-1 sm:space-y-2">
             <Label htmlFor="contact" className="text-xs sm:text-sm font-medium flex items-center gap-1">
               <UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              Assign to Contact
+              Assign to Contact <span className="text-red-500">*</span>
             </Label>
             <Select
-              value={formData.contactName}
-              onValueChange={(value) =>
-                setFormData({ ...formData, contactName: value })
-              }
+              value={formData.contactId.toString()}
+              onValueChange={(value) => {
+                const contactId = parseInt(value);
+                const selectedContact = contacts.find(c => c.id === contactId);
+                setFormData({ 
+                  ...formData, 
+                  contactId,
+                  contactName: selectedContact?.name || ""
+                });
+              }}
+              disabled={isLoadingContacts}
             >
               <SelectTrigger id="contact" className="text-sm">
-                <SelectValue placeholder="Select a contact" />
+                <SelectValue placeholder={isLoadingContacts ? "Cargando contactos..." : "Select a contact"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="John Martinez">John Martinez</SelectItem>
-                <SelectItem value="Emma Wilson">Emma Wilson</SelectItem>
-                <SelectItem value="Michael Chen">Michael Chen</SelectItem>
-                <SelectItem value="Sofia Rodriguez">Sofia Rodriguez</SelectItem>
+                {contacts.length === 0 && !isLoadingContacts ? (
+                  <SelectItem value="0" disabled>No hay contactos disponibles</SelectItem>
+                ) : (
+                  contacts.map((contact) => (
+                    <SelectItem key={contact.id} value={contact.id.toString()}>
+                      {contact.name} {contact.email ? `(${contact.email})` : ""}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
