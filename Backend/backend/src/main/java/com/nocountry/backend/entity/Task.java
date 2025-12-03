@@ -37,6 +37,9 @@ public class Task {
     @Column(name = "is_completed")
     private boolean isCompleted = false;
 
+    @Column(name = "is_automated")
+    private Boolean isAutomated = false;
+
     @Enumerated(EnumType.STRING)
     private Priority priority;
 

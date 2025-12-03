@@ -4,7 +4,6 @@ import com.nocountry.backend.enums.Role;
 
 import java.time.LocalDateTime;
 
-// DTO de Respuesta (Salida hacia el Frontend)
 public record UserDTO(
 
         Long id,

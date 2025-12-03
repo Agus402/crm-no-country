@@ -14,6 +14,8 @@ public record CreateUpdateTaskDTO(
 
         String description,
 
+        Boolean isAutomated,
+
         @NotNull(message = "Task type is required")
         TaskType taskType,
 
@@ -27,5 +29,4 @@ public record CreateUpdateTaskDTO(
         @NotNull(message = "Contact ID is required")
         Long crmLead_Id
 
-        // El assignedTo (agente) se obtiene del JWT en el Controller
 ) {}

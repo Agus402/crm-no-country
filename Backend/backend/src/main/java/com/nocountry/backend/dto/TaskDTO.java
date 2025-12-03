@@ -19,11 +19,13 @@ public record TaskDTO(
 
         boolean completed,
 
+        Boolean isAutomated,
+
         LocalDateTime createdAt,
 
         Priority priority,
 
-        CrmLeadDTO crmLeadDTO,
+        CrmLeadDTO crmLead,
 
         UserDTO assignedTo
 
