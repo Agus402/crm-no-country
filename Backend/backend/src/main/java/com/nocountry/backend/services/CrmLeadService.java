@@ -2,15 +2,18 @@ package com.nocountry.backend.services;
 
 import com.nocountry.backend.dto.*;
 import com.nocountry.backend.entity.*;
+import com.nocountry.backend.enums.LeadHistoryAction;
 import com.nocountry.backend.enums.Stage;
 import com.nocountry.backend.repository.*;
 import com.nocountry.backend.mappers.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
 @Service
 @RequiredArgsConstructor
 public class CrmLeadService {
@@ -18,6 +21,7 @@ public class CrmLeadService {
     private final CrmLeadRepository crmLeadRepository;
     private final TagRepository tagRepository;
     private final CrmLeadMapper crmLeadMapper;
+    private final LeadHistoryService leadHistoryService;
 
     public CrmLeadDTO create(CreateCrmLeadDTO dto) {
 
@@ -52,6 +56,14 @@ public class CrmLeadService {
                 throw new RuntimeException("A lead with this email already exists");
             }
         }
+        CrmLead before = CrmLead.builder()
+                .id(crmLead.getId())
+                .name(crmLead.getName())
+                .email(crmLead.getEmail())
+                .phone(crmLead.getPhone())
+                .stage(crmLead.getStage())
+                .tag(new HashSet<>(crmLead.getTag()))
+                .build();
 
         crmLeadMapper.updateCrmLeadFromDto(dto, crmLead);
 
@@ -61,9 +73,12 @@ public class CrmLeadService {
 
         crmLead.setUpdatedAt(LocalDateTime.now());
 
-        return crmLeadMapper.toDTO(crmLeadRepository.save(crmLead));
-    }
+            CrmLead saved = crmLeadRepository.save(crmLead);
 
+            detectChangesAndLog(before, saved);
+
+            return crmLeadMapper.toDTO(saved);
+    }
 
 
     public void delete(Long id) {
@@ -75,6 +90,12 @@ public class CrmLeadService {
         crmLead.setUpdatedAt(LocalDateTime.now());
 
         crmLeadRepository.save(crmLead);
+        leadHistoryService.log(
+                crmLead,
+                LeadHistoryAction.STATUS_CHANGE,
+                "deleted",
+                "Lead moved to deleted (soft delete)"
+        );
     }
 
     public List<CrmLeadDTO> getAll(String name, String email, Stage stage) {
@@ -115,5 +136,52 @@ public class CrmLeadService {
                 .toList();
     }
 
+    private void detectChangesAndLog(CrmLead before, CrmLead after) {
+
+        if (!before.getName().equals(after.getName())) {
+            leadHistoryService.log(
+                    after,
+                    LeadHistoryAction.UPDATED,
+                    "name",
+                    before.getName() + " → " + after.getName()
+            );
+        }
+
+        if (!before.getEmail().equals(after.getEmail())) {
+            leadHistoryService.log(
+                    after,
+                    LeadHistoryAction.UPDATED,
+                    "email",
+                    before.getEmail() + " → " + after.getEmail()
+            );
+        }
+
+        if (before.getPhone() != null && !before.getPhone().equals(after.getPhone())) {
+            leadHistoryService.log(
+                    after,
+                    LeadHistoryAction.UPDATED,
+                    "phone",
+                    before.getPhone() + " → " + after.getPhone()
+            );
+        }
+
+        if (before.getStage() != after.getStage()) {
+            leadHistoryService.log(
+                    after,
+                    LeadHistoryAction.STATUS_CHANGE,
+                    "stage",
+                    before.getStage().name() + " → " + after.getStage().name()
+            );
+        }
+
+        if (!before.getTag().equals(after.getTag())) {
+            leadHistoryService.log(
+                    after,
+                    LeadHistoryAction.UPDATED,
+                    "tags",
+                    before.getTag().toString() + " → " + after.getTag().toString()
+            );
+        }
+    }
 
 }
