@@ -13,5 +13,6 @@ public record UpdateCrmLeadDTO(
         Stage stage,
         Channel channel,
         Set<Long> tagIds,
-        Long accountId
+        Long accountId,
+        Long ownerId
 ) {}
