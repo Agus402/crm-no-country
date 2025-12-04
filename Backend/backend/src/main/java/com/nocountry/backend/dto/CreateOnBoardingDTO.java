@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotBlank;
 public record CreateOnBoardingDTO(
 
         // Datos del Usuario Administrador (User)
-        @NotBlank(message = "El nombre de la empresa es obligatorio")
+        @NotBlank(message = "Company name is required")
         String companyName,
 
         @Nullable
@@ -23,14 +23,14 @@ public record CreateOnBoardingDTO(
         String address,
 
         // Datos del Usuario Administrador (User)
-        @NotBlank(message = "El nombre del usuario es obligatorio")
+        @NotBlank(message = "User name is required")
         String userName,
 
-        @Email(message = "Email inválido")
-        @NotBlank(message = "El email es obligatorio")
+        @Email(message = "Invalid email")
+        @NotBlank(message = "Email is required")
         String userEmail,
 
-        @NotBlank(message = "La contraseña es obligatoria")
+        @NotBlank(message = "Password is required")
         String password
 
 ) {

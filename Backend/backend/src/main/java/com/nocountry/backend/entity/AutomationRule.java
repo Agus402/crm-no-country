@@ -1,5 +1,6 @@
 package com.nocountry.backend.entity;
 
+import com.nocountry.backend.enums.TriggerEvent;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;

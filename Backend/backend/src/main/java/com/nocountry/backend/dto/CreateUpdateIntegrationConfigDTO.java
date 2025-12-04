@@ -1,18 +1,18 @@
 package com.nocountry.backend.dto;
 
-import com.nocountry.backend.entity.IntegrationType;
+import com.nocountry.backend.enums.IntegrationType;
 import jakarta.validation.constraints.NotNull;
 
 public record CreateUpdateIntegrationConfigDTO (
 
-        @NotNull(message = "El tipo de integración es obligatorio.")
+        @NotNull(message = "Integration type is required.")
         IntegrationType integrationType,
 
-        @NotNull(message = "El ID de la cuenta es obligatorio.")
+        @NotNull(message = "Account ID is required.")
         Long accountId,
 
         String credentials,
 
-        @NotNull(message = "El estado de conexión es obligatorio.")
+        @NotNull(message = "Connection status is required.")
         Boolean isConnected
 ) {}

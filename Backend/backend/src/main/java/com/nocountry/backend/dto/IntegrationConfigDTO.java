@@ -1,6 +1,6 @@
 package com.nocountry.backend.dto;
 
-import com.nocountry.backend.entity.IntegrationType;
+import com.nocountry.backend.enums.IntegrationType;
 
 import java.time.LocalDateTime;
 
