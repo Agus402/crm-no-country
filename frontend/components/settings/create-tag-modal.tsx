@@ -82,7 +82,7 @@ export function CreateTagModal({ isOpen, onClose, onSave, editingTag }: CreateTa
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-6 py-4">
+        <div className="grid gap-6 py-4 max-h-[60vh] overflow-y-auto px-1">
           <div className="space-y-2">
             <Label htmlFor="tagName">Tag Name *</Label>
             <Input
@@ -138,7 +138,7 @@ export function CreateTagModal({ isOpen, onClose, onSave, editingTag }: CreateTa
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
 
-          <Button 
+          <Button
             onClick={handleSave}
             className="bg-purple-600 hover:bg-purple-700"
           >

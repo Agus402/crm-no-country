@@ -2,17 +2,17 @@
 
 // Definimos la interfaz basada en lo que espera y devuelve tu backend
 export interface TagData {
-  id?: number; // Opcional al crear
   name: string;
   color: string;
-  count?: number; // El backend quizás no lo devuelva aún, lo manejaremos
 }
 
 const API_URL = "http://localhost:8080/api/tag"; 
 
 export const tagService = {
   getAll: async (): Promise<TagData[]> => {
-    const res = await fetch(API_URL);
+    const res = await fetch(API_URL, {
+      credentials: "include",
+    });
     
     if (!res.ok) {
         // LEER QUÉ PASÓ
@@ -24,12 +24,12 @@ export const tagService = {
     return res.json();
   },
 
-  // ... (mantén el código del create mejorado que te pasé antes)
   create: async (tag: { name: string; color: string }): Promise<TagData> => {
     const res = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(tag),
+      credentials: "include",
     });
 
     if (!res.ok) {
@@ -45,6 +45,7 @@ export const tagService = {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
+      credentials: "include",
     });
     if (!res.ok) throw new Error("Error updating tag");
     return res.json();
@@ -53,6 +54,7 @@ export const tagService = {
   delete: async (id: number): Promise<void> => {
     const res = await fetch(`${API_URL}/${id}`, {
       method: "DELETE",
+      credentials: "include",
     });
     if (!res.ok) throw new Error("Error deleting tag");
   }
