@@ -1,11 +1,9 @@
 package com.nocountry.backend.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.nocountry.backend.entity.Role;
+import com.nocountry.backend.enums.Role;
 
 import java.time.LocalDateTime;
 
-// DTO de Respuesta (Salida hacia el Frontend)
 public record UserDTO(
 
         Long id,

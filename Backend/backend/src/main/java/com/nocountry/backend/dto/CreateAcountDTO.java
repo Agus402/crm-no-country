@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 
 public record CreateAcountDTO (
 
-        @NotBlank(message = "El nombre de la cuenta es obligatorio.")
+        @NotBlank(message = "Account name is required.")
         String name,
         String industry
 

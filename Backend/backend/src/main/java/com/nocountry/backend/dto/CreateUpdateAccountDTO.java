@@ -5,7 +5,7 @@ import org.springframework.lang.Nullable;
 
 public record CreateUpdateAccountDTO(
 
-        @NotBlank(message = "El nombre de la cuenta es obligatorio.")
+        @NotBlank(message = "Account name is required.")
         String name,
 
         @Nullable String industry,

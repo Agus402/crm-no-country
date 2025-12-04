@@ -1,4 +1,4 @@
-package com.nocountry.backend.entity;
+package com.nocountry.backend.enums;
 
 public enum Priority {
 
