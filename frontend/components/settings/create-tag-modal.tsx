@@ -51,9 +51,9 @@ export function CreateTagModal({ isOpen, onClose, onSave, editingTag }: CreateTa
   useEffect(() => {
     if (editingTag) {
       setTagName(editingTag.name);
-      setSelectedColor(
-        AVAILABLE_COLORS.find(c => editingTag.color.includes(c.bg)) || AVAILABLE_COLORS[0]
-      );
+      // Buscamos si el string de color que viene del back contiene la clase bg del color disponible
+      const foundColor = AVAILABLE_COLORS.find(c => editingTag.color.includes(c.bg));
+      setSelectedColor(foundColor || AVAILABLE_COLORS[0]);
     } else {
       setTagName("");
       setSelectedColor(AVAILABLE_COLORS[0]);
