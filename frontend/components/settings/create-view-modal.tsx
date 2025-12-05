@@ -69,7 +69,7 @@ interface CreateViewModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (view: ViewObject) => void;
-  editingView?: ViewObject | null;
+  editingView?: ViewObject | null; // <--- NUEVA PROP
 }
 
 export function CreateViewModal({
@@ -78,7 +78,7 @@ export function CreateViewModal({
   onSave,
   editingView,
 }: CreateViewModalProps) {
-  const isEditing = !!editingView;
+  const isEditing = !!editingView; // Booleano para saber si editamos
 
   const [viewName, setViewName] = useState("");
   const [description, setDescription] = useState("");
@@ -86,15 +86,18 @@ export function CreateViewModal({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isDefault, setIsDefault] = useState(false);
 
+  // Lógica de carga de datos (Reset o Populate)
   useEffect(() => {
     if (isOpen) {
       if (editingView) {
+        // MODO EDICIÓN: Cargar datos existentes
         setViewName(editingView.name);
         setDescription(editingView.desc);
         setSelectedStages(editingView.filters?.stages || []);
         setSelectedTags(editingView.filters?.tags || []);
         setIsDefault(editingView.filters?.isDefault || false);
       } else {
+        // MODO CREACIÓN: Resetear a limpio
         setViewName("");
         setDescription("");
         setSelectedStages([]);
@@ -135,22 +138,12 @@ export function CreateViewModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent
-        className="
-          sm:max-w-[600px]
-          w-[95vw]                /* evitar que quede pegado */
-          max-h-[86vh]
-          overflow-y-auto
-          px-4 py-4
-          rounded-xl
-        "
-      >
-        <DialogHeader className="px-1 sm:px-0">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-purple-700">
             <Eye className="h-5 w-5" />
             {isEditing ? "Edit View" : "Create Custom View"}
           </DialogTitle>
-
           <p className="text-sm text-muted-foreground">
             {isEditing
               ? "Update your view filters."
@@ -158,8 +151,7 @@ export function CreateViewModal({
           </p>
         </DialogHeader>
 
-        <div className="grid gap-6 py-2 px-1 sm:px-0">
-          {/* NAME + DESCRIPTION */}
+        <div className="grid gap-6 py-4">
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="viewName">View Name *</Label>
@@ -170,7 +162,6 @@ export function CreateViewModal({
                 onChange={(e) => setViewName(e.target.value)}
               />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="desc">Description (optional)</Label>
               <Input
@@ -182,53 +173,42 @@ export function CreateViewModal({
             </div>
           </div>
 
-          {/* FILTER TITLE */}
-          <div className="border-t border-gray-100"></div>
+          <div className="border-t border-gray-100 my-1"></div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 -mb-2.5">
             <Filter className="h-4 w-4 text-purple-600" />
             <h3 className="font-semibold text-gray-900 text-sm">
               Filters Configuration
             </h3>
           </div>
 
-          {/* FILTER BY STAGE */}
+          {/* Filter by Stage */}
           <div className="space-y-3">
             <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
               Filter by Stage
             </Label>
-
-            <div
-              className="
-                grid
-                grid-cols-2  
-                sm:grid-cols-3  
-                gap-3
-              "
-            >
+            <div className="grid grid-cols-3 gap-3">
               {STAGES.map((stage) => {
                 const isSelected = selectedStages.includes(stage.id);
                 const Icon = stage.icon;
-
                 return (
                   <div
                     key={stage.id}
                     onClick={() => toggleStage(stage.id)}
                     className={cn(
-                      "cursor-pointer border rounded-xl p-3 sm:p-4 flex flex-col gap-3 transition-all hover:shadow-md select-none",
+                      "cursor-pointer border rounded-xl p-4 flex flex-col items-center gap-2 transition-all hover:shadow-md select-none",
                       isSelected
-                        ? "border-purple-500 ring-1 ring-purple-500 bg-purple-50/50"
+                        ? `border-purple-500 ring-1 ring-purple-500 bg-purple-50/50`
                         : "border-gray-200 bg-white hover:border-gray-300"
                     )}
                   >
-                    <div className="flex w-full justify-between items-center">
+                    <div className="flex w-full justify-between items-start">
                       <div className={cn("p-2 rounded-lg", stage.color)}>
                         <Icon className="h-5 w-5" />
                       </div>
-
                       <div
                         className={cn(
-                          "h-5 w-5 rounded border flex items-center justify-center",
+                          "h-5 w-5 rounded border flex items-center justify-center transition-colors",
                           isSelected
                             ? "bg-purple-600 border-purple-600"
                             : "border-gray-300"
@@ -237,8 +217,7 @@ export function CreateViewModal({
                         {isSelected && <Check className="h-3 w-3 text-white" />}
                       </div>
                     </div>
-
-                    <span className="text-sm font-medium text-gray-700">
+                    <span className="text-sm font-medium text-gray-700 w-full">
                       {stage.label}
                     </span>
                   </div>
@@ -247,29 +226,21 @@ export function CreateViewModal({
             </div>
           </div>
 
-          {/* FILTER BY TAGS */}
+          {/* Filter by Tags */}
           <div className="space-y-3">
             <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
               Filter by Tags
             </Label>
 
-            <div
-              className="
-                flex flex-wrap gap-2 
-                p-3 sm:p-4 
-                bg-gray-50/50 rounded-xl 
-                border border-dashed border-gray-200
-              "
-            >
+            <div className="flex flex-wrap gap-2 p-4 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
               {AVAILABLE_TAGS.map((tag) => {
                 const isSelected = selectedTags.includes(tag);
-
                 return (
                   <button
                     key={tag}
                     onClick={() => toggleTag(tag)}
                     className={cn(
-                      "px-3 py-1 rounded-full text-xs font-medium border transition-all whitespace-nowrap",
+                      "px-3 py-1 rounded-full text-xs font-medium border transition-all",
                       isSelected
                         ? "bg-purple-600 text-white border-purple-600 shadow-sm"
                         : "bg-white text-gray-600 border-gray-200 hover:border-purple-300 hover:text-purple-600"
@@ -282,7 +253,6 @@ export function CreateViewModal({
             </div>
           </div>
 
-          {/* DEFAULT CHECKBOX */}
           <div className="flex items-center space-x-2 border p-3 rounded-lg bg-gray-50/30">
             <input
               type="checkbox"
@@ -299,7 +269,6 @@ export function CreateViewModal({
             </label>
           </div>
 
-          {/* SUMMARY */}
           <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
             <div className="flex items-center gap-2 text-purple-900 font-semibold text-sm mb-1">
               <Eye className="h-4 w-4" /> View Summary
@@ -314,11 +283,10 @@ export function CreateViewModal({
           </div>
         </div>
 
-        <DialogFooter className="px-1 sm:px-0">
+        <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-
           <Button
             onClick={handleSave}
             className="bg-purple-600 hover:bg-purple-700"
