@@ -2,6 +2,7 @@
 
 // Definimos la interfaz basada en lo que espera y devuelve tu backend
 export interface TagData {
+  id?: number; // Opcional al crear
   name: string;
   color: string;
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Tag as TagIcon } from "lucide-react"; // Renombrado para evitar conflicto
+import { Loader2, Tag as TagIcon } from "lucide-react"; 
 import { CreateTagModal } from "@/components/settings/create-tag-modal";
 import ConfirmDeleteModal from "@/components/shared/ConfirmDeleteModal"; 
 import { tagService, TagData } from "@/services/tag-service";
@@ -116,8 +116,6 @@ export function TagsSection() {
                     <div className={`h-3 w-3 shrink-0 rounded-full ${tag.color || "bg-gray-300"}`} />
                     <div>
                       <p className="font-medium text-sm text-gray-900">{tag.name}</p>
-                      {/* Si el backend no devuelve count, ocultamos o mostramos 0 */}
-                      <p className="text-xs text-muted-foreground">{tag.count ?? 0} contacts</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
