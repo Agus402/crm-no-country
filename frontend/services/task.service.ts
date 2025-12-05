@@ -54,6 +54,7 @@ export interface TaskDTO {
   completed: boolean;
   createdAt: string; // ISO date string
   priority: Priority;
+  taskType: "MESSAGE" | "EMAIL"; // Backend enum
   crmLeadDTO: CrmLeadDTO;
   assignedTo: UserDTO;
 }
@@ -63,6 +64,7 @@ export interface CreateUpdateTaskDTO {
   description?: string;
   dueDate: string; // ISO date string
   priority: Priority;
+  taskType: "MESSAGE" | "EMAIL"; // Backend enum: MESSAGE or EMAIL
   crmLead_Id: number;
 }
 
