@@ -3,32 +3,52 @@ package com.nocountry.backend.mappers;
 import com.nocountry.backend.dto.CrmLeadDTO;
 import com.nocountry.backend.dto.TaskDTO;
 import com.nocountry.backend.dto.UserDTO;
-import com.nocountry.backend.entity.CrmLead;
 import com.nocountry.backend.entity.Task;
-import com.nocountry.backend.entity.User;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.Named;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
-@Mapper(componentModel = "spring")
-public interface TaskMapper {
+@Component
+@RequiredArgsConstructor
+public class TaskMapper {
 
-    @Mapping(target = "isAutomated", source = "isAutomated")
-    @Mapping(target = "taskType", source = "taskType")
-    @Mapping(target = "crmLead", source = "crmLead", qualifiedByName = "mapContactSummary")
-    @Mapping(target = "assignedTo", source = "assignedTo", qualifiedByName = "mapUserSummary")
-    @Mapping(target = "completed", expression = "java(task.isCompleted())")
-    
-    TaskDTO toDTO(Task task);
+    private final UserMapper userMapper;
+    private final CrmLeadMapper crmLeadMapper;
 
-    List<TaskDTO> toDTOList(List<Task> tasks);
+    public TaskDTO toDTO(Task task) {
+        if (task == null) {
+            return null;
+        }
 
-    @Named("mapUserSummary")
-    @Mapping(target = "account", ignore = true)
-    UserDTO toUserDTO(User user);
+        // Mapear el usuario sin el account para evitar bucles
+        UserDTO assignedToDTO = userMapper.toDTO(task.getAssignedTo());
 
-    @Named("mapContactSummary")
-    CrmLeadDTO toCrmLeadDTO(CrmLead crmLead);
+        // Mapear el contacto
+        CrmLeadDTO crmLeadDTO = crmLeadMapper.toDTO(task.getCrmLead());
+
+        return new TaskDTO(
+                task.getId(),
+                task.getTitle(),
+                task.getDescription(),
+                task.getTaskType(),
+                task.getDueDate(),
+                task.isCompleted(),
+                task.getIsAutomated() != null ? task.getIsAutomated() : false,
+                task.getCreatedAt(),
+                task.getPriority(),
+                crmLeadDTO,
+                assignedToDTO
+        );
+    }
+
+    public List<TaskDTO> toDTOList(List<Task> tasks) {
+        if (tasks == null) {
+            return List.of();
+        }
+        return tasks.stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
 }
