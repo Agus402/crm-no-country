@@ -35,7 +35,9 @@ function mapTaskDTOToTask(dto: TaskDTO): Task {
     hour12: true 
   });
 
-  const initials = dto.crmLeadDTO.name
+  // Handle null/undefined crmLeadDTO
+  const contactName = dto.crmLeadDTO?.name || "Unknown Contact";
+  const initials = contactName
     .split(" ")
     .map((n) => n[0])
     .join("")
@@ -45,7 +47,7 @@ function mapTaskDTOToTask(dto: TaskDTO): Task {
   return {
     id: dto.id.toString(),
     title: dto.title,
-    contactName: dto.crmLeadDTO.name,
+    contactName: contactName,
     contactInitials: initials,
     priority: dto.priority.toLowerCase() as "high" | "medium" | "low",
     dueDate: dueDateStr,
@@ -129,17 +131,28 @@ export default function TasksPage() {
         dueDateTime = `${newTask.dueDate}T00:00:00`;
       }
 
+      // Map frontend task type to backend TaskType enum
+      // Backend only supports MESSAGE and EMAIL
+      const mapTaskType = (type: string): "MESSAGE" | "EMAIL" => {
+        if (type === "send-email" || type === "follow-up-call") {
+          return "EMAIL";
+        }
+        return "MESSAGE"; // Default to MESSAGE for other types
+      };
+
       const taskDTO: {
         title: string;
         description?: string;
         dueDate: string;
         priority: Priority;
+        taskType: "MESSAGE" | "EMAIL";
         crmLead_Id: number;
       } = {
         title: newTask.title,
         description: newTask.description,
         dueDate: dueDateTime,
         priority: newTask.priority.toUpperCase() as Priority,
+        taskType: mapTaskType(newTask.type),
         crmLead_Id: newTask.contactId,
       };
 
@@ -159,6 +172,7 @@ export default function TasksPage() {
     description?: string;
     dueDate: string;
     priority: Priority;
+    taskType: "MESSAGE" | "EMAIL";
     crmLead_Id: number;
   }) => {
     try {

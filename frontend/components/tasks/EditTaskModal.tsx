@@ -39,6 +39,7 @@ interface EditTaskModalProps {
     description?: string;
     dueDate: string;
     priority: Priority;
+    taskType: "MESSAGE" | "EMAIL";
     crmLead_Id: number;
   }) => void;
 }
@@ -122,11 +123,15 @@ export default function EditTaskModal({
       dueDateTime = `${formData.dueDate}T00:00:00`;
     }
 
+    // Use existing taskType from the task, or default to MESSAGE
+    const taskType = task.taskType || "MESSAGE";
+    
     onUpdateTask(task.id, {
       title: formData.title,
       description: formData.description,
       dueDate: dueDateTime,
       priority: formData.priority.toUpperCase() as Priority,
+      taskType: taskType as "MESSAGE" | "EMAIL",
       crmLead_Id: formData.contactId,
     });
 
