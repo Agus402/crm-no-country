@@ -2,15 +2,20 @@ package com.nocountry.backend.services;
 
 import com.nocountry.backend.dto.*;
 import com.nocountry.backend.entity.*;
+import com.nocountry.backend.enums.LeadHistoryAction;
+import com.nocountry.backend.enums.NotificationType;
 import com.nocountry.backend.enums.Stage;
 import com.nocountry.backend.repository.*;
 import com.nocountry.backend.mappers.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
 @Service
 @RequiredArgsConstructor
 public class CrmLeadService {
@@ -18,6 +23,9 @@ public class CrmLeadService {
     private final CrmLeadRepository crmLeadRepository;
     private final TagRepository tagRepository;
     private final CrmLeadMapper crmLeadMapper;
+    private final LeadHistoryService leadHistoryService;
+    private final NotificationService notificationService;
+    private final UserRepository userRepository;
 
     public CrmLeadDTO create(CreateCrmLeadDTO dto) {
 
@@ -31,6 +39,12 @@ public class CrmLeadService {
 
         Set<Tag> tags = new HashSet<>(tagRepository.findAllById(dto.tagIds()));
         crmLead.setTag(tags);
+
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User owner = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
+
+        crmLead.setOwner(owner);
 
         return crmLeadMapper.toDTO(crmLeadRepository.save(crmLead));
     }
@@ -52,6 +66,21 @@ public class CrmLeadService {
                 throw new RuntimeException("A lead with this email already exists");
             }
         }
+        if (dto.ownerId() != null) {
+            User newOwner = userRepository.findById(dto.ownerId())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            crmLead.setOwner(newOwner);
+        }
+
+        CrmLead before = CrmLead.builder()
+                .id(crmLead.getId())
+                .name(crmLead.getName())
+                .email(crmLead.getEmail())
+                .phone(crmLead.getPhone())
+                .stage(crmLead.getStage())
+                .tag(new HashSet<>(crmLead.getTag()))
+                .build();
 
         crmLeadMapper.updateCrmLeadFromDto(dto, crmLead);
 
@@ -61,9 +90,12 @@ public class CrmLeadService {
 
         crmLead.setUpdatedAt(LocalDateTime.now());
 
-        return crmLeadMapper.toDTO(crmLeadRepository.save(crmLead));
-    }
+            CrmLead saved = crmLeadRepository.save(crmLead);
 
+            detectChangesAndLog(before, saved);
+
+            return crmLeadMapper.toDTO(saved);
+    }
 
 
     public void delete(Long id) {
@@ -75,6 +107,12 @@ public class CrmLeadService {
         crmLead.setUpdatedAt(LocalDateTime.now());
 
         crmLeadRepository.save(crmLead);
+        leadHistoryService.log(
+                crmLead,
+                LeadHistoryAction.STATUS_CHANGE,
+                "deleted",
+                "Lead moved to deleted (soft delete)"
+        );
     }
 
     public List<CrmLeadDTO> getAll(String name, String email, Stage stage) {
@@ -115,5 +153,83 @@ public class CrmLeadService {
                 .toList();
     }
 
+    private void detectChangesAndLog(CrmLead before, CrmLead after) {
 
+        System.out.println(">>> CHECKING STAGE CHANGE");
+        System.out.println("Before: " + before.getStage());
+        System.out.println("After: " + after.getStage());
+
+        User owner = after.getOwner();
+
+        if (owner != null) {
+            System.out.println("PREFS = " + owner.getPreferences());
+            if (owner.getPreferences() != null) {
+                System.out.println("notifyStageChange = " + owner.getPreferences().isNotifyStageChange());
+            }
+        }
+
+
+        if (!before.getName().equals(after.getName())) {
+            leadHistoryService.log(
+                    after,
+                    LeadHistoryAction.UPDATED,
+                    "name",
+                    before.getName() + " → " + after.getName()
+            );
+        }
+
+        if (!before.getEmail().equals(after.getEmail())) {
+            leadHistoryService.log(
+                    after,
+                    LeadHistoryAction.UPDATED,
+                    "email",
+                    before.getEmail() + " → " + after.getEmail()
+            );
+        }
+
+        if (before.getPhone() != null && !before.getPhone().equals(after.getPhone())) {
+            leadHistoryService.log(
+                    after,
+                    LeadHistoryAction.UPDATED,
+                    "phone",
+                    before.getPhone() + " → " + after.getPhone()
+            );
+        }
+
+
+        if (before.getStage() != after.getStage()) {
+
+            leadHistoryService.log(
+                    after,
+                    LeadHistoryAction.STATUS_CHANGE,
+                    "stage",
+                    before.getStage().name() + " → " + after.getStage().name()
+            );
+
+            if (owner != null
+                    && owner.getPreferences() != null
+                    && owner.getPreferences().isNotifyStageChange()) {
+
+                notificationService.createNotification(
+                        owner,
+                        after,
+                        NotificationType.STAGE_CHANGE,
+                        "Lead stage changed from " + before.getStage() + " to " + after.getStage()
+                );
+
+                System.out.println(">>> STAGE NOTIFICATION SENT");
+            } else {
+                System.out.println(">>> NO STAGE NOTIFICATION – missing owner or prefs disabled");
+            }
+        }
+
+        if (!before.getTag().equals(after.getTag())) {
+            leadHistoryService.log(
+                    after,
+                    LeadHistoryAction.UPDATED,
+                    "tags",
+                    before.getTag().toString() + " → " + after.getTag().toString()
+            );
+        }
+    }
 }

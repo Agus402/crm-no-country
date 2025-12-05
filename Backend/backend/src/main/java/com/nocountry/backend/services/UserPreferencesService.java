@@ -36,7 +36,6 @@ public class UserPreferencesService {
                 .autoSaveConv(true)
                 .notifyNewMessages(true)
                 .notifyTaskReminders(true)
-                .notifyDailySummary(false)
                 .notifyStageChange(true)
                 .notifyAutomationTrigger(false)
                 .build();
