@@ -5,6 +5,7 @@ import com.nocountry.backend.dto.TaskDTO;
 import com.nocountry.backend.entity.CrmLead;
 import com.nocountry.backend.entity.Task;
 import com.nocountry.backend.entity.User;
+import com.nocountry.backend.enums.NotificationType;
 import com.nocountry.backend.mappers.TaskMapper;
 import com.nocountry.backend.repository.CrmLeadRepository;
 import com.nocountry.backend.repository.TaskRepository;
@@ -26,6 +27,7 @@ public class TaskService {
     private final UserRepository userRepository;
     private final CrmLeadRepository crmLeadRepository;
     private final TaskMapper taskMapper;
+    private final NotificationService notificationService;
 
     @Transactional
     public TaskDTO findTaskById(Long id) {
@@ -90,6 +92,23 @@ public class TaskService {
                 .build();
 
         Task savedTask = taskRepository.save(task);
+
+        System.out.println("DEBUG PREFS: " + assignedTo.getPreferences());
+        if (assignedTo.getPreferences() != null) {
+            System.out.println("notifyTaskReminders = " + assignedTo.getPreferences().isNotifyTaskReminders());
+        }
+
+        if (task.getDueDate() != null && assignedTo.getPreferences() != null && assignedTo.getPreferences().isNotifyTaskReminders()) {
+            long hoursToDue = LocalDateTime.now().until(task.getDueDate(), java.time.temporal.ChronoUnit.HOURS);
+            if (hoursToDue <= 24) {
+                notificationService.createNotification(
+                        assignedTo,
+                        task.getCrmLead(),
+                        NotificationType.TASK_DUE,
+                        "Upcoming task: " + task.getTitle() + " due at " + task.getDueDate()
+                );
+            }
+        }
         return taskMapper.toDTO(savedTask);
     }
 

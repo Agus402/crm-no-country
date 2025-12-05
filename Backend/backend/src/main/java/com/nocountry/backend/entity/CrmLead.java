@@ -37,6 +37,10 @@ public class CrmLead {
     @Column(nullable = false)
     private boolean deleted = false;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    private User owner;
+
 
     @ManyToMany
     @JoinTable(
@@ -49,5 +53,6 @@ public class CrmLead {
     @ManyToOne
     @JoinColumn(name = "account_id")
     private Account account;
+
 
 }

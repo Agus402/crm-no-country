@@ -1,10 +1,7 @@
 package com.nocountry.backend.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Data
 @NoArgsConstructor
@@ -12,6 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @Entity
 @Table(name = "user_preferences")
+@ToString(exclude = "user")
 public class UserPreferences {
 
     @Id
@@ -19,6 +17,7 @@ public class UserPreferences {
     private Long userId;
 
     @OneToOne(fetch = FetchType.LAZY)
+    @MapsId
     @JoinColumn(name = "user_id")
     private User user;
 
@@ -33,9 +32,6 @@ public class UserPreferences {
 
     @Column(name = "notify_task_reminders", columnDefinition = "TINYINT(1) default 1")
     private boolean notifyTaskReminders = true;
-
-    @Column(name = "notify_daily_summary", columnDefinition = "TINYINT(1) default 0")
-    private boolean notifyDailySummary = false;
 
     @Column(name = "notify_stage_change", columnDefinition = "TINYINT(1) default 1")
     private boolean notifyStageChange = true;
