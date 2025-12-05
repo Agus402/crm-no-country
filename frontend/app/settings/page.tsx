@@ -16,10 +16,10 @@ export default function SettingsPage() {
 
       <Tabs defaultValue="integrations" className="space-y-6">
         <TabsList className="flex flex-nowrap md:flex-wrap  h-auto justify-start gap-1 p-1 overflow-x-auto ">
-          <TabsTrigger value="integrations" className="flex-1 md:flex-none text-[11px] md:text-sm px-2 py-1">Integrations</TabsTrigger>
-          <TabsTrigger value="tags" className="flex-1 md:flex-none text-[11px] md:text-sm px-2 py-1">Tags & Views</TabsTrigger>
-          <TabsTrigger value="notifications" className="flex-1 md:flex-none text-[11px] md:text-sm px-2 py-1">Notifications</TabsTrigger>
-          <TabsTrigger value="preferences" className="flex-1 md:flex-none text-[11px] md:text-sm px-2 py-1">Preferences</TabsTrigger>
+          <TabsTrigger value="integrations" className="flex-1 md:flex-none text-[9px] md:text-sm px-2 py-1">Integrations</TabsTrigger>
+          <TabsTrigger value="tags" className="flex-1 md:flex-none text-[9px] md:text-sm px-2 py-1">Tags & Views</TabsTrigger>
+          <TabsTrigger value="notifications" className="flex-1 md:flex-none text-[9px] md:text-sm px-2 py-1">Notifications</TabsTrigger>
+          <TabsTrigger value="preferences" className="flex-1 md:flex-none text-[9px] md:text-sm px-2 py-1">Preferences</TabsTrigger>
         </TabsList>
 
         <TabsContent value="integrations" className="space-y-6">

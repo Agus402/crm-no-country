@@ -2,36 +2,41 @@ services:
   mysql:
     image: mysql:8.0
     container_name: crm-mysql
-    restart: always
+    restart: on-failure # Cambiado para evitar bucles infinitos durante el debug
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
-      - "3306:3306"
+      - "3307:3306" # Tú entras por el 3307 desde fuera, pero dentro de la red es el 3306
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
       - app-network
     healthcheck:
+      # Este comando verifica que MySQL esté listo para recibir conexiones
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
-      retries: 10
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s # Espera 30s antes de empezar a contar fallos
 
   backend:
     build:
       context: ./Backend/backend
       dockerfile: Dockerfile
     container_name: crm-backend
-    restart: always
+    restart: on-failure
     depends_on:
       mysql:
         condition: service_healthy
     environment:
-      DB_URL: ${DB_URL}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
+      # IMPORTANTE: Aquí sobrescribimos la URL para asegurar que sea correcta dentro de Docker.
+      # Usa el nombre del servicio 'mysql' y el puerto INTERNO '3306'.
+      DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      DB_USERNAME: ${MYSQL_USER} # Usamos la misma variable que definimos en mysql
+      DB_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "8080:8080"
     networks:
@@ -44,7 +49,7 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     container_name: crm-frontend
-    restart: always
+    restart: on-failure
     depends_on:
       - backend
     ports:
