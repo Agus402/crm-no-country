@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Definimos los colores disponibles 
 const AVAILABLE_COLORS = [
   { name: "Slate", bg: "bg-slate-300", text: "text-slate-700", border: "border-slate-200" },
   { name: "Red", bg: "bg-red-300", text: "text-red-700", border: "border-red-200" },
@@ -47,11 +46,9 @@ export function CreateTagModal({ isOpen, onClose, onSave, editingTag }: CreateTa
   const [tagName, setTagName] = useState(editingTag?.name || "");
   const [selectedColor, setSelectedColor] = useState(initialColor);
 
-  // reset cuando abre/cierra
   useEffect(() => {
     if (editingTag) {
       setTagName(editingTag.name);
-      // Buscamos si el string de color que viene del back contiene la clase bg del color disponible
       const foundColor = AVAILABLE_COLORS.find(c => editingTag.color.includes(c.bg));
       setSelectedColor(foundColor || AVAILABLE_COLORS[0]);
     } else {
@@ -73,8 +70,15 @@ export function CreateTagModal({ isOpen, onClose, onSave, editingTag }: CreateTa
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
-
+      <DialogContent
+        className="
+          sm:max-w-[500px] 
+          max-w-[90%]
+          max-h-[85vh]
+          overflow-y-auto
+          px-4
+        "
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Tag className="h-5 w-5 text-purple-600" />
@@ -82,7 +86,8 @@ export function CreateTagModal({ isOpen, onClose, onSave, editingTag }: CreateTa
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-6 py-4 max-h-[60vh] overflow-y-auto px-1">
+        <div className="grid gap-6 py-4">
+          {/* Tag name */}
           <div className="space-y-2">
             <Label htmlFor="tagName">Tag Name *</Label>
             <Input
@@ -92,9 +97,11 @@ export function CreateTagModal({ isOpen, onClose, onSave, editingTag }: CreateTa
             />
           </div>
 
+          {/* Colors */}
           <div className="space-y-3">
             <Label>Color</Label>
-            <div className="grid grid-cols-4 gap-3">
+
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
               {AVAILABLE_COLORS.map((color) => (
                 <button
                   key={color.name}
@@ -106,7 +113,7 @@ export function CreateTagModal({ isOpen, onClose, onSave, editingTag }: CreateTa
                       : "border-gray-100 bg-white hover:border-gray-200"
                   )}
                 >
-                  <div className={cn("w-full h-6 rounded-md mb-2", color.bg)}></div>
+                  <div className={cn("w-full h-6 rounded-md mb-1", color.bg)}></div>
                   <span className="text-xs font-medium text-gray-600">{color.name}</span>
                 </button>
               ))}
@@ -118,18 +125,18 @@ export function CreateTagModal({ isOpen, onClose, onSave, editingTag }: CreateTa
             <Label>Preview</Label>
             <div className="h-16 border rounded-lg bg-gray-50/50 flex items-center justify-center border-dashed">
               {tagName ? (
-                <span className={cn(
-                  "inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium border",
-                  selectedColor.bg,
-                  selectedColor.text,
-                  selectedColor.border
-                )}>
+                <span
+                  className={cn(
+                    "inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium border",
+                    selectedColor.bg,
+                    selectedColor.text,
+                    selectedColor.border
+                  )}
+                >
                   {tagName}
                 </span>
               ) : (
-                <span className="text-sm text-gray-400 italic">
-                  Enter a tag name to see preview
-                </span>
+                <span className="text-sm text-gray-400 italic">Enter a tag name to see preview</span>
               )}
             </div>
           </div>
@@ -137,15 +144,10 @@ export function CreateTagModal({ isOpen, onClose, onSave, editingTag }: CreateTa
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-
-          <Button
-            onClick={handleSave}
-            className="bg-purple-600 hover:bg-purple-700"
-          >
+          <Button className="bg-purple-600 hover:bg-purple-700" onClick={handleSave}>
             {isEditing ? "Save Changes" : "Create Tag"}
           </Button>
         </DialogFooter>
-
       </DialogContent>
     </Dialog>
   );
