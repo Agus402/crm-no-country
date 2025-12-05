@@ -1,5 +1,7 @@
 package com.nocountry.backend.entity;
 
+import com.nocountry.backend.enums.Priority;
+import com.nocountry.backend.enums.TaskType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,11 +27,18 @@ public class Task {
 
     private String description;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "task_type", nullable = false)
+    private TaskType taskType;
+
     @Column(name = "due_date")
     private LocalDateTime dueDate;
 
     @Column(name = "is_completed")
     private boolean isCompleted = false;
+
+    @Column(name = "is_automated")
+    private Boolean isAutomated = false;
 
     @Enumerated(EnumType.STRING)
     private Priority priority;

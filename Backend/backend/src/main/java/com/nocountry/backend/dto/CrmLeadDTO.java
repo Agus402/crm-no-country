@@ -1,7 +1,5 @@
 package com.nocountry.backend.dto;
 
-import com.nocountry.backend.entity.Account;
-import com.nocountry.backend.entity.Tag;
 import com.nocountry.backend.enums.Channel;
 import com.nocountry.backend.enums.Stage;
 
@@ -19,6 +17,6 @@ public record CrmLeadDTO(
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
         Set<Long> tagIds,
-        Account account
+        AccountDTO account
 
 ) {}

@@ -27,29 +27,52 @@ public class TaskController {
         if (authentication != null && authentication.getPrincipal() instanceof User user) {
             return user.getId();
         }
-        throw new IllegalStateException("Usuario no autenticado");
+        throw new IllegalStateException("User not found");
+    }
+
+    @GetMapping
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<TaskDTO>> getMyTasks(){
+        List<TaskDTO> tasks = taskService.getAllTasks();
+        return ResponseEntity.ok(tasks);
+    }
+
+    @GetMapping("/pending")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<TaskDTO>> getPendingTasks() {
+        Long userId = getCurrentUserId();
+        List<TaskDTO> tasks = taskService.findPendingTasks(userId);
+        return ResponseEntity.ok(tasks);
     }
 
     /**
-     * GET /api/tasks
-     * Obtiene las tareas del usuario logueado.
-     * Permite filtrar por estado (completadas o pendientes).
-     * Ejemplo: /api/tasks?completed=false (Trae las pendientes)
+     * GET /api/tasks/completed
      */
-    @GetMapping
+    @GetMapping("/completed")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<TaskDTO>> getMyTasks(
-            @RequestParam(required = false, defaultValue = "false") boolean completed
-    ) {
+    public ResponseEntity<List<TaskDTO>> getCompletedTasks() {
         Long userId = getCurrentUserId();
-        List<TaskDTO> tasks = taskService.findTasksByAssignedUser(userId, completed);
+        List<TaskDTO> tasks = taskService.findCompletedTasks(userId);
+        return ResponseEntity.ok(tasks);
+    }
+
+    /**
+     * GET /api/tasks/automated
+     */
+    @GetMapping("/automated")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<TaskDTO>> getAutomatedTasks() {
+        Long userId = getCurrentUserId();
+        // Llama al método dedicado
+        List<TaskDTO> tasks = taskService.findAutomatedTasks(userId);
         return ResponseEntity.ok(tasks);
     }
 
     @GetMapping("/due-today")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<TaskDTO>> getTasksDueToday() {
-        return ResponseEntity.ok(taskService.findTasksDueToday());
+        Long userId = getCurrentUserId();
+        return ResponseEntity.ok(taskService.findTasksDueToday(userId));
     }
 
     @GetMapping("/{id}")

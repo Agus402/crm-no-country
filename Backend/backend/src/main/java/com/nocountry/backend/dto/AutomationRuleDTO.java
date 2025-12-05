@@ -1,6 +1,6 @@
 package com.nocountry.backend.dto;
 
-import com.nocountry.backend.entity.TriggerEvent;
+import com.nocountry.backend.enums.TriggerEvent;
 import java.time.LocalDateTime;
 
 public record AutomationRuleDTO(
