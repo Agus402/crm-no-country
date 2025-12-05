@@ -28,51 +28,48 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import { contactService, CrmLeadDTO } from "@/services/contact.service";
+import { TaskDTO, Priority } from "@/services/task.service";
 
-interface CreateTaskModalProps {
+interface EditTaskModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreateTask: (task: NewTask) => void;
+  task: TaskDTO | null;
+  onUpdateTask: (id: number, task: {
+    title: string;
+    description?: string;
+    dueDate: string;
+    priority: Priority;
+    crmLead_Id: number;
+  }) => void;
 }
 
 type TaskType = "follow-up-call" | "send-email" | "schedule-demo" | "send-proposal" | "client-onboarding" | "other";
 
-export interface NewTask {
-  title: string;
-  contactName: string;
-  contactId: number; // Add contact ID
-  contactInitials: string;
-  priority: "high" | "medium" | "low";
-  dueDate: string;
-  dueTime: string;
-  type: TaskType;
-  description?: string;
-  enableReminder?: boolean;
-  isAutomated?: boolean;
-}
-
-export default function CreateTaskModal({
+export default function EditTaskModal({
   open,
   onOpenChange,
-  onCreateTask,
-}: CreateTaskModalProps) {
+  task,
+  onUpdateTask,
+}: EditTaskModalProps) {
   const [contacts, setContacts] = useState<CrmLeadDTO[]>([]);
   const [isLoadingContacts, setIsLoadingContacts] = useState(false);
-  const [formData, setFormData] = useState<NewTask>({
+  const [formData, setFormData] = useState<{
+    title: string;
+    contactId: number;
+    priority: "high" | "medium" | "low";
+    dueDate: string;
+    dueTime: string;
+    description: string;
+  }>({
     title: "",
-    contactName: "",
     contactId: 0,
-    contactInitials: "",
     priority: "medium",
     dueDate: "",
     dueTime: "",
-    type: "follow-up-call",
     description: "",
-    enableReminder: false,
-    isAutomated: false,
   });
 
-  // Load contacts when modal opens
+  // Load contacts and populate form when modal opens or task changes
   useEffect(() => {
     if (open) {
       const loadContacts = async () => {
@@ -90,44 +87,49 @@ export default function CreateTaskModal({
     }
   }, [open]);
 
+  // Populate form when task changes
+  useEffect(() => {
+    if (task) {
+      const dueDate = new Date(task.dueDate);
+      const dateStr = dueDate.toISOString().split('T')[0];
+      const timeStr = dueDate.toTimeString().slice(0, 5); // HH:mm format
+
+      setFormData({
+        title: task.title,
+        contactId: task.crmLeadDTO?.id || 0,
+        priority: task.priority.toLowerCase() as "high" | "medium" | "low",
+        dueDate: dateStr,
+        dueTime: timeStr,
+        description: task.description || "",
+      });
+    }
+  }, [task]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.contactId) {
+    if (!formData.contactId || !task) {
       alert("Por favor selecciona un contacto");
       return;
     }
 
-    const selectedContact = contacts.find(c => c.id === formData.contactId);
-    const initials = selectedContact
-      ? selectedContact.name
-          .split(" ")
-          .map((n) => n[0])
-          .join("")
-          .toUpperCase()
-          .slice(0, 2)
-      : "";
+    // Combine date and time in ISO format for backend
+    let dueDateTime: string;
+    if (formData.dueTime) {
+      const [hours, minutes] = formData.dueTime.split(':');
+      dueDateTime = `${formData.dueDate}T${hours}:${minutes}:00`;
+    } else {
+      dueDateTime = `${formData.dueDate}T00:00:00`;
+    }
 
-    onCreateTask({
-      ...formData,
-      contactName: selectedContact?.name || "",
-      contactInitials: initials,
+    onUpdateTask(task.id, {
+      title: formData.title,
+      description: formData.description,
+      dueDate: dueDateTime,
+      priority: formData.priority.toUpperCase() as Priority,
+      crmLead_Id: formData.contactId,
     });
 
-    // Reset form
-    setFormData({
-      title: "",
-      contactName: "",
-      contactId: 0,
-      contactInitials: "",
-      priority: "medium",
-      dueDate: "",
-      dueTime: "",
-      type: "follow-up-call",
-      description: "",
-      enableReminder: false,
-      isAutomated: false,
-    });
     onOpenChange(false);
   };
 
@@ -140,16 +142,18 @@ export default function CreateTaskModal({
     { value: "other", label: "Other", icon: MoreHorizontal },
   ];
 
+  if (!task) return null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-[90vw] md:max-w-[650px]">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <CheckSquare className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
-            <DialogTitle className="text-base sm:text-lg">Create New Task</DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">Edit Task</DialogTitle>
           </div>
           <p className="text-xs sm:text-sm text-gray-600 mt-1">
-            Create a task to manage your follow-ups and workflow.
+            Update task details and information.
           </p>
         </DialogHeader>
 
@@ -171,38 +175,6 @@ export default function CreateTaskModal({
             />
           </div>
 
-          {/* Task Type */}
-          <div className="space-y-1 sm:space-y-2">
-            <Label className="text-xs sm:text-sm font-medium">
-              Task Type <span className="text-red-500">*</span>
-            </Label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2">
-              {taskTypes.map((type) => {
-                const Icon = type.icon;
-                return (
-                  <button
-                    key={type.value}
-                    type="button"
-                    onClick={() =>
-                      setFormData({ 
-                        ...formData, 
-                        type: type.value as TaskType
-                      })
-                    }
-                    className={`flex items-center justify-center sm:justify-start gap-1 sm:gap-2 px-2 py-1 sm:py-1.5 rounded-lg border transition-all text-[11px] sm:text-xs ${
-                      formData.type === type.value
-                        ? "border-purple-600 bg-purple-50 text-purple-700"
-                        : "border-gray-200 hover:border-gray-300 text-gray-700"
-                    }`}
-                  >
-                    <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
-                    <span className="truncate text-[10px] sm:text-xs">{type.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Assign to Contact */}
           <div className="space-y-1 sm:space-y-2">
             <Label htmlFor="contact" className="text-xs sm:text-sm font-medium flex items-center gap-1">
@@ -212,12 +184,9 @@ export default function CreateTaskModal({
             <Select
               value={formData.contactId.toString()}
               onValueChange={(value) => {
-                const contactId = parseInt(value);
-                const selectedContact = contacts.find(c => c.id === contactId);
                 setFormData({ 
                   ...formData, 
-                  contactId,
-                  contactName: selectedContact?.name || ""
+                  contactId: parseInt(value)
                 });
               }}
               disabled={isLoadingContacts}
@@ -320,43 +289,9 @@ export default function CreateTaskModal({
               onChange={(e) =>
                 setFormData({ ...formData, description: e.target.value })
               }
-              rows={1}
+              rows={3}
               className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-xs sm:text-sm"
             />
-          </div>
-
-          {/* Checkboxes */}
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-6">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="reminder"
-                checked={formData.enableReminder}
-                onChange={(e) =>
-                  setFormData({ ...formData, enableReminder: e.target.checked })
-                }
-                className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-              />
-              <Label htmlFor="reminder" className="text-xs sm:text-sm font-medium cursor-pointer flex items-center gap-1">
-                <span className="text-red-500">🔔</span>
-                Enable Reminder
-              </Label>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="automated"
-                checked={formData.isAutomated}
-                onChange={(e) =>
-                  setFormData({ ...formData, isAutomated: e.target.checked })
-                }
-                className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-              />
-              <Label htmlFor="automated" className="text-xs sm:text-sm font-medium cursor-pointer">
-                Make this an automated task
-              </Label>
-            </div>
           </div>
 
           {/* Footer Buttons */}
@@ -373,7 +308,7 @@ export default function CreateTaskModal({
               type="submit"
               className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto"
             >
-              Create Task
+              Update Task
             </Button>
           </DialogFooter>
         </form>

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Filter, ChevronDown, Clock, Bell, Check } from "lucide-react";
+import { Filter, ChevronDown, Clock, Bell, Check, Edit, Trash2, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,11 +29,13 @@ export interface Task {
 interface TaskListProps {
   tasks: Task[];
   onToggleTask: (id: string) => void;
+  onEditTask?: (id: string) => void;
+  onDeleteTask?: (id: string) => void;
 }
 
 type FilterType = "all" | "pending" | "completed" | "automated";
 
-export default function TaskList({ tasks, onToggleTask }: TaskListProps) {
+export default function TaskList({ tasks, onToggleTask, onEditTask, onDeleteTask }: TaskListProps) {
   const [filter, setFilter] = useState<FilterType>("all");
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -178,12 +180,47 @@ export default function TaskList({ tasks, onToggleTask }: TaskListProps) {
                     )}
                   </div>
                 </div>
-                <Badge
-                  variant="outline"
-                  className={`text-xs ${getPriorityColor(task.priority)}`}
-                >
-                  {task.priority}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className={`text-xs ${getPriorityColor(task.priority)}`}
+                  >
+                    {task.priority}
+                  </Badge>
+                  {(onEditTask || onDeleteTask) && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {onEditTask && (
+                          <DropdownMenuItem
+                            onClick={() => onEditTask(task.id)}
+                            className="cursor-pointer"
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                        )}
+                        {onDeleteTask && (
+                          <DropdownMenuItem
+                            onClick={() => {
+                              if (confirm("¿Estás seguro de que quieres eliminar esta tarea?")) {
+                                onDeleteTask(task.id);
+                              }
+                            }}
+                            className="cursor-pointer text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
               </div>
             </Card>
           ))

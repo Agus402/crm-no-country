@@ -19,6 +19,8 @@ public interface TaskMapper {
     @Mapping(target = "taskType", source = "taskType")
     @Mapping(target = "crmLead", source = "crmLead", qualifiedByName = "mapContactSummary")
     @Mapping(target = "assignedTo", source = "assignedTo", qualifiedByName = "mapUserSummary")
+    @Mapping(target = "completed", expression = "java(task.isCompleted())")
+    
     TaskDTO toDTO(Task task);
 
     List<TaskDTO> toDTOList(List<Task> tasks);
