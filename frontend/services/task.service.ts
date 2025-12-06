@@ -66,6 +66,8 @@ export interface CreateUpdateTaskDTO {
   priority: Priority;
   taskType: "MESSAGE" | "EMAIL"; // Backend enum: MESSAGE or EMAIL
   crmLead_Id: number;
+  isAutomated?: boolean;
+  enableReminder?: boolean;
 }
 
 export const taskService = {

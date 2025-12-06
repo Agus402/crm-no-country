@@ -157,6 +157,8 @@ export default function TasksPage() {
         priority: Priority;
         taskType: "MESSAGE" | "EMAIL";
         crmLead_Id: number;
+        isAutomated?: boolean;
+        enableReminder?: boolean;
       } = {
         title: newTask.title,
         description: newTask.description,
@@ -164,12 +166,41 @@ export default function TasksPage() {
         priority: newTask.priority.toUpperCase() as Priority,
         taskType: mapTaskType(newTask.type),
         crmLead_Id: newTask.contactId,
+        isAutomated: newTask.isAutomated || false,
+        enableReminder: newTask.enableReminder || false,
       };
 
       const createdTask = await taskService.create(taskDTO);
       setTaskDTOs([...taskDTOs, createdTask]);
       const mappedTask = mapTaskDTOToTask(createdTask);
       setTasks([...tasks, mappedTask]);
+      
+      // Reload smart reminders and workflows if task was created with reminder or automated
+      if (newTask.enableReminder || newTask.isAutomated) {
+        // Reload smart reminders
+        try {
+          const loadedReminders = await smartReminderService.getAll();
+          setReminders(loadedReminders);
+        } catch (err) {
+          console.error("Error reloading smart reminders:", err);
+        }
+        
+        // Reload workflows if task was automated
+        if (newTask.isAutomated) {
+          try {
+            const rules = await automationRuleService.getAll();
+            const mappedWorkflows: Workflow[] = rules.map(rule => ({
+              id: rule.id.toString(),
+              name: rule.name,
+              contactCount: "0 contacts in sequence",
+              status: rule.isActive ? "Active" : "Paused",
+            }));
+            setWorkflows(mappedWorkflows);
+          } catch (err) {
+            console.error("Error reloading workflows:", err);
+          }
+        }
+      }
     } catch (err) {
       console.error("Error creating task:", err);
       setError(err instanceof Error ? err.message : "Error al crear la tarea");
