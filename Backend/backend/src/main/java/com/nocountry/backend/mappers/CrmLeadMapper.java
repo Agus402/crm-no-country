@@ -87,6 +87,6 @@ public class CrmLeadMapper {
         if (dto.channel() != null) {
             entity.setChannel(dto.channel());
         }
-        // Note: status, account, and tags are handled separately in the service
     }
+
 }
