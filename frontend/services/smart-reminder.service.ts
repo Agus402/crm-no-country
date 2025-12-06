@@ -1,6 +1,6 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
-export interface SmartReminderDTO {
+export interface SmartReminderResponse {
   id: number;
   text: string;
   time: string;
@@ -18,7 +18,7 @@ export interface Reminder {
 
 export const smartReminderService = {
   async getAll(): Promise<Reminder[]> {
-    const response = await fetch(`${API_URL}/smart-reminders`, {
+    const response = await fetch(`${API_URL}/notifications/smart-reminders`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -40,13 +40,13 @@ export const smartReminderService = {
       throw new Error(errorMessage);
     }
 
-    const reminders: SmartReminderDTO[] = await response.json();
+    const reminders: SmartReminderResponse[] = await response.json();
     
-    // Convert SmartReminderDTO to Reminder format expected by the component
+    // Convert response to Reminder format expected by the component
     return reminders.map((reminder) => ({
-      id: reminder.id.toString(),
-      text: reminder.text,
-      time: reminder.time,
+      id: reminder.id?.toString() || String(Date.now()),
+      text: reminder.text || "",
+      time: reminder.time || "",
     }));
   },
 };
