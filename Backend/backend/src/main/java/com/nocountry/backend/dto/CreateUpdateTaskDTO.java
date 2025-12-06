@@ -16,6 +16,8 @@ public record CreateUpdateTaskDTO(
 
         Boolean isAutomated,
 
+        Boolean enableReminder,
+
         @NotNull(message = "Task type is required")
         TaskType taskType,
 

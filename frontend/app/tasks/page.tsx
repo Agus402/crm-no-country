@@ -7,11 +7,12 @@ import CreateTaskModal, { NewTask } from "@/components/tasks/CreateTaskModal";
 import EditTaskModal from "@/components/tasks/EditTaskModal";
 import StatsCards from "./components/StatsCards";
 import TaskList, { Task } from "./components/TaskList";
-import SmartReminders, { Reminder } from "./components/SmartReminders";
+import SmartReminders from "./components/SmartReminders";
 import AutomatedWorkflows, { Workflow } from "./components/AutomatedWorkflows";
 import { AutomationRule } from "@/components/tasks/CreateAutomationRuleModal";
 import { taskService, TaskDTO, Priority } from "@/services/task.service";
 import { automationRuleService, CreateUpdateAutomationRuleDTO, TriggerEvent } from "@/services/automation-rule.service";
+import { smartReminderService, Reminder } from "@/services/smart-reminder.service";
 
 // Helper function to convert TaskDTO to Task
 function mapTaskDTOToTask(dto: TaskDTO): Task {
@@ -66,6 +67,7 @@ export default function TasksPage() {
   const [taskDTOs, setTaskDTOs] = useState<TaskDTO[]>([]); // Keep DTOs for editing
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
 
   // Load tasks from backend
   useEffect(() => {
@@ -88,12 +90,20 @@ export default function TasksPage() {
     loadTasks();
   }, []);
 
-  const reminders: Reminder[] = [
-    { id: "1", text: "John Martinez hasn't responded in 3 days", time: "2 hours ago" },
-    { id: "2", text: "Emma Wilson opened your email 3 times", time: "4 hours ago" },
-    { id: "3", text: "Demo scheduled with Michael Chen in 2 days", time: "1 day ago" },
-    { id: "4", text: "5 leads need follow-up this week", time: "1 day ago" },
-  ];
+  // Load smart reminders from backend
+  useEffect(() => {
+    const loadReminders = async () => {
+      try {
+        const loadedReminders = await smartReminderService.getAll();
+        setReminders(loadedReminders);
+      } catch (err) {
+        console.error("Error loading smart reminders:", err);
+        // Don't set error state here, just log it - reminders are not critical
+      }
+    };
+
+    loadReminders();
+  }, []);
 
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
 
@@ -147,6 +157,8 @@ export default function TasksPage() {
         priority: Priority;
         taskType: "MESSAGE" | "EMAIL";
         crmLead_Id: number;
+        isAutomated?: boolean;
+        enableReminder?: boolean;
       } = {
         title: newTask.title,
         description: newTask.description,
@@ -154,12 +166,41 @@ export default function TasksPage() {
         priority: newTask.priority.toUpperCase() as Priority,
         taskType: mapTaskType(newTask.type),
         crmLead_Id: newTask.contactId,
+        isAutomated: newTask.isAutomated || false,
+        enableReminder: newTask.enableReminder || false,
       };
 
       const createdTask = await taskService.create(taskDTO);
       setTaskDTOs([...taskDTOs, createdTask]);
       const mappedTask = mapTaskDTOToTask(createdTask);
       setTasks([...tasks, mappedTask]);
+      
+      // Reload smart reminders and workflows if task was created with reminder or automated
+      if (newTask.enableReminder || newTask.isAutomated) {
+        // Reload smart reminders
+        try {
+          const loadedReminders = await smartReminderService.getAll();
+          setReminders(loadedReminders);
+        } catch (err) {
+          console.error("Error reloading smart reminders:", err);
+        }
+        
+        // Reload workflows if task was automated
+        if (newTask.isAutomated) {
+          try {
+            const rules = await automationRuleService.getAll();
+            const mappedWorkflows: Workflow[] = rules.map(rule => ({
+              id: rule.id.toString(),
+              name: rule.name,
+              contactCount: "0 contacts in sequence",
+              status: rule.isActive ? "Active" : "Paused",
+            }));
+            setWorkflows(mappedWorkflows);
+          } catch (err) {
+            console.error("Error reloading workflows:", err);
+          }
+        }
+      }
     } catch (err) {
       console.error("Error creating task:", err);
       setError(err instanceof Error ? err.message : "Error al crear la tarea");
