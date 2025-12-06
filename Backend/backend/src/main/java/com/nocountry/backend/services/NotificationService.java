@@ -31,22 +31,28 @@ public class NotificationService {
     private final TaskRepository taskRepository;
 
     public void createNotification(User user, CrmLead lead, NotificationType type, String body) {
+        createNotification(user, lead, type, body, false);
+    }
+
+    public void createNotification(User user, CrmLead lead, NotificationType type, String body, boolean forceCreate) {
         System.out.println(">>> NOTIFICATION SERVICE TRIGGERED");
 
         if (user == null) return;
 
-        UserPreferences preferences = user.getPreferences();
-        if (preferences == null) return;
+        // If forceCreate is true, skip preference check (for explicit reminders)
+        if (!forceCreate) {
+            UserPreferences preferences = user.getPreferences();
+            if (preferences == null) return;
 
-        boolean allowed = switch (type) {
-            case NEW_MESSAGE -> preferences.isNotifyNewMessages();
-            case TASK_DUE -> preferences.isNotifyTaskReminders();
-            case AUTOMATION_ALERT -> preferences.isNotifyAutomationTrigger();
-            case STAGE_CHANGE -> preferences.isNotifyStageChange();
+            boolean allowed = switch (type) {
+                case NEW_MESSAGE -> preferences.isNotifyNewMessages();
+                case TASK_DUE -> preferences.isNotifyTaskReminders();
+                case AUTOMATION_ALERT -> preferences.isNotifyAutomationTrigger();
+                case STAGE_CHANGE -> preferences.isNotifyStageChange();
+            };
 
-        };
-
-        if (!allowed) return;
+            if (!allowed) return;
+        }
 
         Notification notification = Notification.builder()
                 .user(user)
@@ -84,6 +90,9 @@ public class NotificationService {
                 .filter(lead -> lead.getOwner() != null && lead.getOwner().getId().equals(userId))
                 .collect(Collectors.toList());
 
+        // 0. Task reminders from notifications (TASK_DUE type)
+        reminders.addAll(getTaskRemindersFromNotifications(userId, now));
+
         // 1. Leads sin respuesta en 3+ días
         reminders.addAll(getLeadsWithoutResponse(userLeads, now));
 
@@ -105,6 +114,34 @@ public class NotificationService {
                 })
                 .limit(10)
                 .collect(Collectors.toList());
+    }
+
+    private List<Map<String, Object>> getTaskRemindersFromNotifications(Long userId, LocalDateTime now) {
+        List<Map<String, Object>> reminders = new ArrayList<>();
+        
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) return reminders;
+
+        // Get recent TASK_DUE notifications for this user
+        List<Notification> taskNotifications = notificationRepository.findByUserOrderByCreatedAtDesc(user).stream()
+                .filter(n -> n.getType() == NotificationType.TASK_DUE && !n.isRead())
+                .limit(5)
+                .collect(Collectors.toList());
+
+        for (Notification notification : taskNotifications) {
+            String timeAgo = formatTimeAgo(notification.getCreatedAt(), now);
+            Map<String, Object> reminder = new HashMap<>();
+            reminder.put("id", notification.getId() + 50000L); // Unique ID
+            reminder.put("text", notification.getBody());
+            reminder.put("time", timeAgo);
+            reminder.put("type", "TASK_REMINDER");
+            reminder.put("leadId", notification.getLead() != null ? notification.getLead().getId() : null);
+            reminder.put("leadName", notification.getLead() != null ? notification.getLead().getName() : null);
+            reminder.put("createdAt", notification.getCreatedAt());
+            reminders.add(reminder);
+        }
+
+        return reminders;
     }
 
     private List<Map<String, Object>> getLeadsWithoutResponse(List<CrmLead> leads, LocalDateTime now) {

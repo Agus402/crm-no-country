@@ -1,15 +1,18 @@
 package com.nocountry.backend.services;
 
 import com.nocountry.backend.dto.CreateUpdateTaskDTO;
+import com.nocountry.backend.dto.CreateUpdateAutomationRuleDTO;
 import com.nocountry.backend.dto.TaskDTO;
 import com.nocountry.backend.entity.CrmLead;
 import com.nocountry.backend.entity.Task;
 import com.nocountry.backend.entity.User;
 import com.nocountry.backend.enums.NotificationType;
+import com.nocountry.backend.enums.TriggerEvent;
 import com.nocountry.backend.mappers.TaskMapper;
 import com.nocountry.backend.repository.CrmLeadRepository;
 import com.nocountry.backend.repository.TaskRepository;
 import com.nocountry.backend.repository.UserRepository;
+import com.nocountry.backend.services.AutomationRuleService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,6 +31,7 @@ public class TaskService {
     private final CrmLeadRepository crmLeadRepository;
     private final TaskMapper taskMapper;
     private final NotificationService notificationService;
+    private final AutomationRuleService automationRuleService;
 
     @Transactional
     public TaskDTO findTaskById(Long id) {
@@ -85,7 +89,7 @@ public class TaskService {
                 .taskType(taskDTO.taskType())
                 .dueDate(taskDTO.dueDate())
                 .priority(taskDTO.priority())
-                .isAutomated(false)
+                .isAutomated(taskDTO.isAutomated() != null ? taskDTO.isAutomated() : false)
                 .createdAt(LocalDateTime.now())
                 .assignedTo(assignedTo)
                 .crmLead(crmLead)
@@ -93,12 +97,17 @@ public class TaskService {
 
         Task savedTask = taskRepository.save(task);
 
-        System.out.println("DEBUG PREFS: " + assignedTo.getPreferences());
-        if (assignedTo.getPreferences() != null) {
-            System.out.println("notifyTaskReminders = " + assignedTo.getPreferences().isNotifyTaskReminders());
-        }
-
-        if (task.getDueDate() != null && assignedTo.getPreferences() != null && assignedTo.getPreferences().isNotifyTaskReminders()) {
+        // Create notification if enableReminder is true (force create, skip preferences)
+        if (Boolean.TRUE.equals(taskDTO.enableReminder()) && task.getDueDate() != null) {
+            notificationService.createNotification(
+                    assignedTo,
+                    task.getCrmLead(),
+                    NotificationType.TASK_DUE,
+                    "Reminder: " + task.getTitle() + " due at " + task.getDueDate(),
+                    true // forceCreate = true to skip preference check
+            );
+        } else if (task.getDueDate() != null && assignedTo.getPreferences() != null && assignedTo.getPreferences().isNotifyTaskReminders()) {
+            // Original logic: create notification if user preferences allow and task is due within 24 hours
             long hoursToDue = LocalDateTime.now().until(task.getDueDate(), java.time.temporal.ChronoUnit.HOURS);
             if (hoursToDue <= 24) {
                 notificationService.createNotification(
@@ -109,7 +118,36 @@ public class TaskService {
                 );
             }
         }
+
+        // Create automation rule if isAutomated is true
+        if (Boolean.TRUE.equals(taskDTO.isAutomated())) {
+            createAutomationRuleFromTask(savedTask, assignedTo);
+        }
+
         return taskMapper.toDTO(savedTask);
+    }
+
+    private void createAutomationRuleFromTask(Task task, User creator) {
+        try {
+            // Create a simple automation rule for this automated task
+            String actionsJson = String.format(
+                "{\"waitDays\":0,\"waitHours\":0,\"actions\":[{\"type\":\"create_task\",\"template\":\"%s\"}]}",
+                task.getTitle()
+            );
+
+            CreateUpdateAutomationRuleDTO ruleDTO = new CreateUpdateAutomationRuleDTO(
+                "Auto: " + task.getTitle(),
+                TriggerEvent.LEAD_CREATED,
+                null,
+                actionsJson,
+                true
+            );
+
+            automationRuleService.createRule(ruleDTO, creator.getId());
+        } catch (Exception e) {
+            // Log error but don't fail task creation
+            System.err.println("Error creating automation rule from task: " + e.getMessage());
+        }
     }
 
     @Transactional
@@ -138,7 +176,9 @@ public class TaskService {
         taskToUpdate.setDescription(taskDTO.description());
         taskToUpdate.setTaskType(taskDTO.taskType());
         taskToUpdate.setDueDate(taskDTO.dueDate());
-        taskToUpdate.setCompleted(taskDTO.isAutomated());
+        if (taskDTO.isAutomated() != null) {
+            taskToUpdate.setIsAutomated(taskDTO.isAutomated());
+        }
         taskToUpdate.setPriority(taskDTO.priority());
 
         Task savedTask = taskRepository.save(taskToUpdate);
