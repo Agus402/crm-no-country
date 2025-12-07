@@ -1,1 +1,4 @@
 .env
+certbot/
+init-certbot.sh.save
+
