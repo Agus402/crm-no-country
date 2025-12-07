@@ -10,7 +10,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 
-import { leadStatsService } from "@/services/lead-stats-service";
+import { leadStatsService } from "@/services/lead-stats.service";
 
 // Configuración con client, NO converted
 const chartConfig = {

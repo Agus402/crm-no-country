@@ -4,7 +4,7 @@
 # CONFIGURACIÓN
 # =========================================================
 DOMAIN="crm-noc.ddns.net"
-EMAIL="adrielscklink@gmail.com"
+EMAIL="maildeejemplo@gmail.com"
 # =========================================================
 
 # 1. Crear estructura de carpetas local

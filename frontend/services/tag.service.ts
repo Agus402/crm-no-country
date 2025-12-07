@@ -7,11 +7,11 @@ export interface TagData {
   color: string;
 }
 
-const API_URL = "http://localhost:8080/api/tag"; 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"; 
 
 export const tagService = {
   getAll: async (): Promise<TagData[]> => {
-    const res = await fetch(API_URL, {
+    const res = await fetch(API_URL + "/tag", {
       credentials: "include",
     });
     
@@ -26,7 +26,7 @@ export const tagService = {
   },
 
   create: async (tag: { name: string; color: string }): Promise<TagData> => {
-    const res = await fetch(API_URL, {
+    const res = await fetch(API_URL + "/tag", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(tag),
@@ -53,7 +53,7 @@ export const tagService = {
   },
 
   delete: async (id: number): Promise<void> => {
-    const res = await fetch(`${API_URL}/${id}`, {
+    const res = await fetch(`${API_URL}/tag/${id}`, {
       method: "DELETE",
       credentials: "include",
     });
