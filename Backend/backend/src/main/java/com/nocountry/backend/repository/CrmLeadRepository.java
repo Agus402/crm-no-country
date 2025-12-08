@@ -5,6 +5,7 @@ import com.nocountry.backend.enums.Stage;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface CrmLeadRepository extends JpaRepository<CrmLead, Long> {
     List<CrmLead> findByDeletedFalse();
@@ -17,6 +18,7 @@ public interface CrmLeadRepository extends JpaRepository<CrmLead, Long> {
 
     List<CrmLead> findByDeletedTrue();
     boolean existsByEmailIgnoreCase(String email);
+    Optional<CrmLead> findByEmailIgnoreCase(String email);
 
 
 
