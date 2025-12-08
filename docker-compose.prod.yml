@@ -40,6 +40,9 @@ services:
       # Configuraciones restantes:
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       APP_COOKIE_SECURE: ${APP_COOKIE_SECURE}
+      WHATSAPP_API_BASE_URL: ${WHATSAPP_API_BASE_URL}
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN}
+      WHATSAPP_API_TOKEN: ${WHATSAPP_API_TOKEN}
       
     networks:
       - app-network
