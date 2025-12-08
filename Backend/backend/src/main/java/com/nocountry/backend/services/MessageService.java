@@ -49,8 +49,7 @@ public class MessageService {
             // Llamar a la API de Meta
             Map<String, String> metaResponse = whatsAppApiService.sendTextMessage(
                     recipientPhoneNumber,
-                    dto.content()
-            );
+                    dto.content());
 
             // 3. Actualizar el mensaje con el ID externo de Meta (para seguimiento)
             String externalId = metaResponse.get("external_message_id");
@@ -74,5 +73,30 @@ public class MessageService {
         return messages.stream()
                 .map(messageMapper::toDTO)
                 .collect(Collectors.toList());
+    }
+
+    // --- SAVE INBOUND MESSAGE (FROM WEBHOOK) ---
+    @Transactional
+    public MessageDTO saveInboundMessage(
+            Conversation conversation,
+            String content,
+            String externalMessageId,
+            LocalDateTime timestamp) {
+
+        // Crear entidad Message para mensaje INBOUND
+        Message message = Message.builder()
+                .conversation(conversation)
+                .senderType(com.nocountry.backend.enums.SenderType.LEAD)
+                .senderLeadId(conversation.getCrm_lead().getId())
+                .messageDirection(com.nocountry.backend.enums.Direction.INBOUND)
+                .messageType(com.nocountry.backend.enums.MessageType.TEXT)
+                .content(content)
+                .externalMessageId(externalMessageId)
+                .sentAt(timestamp)
+                .build();
+
+        Message savedMessage = messageRepository.save(message);
+
+        return messageMapper.toDTO(savedMessage);
     }
 }

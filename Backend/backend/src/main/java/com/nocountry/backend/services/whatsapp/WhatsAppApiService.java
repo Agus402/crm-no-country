@@ -1,7 +1,11 @@
 package com.nocountry.backend.services.whatsapp;
 
+import com.nocountry.backend.repository.ConversationRepository;
+import com.nocountry.backend.repository.CrmLeadRepository;
+import com.nocountry.backend.services.MessageService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -13,22 +17,35 @@ import java.util.Map;
 @Slf4j // Para usar logger.info/error
 public class WhatsAppApiService {
 
-    // URL base configurada en .env (https://graph.facebook.com/v19.0/<PHONE_NUMBER_ID>)
+    // URL base configurada en .env
+    // (https://graph.facebook.com/v19.0/<PHONE_NUMBER_ID>)
     @Value("${WHATSAPP_API_BASE_URL}")
     private String WHATSAPP_API_BASE_URL;
 
     private final RestClient restClient;
     private final String WHATSAPP_API_TOKEN;
+    private final CrmLeadRepository crmLeadRepository;
+    private final ConversationRepository conversationRepository;
+    private final MessageService messageService;
 
     public WhatsAppApiService(
             RestClient.Builder restClientBuilder,
             @Value("${WHATSAPP_API_BASE_URL}") String whatsappApiBaseUrl,
-            @Value("${WHATSAPP_API_TOKEN}") String whatsappApiToken) {
+            @Value("${WHATSAPP_API_TOKEN}") String whatsappApiToken,
+            CrmLeadRepository crmLeadRepository,
+            ConversationRepository conversationRepository,
+            @Lazy MessageService messageService) {
 
         // Asignar el token de acceso
         this.WHATSAPP_API_TOKEN = whatsappApiToken;
 
-        // Inicializar RestClient con la URL base de Meta (Asegurando que el scheme se use aquí)
+        // Asignar repositorios y servicios
+        this.crmLeadRepository = crmLeadRepository;
+        this.conversationRepository = conversationRepository;
+        this.messageService = messageService;
+
+        // Inicializar RestClient con la URL base de Meta (Asegurando que el scheme se
+        // use aquí)
         this.restClient = restClientBuilder
                 .baseUrl(whatsappApiBaseUrl) // El valor COMPLETO (https://...)
                 .build();
@@ -36,8 +53,10 @@ public class WhatsAppApiService {
 
     /**
      * Envía un mensaje de texto simple a través de la API de WhatsApp Cloud.
-     * @param recipientPhoneNumber Número de teléfono de destino (ej. +54911xxxxxxx).
-     * @param message Texto del mensaje.
+     * 
+     * @param recipientPhoneNumber Número de teléfono de destino (ej.
+     *                             +54911xxxxxxx).
+     * @param message              Texto del mensaje.
      * @return Mapa de respuesta de Meta que contiene el ID del mensaje.
      */
     public Map<String, String> sendTextMessage(String recipientPhoneNumber, String message) {
@@ -48,8 +67,7 @@ public class WhatsAppApiService {
                 "messaging_product", "whatsapp",
                 "to", recipientPhoneNumber,
                 "type", "text",
-                "text", Map.of("body", message)
-        );
+                "text", Map.of("body", message));
 
         log.info("Enviando mensaje de WhatsApp a: {}", recipientPhoneNumber);
 
@@ -63,7 +81,8 @@ public class WhatsAppApiService {
                     .header("Accept", "application/json")
                     .body(requestBody)
                     .retrieve()
-                    .body(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {});
+                    .body(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {
+                    });
 
             // 3. Extraer el ID del mensaje para el seguimiento en la DB
             if (response != null && response.containsKey("messages")) {
@@ -90,17 +109,120 @@ public class WhatsAppApiService {
 
         log.info("📢 Webhook recibido. Iniciando procesamiento de mensaje INBOUND...");
 
-        // Aquí iría la lógica real:
-        // 1. Parsear el payload para encontrar el mensaje, el remitente y la conversación.
-        // 2. Extraer el texto o el tipo de mensaje (media, text, etc.).
-        // 3. Usar el MessageService para guardar el mensaje en la DB.
-        // 4. Actualizar el estado de la conversación (ej., unreadCount++).
+        try {
+            // 1. Parsear el payload usando los DTOs de WhatsApp
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            String payloadJson = objectMapper.writeValueAsString(payload);
+            com.nocountry.backend.dto.whatsapp.WhatsAppWebhookPayloadDTO webhookPayload = objectMapper
+                    .readValue(payloadJson, com.nocountry.backend.dto.whatsapp.WhatsAppWebhookPayloadDTO.class);
 
-        // Por ahora, solo registramos el contenido del payload para fines de prueba.
-        log.debug("Contenido del Payload: {}", payload);
+            // 2. Validar que contiene mensajes
+            if (webhookPayload.entry() == null || webhookPayload.entry().isEmpty()) {
+                log.warn("Webhook sin entries. Ignorando.");
+                return;
+            }
 
-        // Nota: Aunque el método no haga nada complejo ahora, debe existir
-        // para que la llamada en el controlador compile.
+            com.nocountry.backend.dto.whatsapp.WhatsAppEntryDTO entry = webhookPayload.entry().get(0);
+            if (entry.changes() == null || entry.changes().isEmpty()) {
+                log.warn("Entry sin changes. Ignorando.");
+                return;
+            }
+
+            com.nocountry.backend.dto.whatsapp.WhatsAppChangeDTO change = entry.changes().get(0);
+            com.nocountry.backend.dto.whatsapp.WhatsAppValueDTO value = change.value();
+
+            if (value.messages() == null || value.messages().isEmpty()) {
+                log.debug("Webhook sin mensajes (posiblemente status update). Ignorando.");
+                return;
+            }
+
+            // 3. Extraer información del mensaje
+            com.nocountry.backend.dto.whatsapp.WhatsAppInboundMessageDTO inboundMessage = value.messages().get(0);
+            String fromPhone = inboundMessage.from();
+            String messageId = inboundMessage.id();
+            String timestamp = inboundMessage.timestamp();
+            String messageType = inboundMessage.type();
+
+            // Solo procesar mensajes de texto por ahora
+            if (!"text".equals(messageType) || inboundMessage.text() == null) {
+                log.info("Mensaje de tipo {} recibido. Solo se procesan mensajes de texto por ahora.", messageType);
+                return;
+            }
+
+            String messageContent = inboundMessage.text().body();
+            log.info("Mensaje de WhatsApp recibido de: {} | Contenido: {}", fromPhone, messageContent);
+
+            // Obtener nombre del perfil si está disponible
+            final String contactName;
+            if (value.contacts() != null && !value.contacts().isEmpty()) {
+                com.nocountry.backend.dto.whatsapp.WhatsAppContactDTO contact = value.contacts().get(0);
+                if (contact.profile() != null && contact.profile().name() != null) {
+                    contactName = contact.profile().name();
+                } else {
+                    contactName = "Lead desde WhatsApp";
+                }
+            } else {
+                contactName = "Lead desde WhatsApp";
+            }
+
+            // 4. Buscar o crear el Lead por número de teléfono
+            com.nocountry.backend.entity.CrmLead lead = crmLeadRepository.findByPhone(fromPhone)
+                    .orElseGet(() -> {
+                        log.info("Lead no encontrado. Creando nuevo Lead para: {}", fromPhone);
+                        // Generar email placeholder ya que es requerido en la base de datos
+                        String placeholderEmail = fromPhone + "@whatsapp.generated";
+                        com.nocountry.backend.entity.CrmLead newLead = com.nocountry.backend.entity.CrmLead.builder()
+                                .phone(fromPhone)
+                                .name(contactName)
+                                .email(placeholderEmail)
+                                .channel(com.nocountry.backend.enums.Channel.WHATSAPP)
+                                .stage(com.nocountry.backend.enums.Stage.ACTIVE_LEAD)
+                                .status("active")
+                                .createdAt(java.time.LocalDateTime.now())
+                                .updatedAt(java.time.LocalDateTime.now())
+                                .deleted(false)
+                                .build();
+                        return crmLeadRepository.save(newLead);
+                    });
+
+            // 5. Buscar o crear la Conversación para ese Lead en el canal WhatsApp
+            com.nocountry.backend.entity.Conversation conversation = conversationRepository
+                    .findByLeadIdAndChannel(lead.getId(), com.nocountry.backend.enums.Channel.WHATSAPP)
+                    .orElseGet(() -> {
+                        log.info("Conversación no encontrada. Creando nueva conversación para Lead ID: {}",
+                                lead.getId());
+                        com.nocountry.backend.entity.Conversation newConversation = com.nocountry.backend.entity.Conversation
+                                .builder()
+                                .crm_lead(lead)
+                                .channel(com.nocountry.backend.enums.Channel.WHATSAPP)
+                                .status(com.nocountry.backend.enums.ConversationStatus.OPEN)
+                                .startedAt(java.time.LocalDateTime.now())
+                                .firstInboundAt(java.time.LocalDateTime.now())
+                                .unreadCount(0)
+                                .build();
+                        return conversationRepository.save(newConversation);
+                    });
+
+            // 6. Guardar el mensaje usando MessageService
+            java.time.LocalDateTime messageSentAt = java.time.LocalDateTime.ofEpochSecond(
+                    Long.parseLong(timestamp), 0, java.time.ZoneOffset.UTC);
+
+            messageService.saveInboundMessage(conversation, messageContent, messageId, messageSentAt);
+
+            // 7. Actualizar la conversación (último mensaje, contador de no leídos)
+            conversation.setLastMessageText(messageContent);
+            conversation.setLastMessageAt(messageSentAt);
+            conversation.setLastMessageDirection(com.nocountry.backend.enums.Direction.INBOUND);
+            conversation.setUnreadCount(conversation.getUnreadCount() + 1);
+            conversationRepository.save(conversation);
+
+            log.info("✅ Mensaje INBOUND procesado exitosamente. Lead ID: {} | Conversation ID: {}",
+                    lead.getId(), conversation.getId());
+
+        } catch (Exception e) {
+            log.error("❌ Error al procesar mensaje INBOUND del webhook: {}", e.getMessage(), e);
+            // No lanzar excepción para evitar que Meta reenvíe el webhook
+        }
     }
 
 }
