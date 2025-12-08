@@ -11,14 +11,19 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/webhooks/whatsapp")
-@RequiredArgsConstructor
 public class WhatsappWebhookController {
 
     private final WhatsAppApiService whatsAppApiService;
-
-    // Token de verificación configurado en Meta y en tu application.properties
-    @Value("${whatsapp.webhook.verify-token}")
     private String VERIFY_TOKEN;
+
+    public WhatsappWebhookController(
+            WhatsAppApiService whatsAppApiService,
+            // Inyección directa del valor de entorno en el constructor
+            @Value("${WHATSAPP_VERIFY_TOKEN}") String verifyToken) {
+
+        this.whatsAppApiService = whatsAppApiService;
+        this.VERIFY_TOKEN = verifyToken;
+    }
 
     // ==========================================
     // 1. VERIFICACIÓN DE WEBHOOK (GET)

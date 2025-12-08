@@ -10,6 +10,8 @@ public record ConversationDTO(
 
         CrmLeadDTO lead,
 
+        UserDTO assignedUser,
+
         String externalId,
 
         String lastMessageText,

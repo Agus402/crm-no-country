@@ -1,65 +1,78 @@
 package com.nocountry.backend.services;
 
-import com.nocountry.backend.dto.CreateMessageDTO;
 import com.nocountry.backend.dto.MessageDTO;
+import com.nocountry.backend.dto.CreateMessageDTO;
 import com.nocountry.backend.entity.Conversation;
 import com.nocountry.backend.entity.Message;
 import com.nocountry.backend.enums.Channel;
-import com.nocountry.backend.enums.Direction;
 import com.nocountry.backend.mappers.MessageMapper;
 import com.nocountry.backend.repository.ConversationRepository;
 import com.nocountry.backend.repository.MessageRepository;
-import jakarta.transaction.Transactional;
+import com.nocountry.backend.services.whatsapp.WhatsAppApiService; // Asegúrate de tener esta clase
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import com.nocountry.backend.services.whatsapp.WhatsAppApiService;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class MessageService {
 
-    private final WhatsAppApiService whatsAppApiService;
     private final MessageRepository messageRepository;
-    private final MessageMapper messageMapper;
     private final ConversationRepository conversationRepository;
+    private final WhatsAppApiService whatsAppApiService;
+    private final MessageMapper messageMapper;
 
+    // --- CREATE OUTBOUND MESSAGE (POST) ---
     @Transactional
-    public MessageDTO create(CreateMessageDTO dto) {
+    public MessageDTO createOutboundMessage(CreateMessageDTO dto) {
 
         Conversation conversation = conversationRepository.findById(dto.conversationId())
-                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+                .orElseThrow(() -> new RuntimeException("Conversación no encontrada"));
 
+        // 1. Guardar el mensaje en la DB con estado inicial
         Message message = messageMapper.toEntity(dto);
-
         message.setConversation(conversation);
         message.setSentAt(LocalDateTime.now());
 
-        if (dto.messageDirection() == Direction.OUTBOUND) {
-
-            // Asumo que Conversation tiene el campo 'channel' y que el Lead tiene el 'phone'
-            if (conversation.getChannel() == Channel.WHATSAPP) {
-
-                // CRÍTICO: Llama a la API externa de Meta
-                String externalId = whatsAppApiService.sendMessage(
-                        conversation.getCrm_lead().getPhone(), // Obtiene el teléfono del Lead asociado a la conversación
-                        dto.content()
-                );
-
-                // CRÍTICO: Almacena el ID externo devuelto por Meta
-                message.setExternalMessageId(externalId);
-            }
-            // else if (conversation.getChannel() == Channel.EMAIL) { /* Lógica de Email Service */ }
-        }
-
         Message savedMessage = messageRepository.save(message);
 
-        conversation.setLastMessageAt(message.getSentAt());
-        conversation.setLastMessageText(message.getContent());
+        // 2. Si el canal es WhatsApp, llamar a la API externa
+        if (conversation.getChannel() == Channel.WHATSAPP) {
+
+            String recipientPhoneNumber = conversation.getCrm_lead().getPhone();
+
+            // Llamar a la API de Meta
+            Map<String, String> metaResponse = whatsAppApiService.sendTextMessage(
+                    recipientPhoneNumber,
+                    dto.content()
+            );
+
+            // 3. Actualizar el mensaje con el ID externo de Meta (para seguimiento)
+            String externalId = metaResponse.get("external_message_id");
+            savedMessage.setExternalMessageId(externalId);
+            messageRepository.save(savedMessage);
+        }
+
+        // 4. Actualizar la conversación (último mensaje)
+        conversation.setLastMessageText(dto.content());
+        conversation.setLastMessageAt(savedMessage.getSentAt());
+        conversation.setLastMessageDirection(dto.messageDirection());
         conversationRepository.save(conversation);
 
         return messageMapper.toDTO(savedMessage);
     }
 
+    // --- READ ALL BY CONVERSATION ID (GET) ---
+    public List<MessageDTO> findMessagesByConversationId(Long conversationId) {
+        List<Message> messages = messageRepository.findByConversationId(conversationId);
+
+        return messages.stream()
+                .map(messageMapper::toDTO)
+                .collect(Collectors.toList());
+    }
 }

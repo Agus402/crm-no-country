@@ -27,9 +27,5 @@ public record CreateMessageDTO(
         @NotBlank(message = "Message content is required.")
         String content,
 
-        @Nullable String mediaType,
-
-        @Nullable String mediaCaption,
-
         @Nullable Long emailTemplateId
 ) {}

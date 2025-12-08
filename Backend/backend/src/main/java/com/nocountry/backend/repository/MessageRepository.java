@@ -9,6 +9,10 @@ import java.util.List;
 @Repository
 public interface MessageRepository extends JpaRepository<Message, Long> {
 
-    List<Message> findByConversationIdOrderBySentAtAsc(Long conversationId);
-
+    /**
+     * Busca todos los mensajes asociados a un ID de conversación específico.
+     * La convención de nombres 'findByConversationId' funciona automáticamente
+     * con la entidad Message que tiene la relación 'conversation'.
+     */
+    List<Message> findByConversationId(Long conversationId);
 }
