@@ -6,6 +6,7 @@ import com.nocountry.backend.services.MessageService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -27,6 +28,7 @@ public class WhatsAppApiService {
     private final CrmLeadRepository crmLeadRepository;
     private final ConversationRepository conversationRepository;
     private final MessageService messageService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     public WhatsAppApiService(
             RestClient.Builder restClientBuilder,
@@ -34,7 +36,8 @@ public class WhatsAppApiService {
             @Value("${WHATSAPP_API_TOKEN}") String whatsappApiToken,
             CrmLeadRepository crmLeadRepository,
             ConversationRepository conversationRepository,
-            @Lazy MessageService messageService) {
+            @Lazy MessageService messageService,
+            SimpMessagingTemplate messagingTemplate) {
 
         // Asignar el token de acceso
         this.WHATSAPP_API_TOKEN = whatsappApiToken;
@@ -43,6 +46,7 @@ public class WhatsAppApiService {
         this.crmLeadRepository = crmLeadRepository;
         this.conversationRepository = conversationRepository;
         this.messageService = messageService;
+        this.messagingTemplate = messagingTemplate;
 
         // Inicializar RestClient con la URL base de Meta (Asegurando que el scheme se
         // use aquí)
@@ -220,6 +224,25 @@ public class WhatsAppApiService {
             conversation.setLastMessageDirection(com.nocountry.backend.enums.Direction.INBOUND);
             conversation.setUnreadCount(conversation.getUnreadCount() + 1);
             conversationRepository.save(conversation);
+
+            // 8. Publicar notificación WebSocket
+            try {
+                com.nocountry.backend.dto.WebSocketMessageDTO notification = new com.nocountry.backend.dto.WebSocketMessageDTO(
+                        "NEW_MESSAGE",
+                        conversation.getId(),
+                        null, // El mensaje completo se puede cargar desde el frontend
+                        null // La conversación se puede recargar desde el frontend
+                );
+                messagingTemplate.convertAndSend(
+                        "/topic/conversations/" + conversation.getId(),
+                        notification);
+                messagingTemplate.convertAndSend(
+                        "/topic/conversations",
+                        notification);
+                log.info("📡 Notificación WebSocket enviada para conversación {}", conversation.getId());
+            } catch (Exception wsError) {
+                log.warn("⚠️ Error al enviar notificación WebSocket: {}", wsError.getMessage());
+            }
 
             log.info("✅ Mensaje INBOUND procesado exitosamente. Lead ID: {} | Conversation ID: {}",
                     lead.getId(), conversation.getId());

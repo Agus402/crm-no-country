@@ -1,17 +1,18 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Search, Send, Paperclip, MessageCircle, Mail, MoreVertical, ArrowLeft, Loader2 } from "lucide-react";
+import { Search, Send, Paperclip, MessageCircle, Mail, MoreVertical, ArrowLeft, Loader2, Wifi, WifiOff } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { conversationService, ConversationDTO } from "@/services/conversation.service";
 import { messageService, MessageDTO } from "@/services/message.service";
+import { websocketService, WebSocketMessage } from "@/services/websocket.service";
 
 export default function Message() {
   // Estado de datos
@@ -29,49 +30,87 @@ export default function Message() {
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
 
   // Ref para scroll automático
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Ref para evitar auto-selección después de la primera carga
+  const hasSelectedInitialRef = useRef(false);
+  // Ref para la conversación seleccionada (para usar en callbacks de WebSocket)
+  const selectedConversationRef = useRef<ConversationDTO | null>(null);
+  // Ref para suscripciones WebSocket
+  const wsSubscriptionsRef = useRef<string[]>([]);
 
-  // Cargar conversaciones al montar
+  // Mantener ref sincronizada con state
   useEffect(() => {
-    loadConversations();
+    selectedConversationRef.current = selectedConversation;
+  }, [selectedConversation]);
 
-    // Polling cada 10 segundos para actualizar conversaciones
-    const interval = setInterval(() => {
-      loadConversations();
-    }, 10000);
+  // Handler para notificaciones WebSocket
+  const handleWebSocketMessage = useCallback((notification: WebSocketMessage) => {
+    console.log('📩 Notificación WebSocket recibida:', notification);
 
-    return () => clearInterval(interval);
+    if (notification.type === 'NEW_MESSAGE' || notification.type === 'MESSAGE_SENT') {
+      // Recargar mensajes si la conversación activa recibió el mensaje
+      if (selectedConversationRef.current?.id === notification.conversationId) {
+        loadMessages(notification.conversationId);
+      }
+      // Siempre recargar lista de conversaciones para actualizar último mensaje
+      loadConversations(false);
+    }
   }, []);
 
-  // Cargar mensajes cuando cambia la conversación seleccionada
+  // Conectar WebSocket y suscribirse al montar
   useEffect(() => {
-    if (selectedConversation) {
+    loadConversations(true);
+
+    // Conectar WebSocket
+    websocketService.connect(() => {
+      setWsConnected(true);
+      // Suscribirse al topic global de conversaciones
+      const subId = websocketService.subscribe('/topic/conversations', handleWebSocketMessage);
+      if (subId) wsSubscriptionsRef.current.push(subId);
+    });
+
+    return () => {
+      // Limpiar suscripciones al desmontar
+      wsSubscriptionsRef.current.forEach(id => websocketService.unsubscribe(id));
+      wsSubscriptionsRef.current = [];
+    };
+  }, [handleWebSocketMessage]);
+
+  // Suscribirse a la conversación específica cuando cambia la selección
+  useEffect(() => {
+    if (selectedConversation && wsConnected) {
       loadMessages(selectedConversation.id);
 
-      // Polling para mensajes cada 5 segundos
-      const interval = setInterval(() => {
-        loadMessages(selectedConversation.id);
-      }, 5000);
+      // Suscribirse al topic específico de la conversación
+      const subId = websocketService.subscribe(
+        `/topic/conversations/${selectedConversation.id}`,
+        handleWebSocketMessage
+      );
+      if (subId) wsSubscriptionsRef.current.push(subId);
 
-      return () => clearInterval(interval);
+      return () => {
+        // No desuscribir aquí, mantener las suscripciones activas
+      };
     }
-  }, [selectedConversation?.id]);
+  }, [selectedConversation?.id, wsConnected, handleWebSocketMessage]);
 
   // Scroll automático al final de los mensajes
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const loadConversations = async () => {
+  const loadConversations = async (allowAutoSelect: boolean = false) => {
     try {
       const data = await conversationService.getAll();
       setConversations(data);
 
-      // Si no hay conversación seleccionada y hay conversaciones, seleccionar la primera
-      if (!selectedConversation && data.length > 0) {
+      // Solo auto-seleccionar en la primera carga si no hay conversación seleccionada
+      if (allowAutoSelect && !hasSelectedInitialRef.current && data.length > 0) {
         setSelectedConversation(data[0]);
+        hasSelectedInitialRef.current = true;
       }
     } catch (error) {
       console.error("Error cargando conversaciones:", error);
@@ -167,8 +206,25 @@ export default function Message() {
   return (
     <div className="p-4 md:p-8 h-[calc(100vh-60px)] flex flex-col">
       <div className={cn("mb-6", showMobileChat ? "hidden lg:block" : "block")}>
-        <h1 className="mb-2 text-2xl font-bold">Mensajes</h1>
-        <p className="text-slate-600">Conversaciones en tiempo real a través de WhatsApp y Email.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="mb-2 text-2xl font-bold">Mensajes</h1>
+            <p className="text-slate-600">Conversaciones en tiempo real a través de WhatsApp y Email.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {wsConnected ? (
+              <div className="flex items-center gap-1 text-emerald-600">
+                <Wifi className="h-4 w-4" />
+                <span className="text-xs hidden sm:inline">Conectado</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 text-yellow-600">
+                <WifiOff className="h-4 w-4" />
+                <span className="text-xs hidden sm:inline">Conectando...</span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
@@ -329,8 +385,8 @@ export default function Message() {
                             )}
                             <div
                               className={`p-3 rounded-2xl text-sm ${isOwn
-                                  ? 'bg-purple-600 text-white rounded-tr-none'
-                                  : 'bg-slate-100 text-slate-900 rounded-tl-none'
+                                ? 'bg-purple-600 text-white rounded-tr-none'
+                                : 'bg-slate-100 text-slate-900 rounded-tl-none'
                                 }`}
                             >
                               <p>{message.content}</p>
@@ -386,6 +442,6 @@ export default function Message() {
           )}
         </Card>
       </div>
-    </div>
+    </div >
   );
 }
