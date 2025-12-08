@@ -12,7 +12,7 @@ const stageColors: Record<string, string> = {
 };
 
 interface Contact {
-  id: string;
+  id: string | number;
   name: string;
   email: string;
   initials: string;
@@ -25,10 +25,11 @@ interface Contact {
 
 interface ContactCardProps {
     contact: Contact;
-    onEdit: (contact: Contact) => void; 
+    onEdit: (contact: Contact) => void;
+    onDelete?: (id: number) => void;
 }
 
-export function ContactCard({ contact, onEdit }: ContactCardProps) {
+export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
   return (
     <Card className="mb-4">
       <CardContent className="p-4 space-y-4">
@@ -57,7 +58,12 @@ export function ContactCard({ contact, onEdit }: ContactCardProps) {
                 
                 <DropdownMenuItem><FileDown className="mr-2 h-4 w-4" /> Export to PDF</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50"><Trash className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                  onClick={() => onDelete && onDelete(Number(contact.id))}
+                >
+                  <Trash className="mr-2 h-4 w-4" /> Delete
+                </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

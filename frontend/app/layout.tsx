@@ -6,6 +6,7 @@ import { Sidebar, MobileSidebar } from "@/components/sidebar/sidebar";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -59,6 +60,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <AuthProvider>
           <ProtectedLayout>{children}</ProtectedLayout>
+          <Toaster />
         </AuthProvider>
       </body>
     </html>
