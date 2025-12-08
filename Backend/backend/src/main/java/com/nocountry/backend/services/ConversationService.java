@@ -38,8 +38,8 @@ public class ConversationService {
         // 2. Mapear DTO a Entidad
         Conversation conversation = conversationMapper.toEntity(dto);
         conversation.setCrm_lead(lead);
+        conversation.setAssignedUser(assignedUser);
         conversation.setStartedAt(LocalDateTime.now());
-        // conversation.setAssignedUser(...) // Asignar el User encontrado
 
         // 3. Guardar y mapear a DTO de respuesta
         Conversation savedConversation = conversationRepository.save(conversation);
@@ -62,9 +62,11 @@ public class ConversationService {
 
     // --- DELETE (DELETE/Cierre) ---
     public void deleteConversation(Long id) {
-        // Para CRMs, generalmente se cambia el estado a CLOSED o ARCHIVED en lugar de eliminar
+        // Para CRMs, generalmente se cambia el estado a CLOSED o ARCHIVED en lugar de
+        // eliminar
         // Conversation conversation = conversationRepository.findById(id)
-        //        .orElseThrow(() -> new RuntimeException("Conversación no encontrada: " + id));
+        // .orElseThrow(() -> new RuntimeException("Conversación no encontrada: " +
+        // id));
         // conversation.setStatus(ConversationStatus.CLOSED);
         // conversationRepository.save(conversation);
 
