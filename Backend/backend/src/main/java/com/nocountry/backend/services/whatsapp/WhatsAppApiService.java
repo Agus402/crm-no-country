@@ -152,6 +152,11 @@ public class WhatsAppApiService {
             String messageContent = inboundMessage.text().body();
             log.info("Mensaje de WhatsApp recibido de: {} | Contenido: {}", fromPhone, messageContent);
 
+            // Normalizar número de teléfono argentino (quitar el "9" de celular)
+            // WhatsApp envía: 5491122667629, pero guardamos: 541122667629
+            String normalizedPhone = normalizeArgentinePhone(fromPhone);
+            log.info("Número normalizado: {} -> {}", fromPhone, normalizedPhone);
+
             // Obtener nombre del perfil si está disponible
             final String contactName;
             if (value.contacts() != null && !value.contacts().isEmpty()) {
@@ -165,14 +170,14 @@ public class WhatsAppApiService {
                 contactName = "Lead desde WhatsApp";
             }
 
-            // 4. Buscar o crear el Lead por número de teléfono
-            com.nocountry.backend.entity.CrmLead lead = crmLeadRepository.findByPhone(fromPhone)
+            // 4. Buscar o crear el Lead por número de teléfono normalizado
+            com.nocountry.backend.entity.CrmLead lead = crmLeadRepository.findByPhone(normalizedPhone)
                     .orElseGet(() -> {
-                        log.info("Lead no encontrado. Creando nuevo Lead para: {}", fromPhone);
+                        log.info("Lead no encontrado. Creando nuevo Lead para: {}", normalizedPhone);
                         // Generar email placeholder ya que es requerido en la base de datos
-                        String placeholderEmail = fromPhone + "@whatsapp.generated";
+                        String placeholderEmail = normalizedPhone + "@whatsapp.generated";
                         com.nocountry.backend.entity.CrmLead newLead = com.nocountry.backend.entity.CrmLead.builder()
-                                .phone(fromPhone)
+                                .phone(normalizedPhone)
                                 .name(contactName)
                                 .email(placeholderEmail)
                                 .channel(com.nocountry.backend.enums.Channel.WHATSAPP)
@@ -223,6 +228,24 @@ public class WhatsAppApiService {
             log.error("❌ Error al procesar mensaje INBOUND del webhook: {}", e.getMessage(), e);
             // No lanzar excepción para evitar que Meta reenvíe el webhook
         }
+    }
+
+    /**
+     * Normaliza números de teléfono argentinos quitando el "9" de celular.
+     * WhatsApp envía números con formato 549XXXXXXXXXX, pero la mayoría de los
+     * sistemas guardan 54XXXXXXXXXX (sin el 9).
+     * 
+     * Ejemplo: 5491122667629 -> 541122667629
+     */
+    private String normalizeArgentinePhone(String phone) {
+        if (phone == null) {
+            return null;
+        }
+        // Si el número empieza con "549" (Argentina + celular), quitar el "9"
+        if (phone.startsWith("549") && phone.length() >= 13) {
+            return "54" + phone.substring(3);
+        }
+        return phone;
     }
 
 }

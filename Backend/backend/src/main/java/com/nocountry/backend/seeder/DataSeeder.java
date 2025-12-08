@@ -63,7 +63,7 @@ public class DataSeeder implements CommandLineRunner {
         System.out.println("   -> Creando 20 Leads...");
 
         createLead("Peppa Pig", "peppa.p@mail.com", "+549111111", Stage.CLIENT, Channel.EMAIL, account);
-        createLead("Marcus Brown", "marcus.b@mail.com", "541122667629", Stage.FOLLOW_UP, Channel.WHATSAPP, account);
+        createLead("Agustín Scklink", "agustin.s@mail.com", "541122667629", Stage.FOLLOW_UP, Channel.WHATSAPP, account);
         createLead("Jessica Park", "jess.p@mail.com", "+549113333", Stage.ACTIVE_LEAD, Channel.EMAIL, account);
         createLead("Thomas Anderson", "thomas.a@mail.com", "+549114444", Stage.FOLLOW_UP, Channel.WHATSAPP, account);
         createLead("David Liu", "david.l@mail.com", "+549115555", Stage.LOST, Channel.EMAIL, account);
