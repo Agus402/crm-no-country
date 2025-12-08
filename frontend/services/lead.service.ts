@@ -13,11 +13,11 @@ export interface LeadData {
   account: any;
 }
 
-const API_URL = "http://localhost:8080/api/crmleads";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
 export const leadService = {
   getAll: async (): Promise<LeadData[]> => {
-    const res = await fetch(API_URL, {
+    const res = await fetch(API_URL + "/crmleads", {
       credentials: "include",
     });
 

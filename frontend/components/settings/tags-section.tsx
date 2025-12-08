@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, Tag as TagIcon } from "lucide-react"; 
 import { CreateTagModal } from "@/components/settings/create-tag-modal";
 import ConfirmDeleteModal from "@/components/shared/ConfirmDeleteModal"; 
-import { tagService, TagData } from "@/services/tag-service";
+import { tagService, TagData } from "@/services/tag.service";
 
 export function TagsSection() {
   const [tags, setTags] = useState<TagData[]>([]);

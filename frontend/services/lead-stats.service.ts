@@ -1,6 +1,6 @@
 // services/lead-stats-service.ts
 
-const API_URL = "http://localhost:8080/api/crmleads";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
 export type StageKey = "ACTIVE_LEAD" | "FOLLOW_UP" | "CLIENT" | "LOST";
 
@@ -13,7 +13,7 @@ export interface StageStats {
 
 async function fetchByStage(stage: StageKey): Promise<number> {
   try {
-    const res = await fetch(`${API_URL}?stage=${stage}`, {
+    const res = await fetch(`${API_URL}/crmleads?stage=${stage}`, {
       credentials: "include",
     });
 
