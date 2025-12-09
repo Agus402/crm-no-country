@@ -2,7 +2,10 @@ package com.nocountry.backend.enums;
 
 public enum MessageType {
     TEXT,
-    MEDIA,
+    IMAGE,
+    VIDEO,
+    AUDIO,
+    DOCUMENT,
+    STICKER,
     EMAIL
 }
-

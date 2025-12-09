@@ -146,7 +146,6 @@ export function NewConversationModal({
                 phone: newLeadForm.phone.trim(),
                 email: newLeadForm.email.trim() || undefined,
                 channel: "WHATSAPP",
-                account: user?.account?.id ? { id: user.account.id } : undefined,
             });
 
             // 2. Crear la conversación

@@ -39,6 +39,17 @@ public class MessageService {
         message.setConversation(conversation);
         message.setSentAt(LocalDateTime.now());
 
+        // Set media fields if present
+        if (dto.mediaUrl() != null) {
+            message.setMediaUrl(dto.mediaUrl());
+        }
+        if (dto.mediaFileName() != null) {
+            message.setMediaFileName(dto.mediaFileName());
+        }
+        if (dto.mediaCaption() != null) {
+            message.setMediaCaption(dto.mediaCaption());
+        }
+
         Message savedMessage = messageRepository.save(message);
 
         // 2. Si el canal es WhatsApp, llamar a la API externa
@@ -46,18 +57,21 @@ public class MessageService {
 
             String recipientPhoneNumber = conversation.getCrm_lead().getPhone();
 
-            // Llamar a la API de Meta
-            Map<String, String> metaResponse = whatsAppApiService.sendTextMessage(
-                    recipientPhoneNumber,
-                    dto.content());
+            // TODO: For media messages, implement sendMediaMessage in WhatsAppApiService
+            // For now, only send text messages via WhatsApp
+            if (dto.messageType() == com.nocountry.backend.enums.MessageType.TEXT) {
+                Map<String, String> metaResponse = whatsAppApiService.sendTextMessage(
+                        recipientPhoneNumber,
+                        dto.content());
 
-            // 3. Actualizar el mensaje con el ID externo de Meta (para seguimiento)
-            String externalId = metaResponse.get("external_message_id");
-            savedMessage.setExternalMessageId(externalId);
-            messageRepository.save(savedMessage);
+                String externalId = metaResponse.get("external_message_id");
+                savedMessage.setExternalMessageId(externalId);
+                messageRepository.save(savedMessage);
+            }
+            // Media messages are saved locally but not sent via WhatsApp API yet
         }
 
-        // 4. Actualizar la conversación (último mensaje)
+        // 3. Actualizar la conversación (último mensaje)
         conversation.setLastMessageText(dto.content());
         conversation.setLastMessageAt(savedMessage.getSentAt());
         conversation.setLastMessageDirection(dto.messageDirection());
@@ -91,6 +105,39 @@ public class MessageService {
                 .messageDirection(com.nocountry.backend.enums.Direction.INBOUND)
                 .messageType(com.nocountry.backend.enums.MessageType.TEXT)
                 .content(content)
+                .externalMessageId(externalMessageId)
+                .sentAt(timestamp)
+                .build();
+
+        Message savedMessage = messageRepository.save(message);
+
+        return messageMapper.toDTO(savedMessage);
+    }
+
+    // --- SAVE INBOUND MEDIA MESSAGE (FROM WEBHOOK - WITH MEDIA SUPPORT) ---
+    @Transactional
+    public MessageDTO saveInboundMediaMessage(
+            Conversation conversation,
+            String content,
+            String externalMessageId,
+            LocalDateTime timestamp,
+            com.nocountry.backend.enums.MessageType messageType,
+            String mediaUrl,
+            String mediaFileName,
+            String mimeType,
+            String mediaCaption) {
+
+        Message message = Message.builder()
+                .conversation(conversation)
+                .senderType(com.nocountry.backend.enums.SenderType.LEAD)
+                .senderLeadId(conversation.getCrm_lead().getId())
+                .messageDirection(com.nocountry.backend.enums.Direction.INBOUND)
+                .messageType(messageType)
+                .content(content)
+                .mediaUrl(mediaUrl)
+                .mediaFileName(mediaFileName)
+                .mediaType(mimeType)
+                .mediaCaption(mediaCaption)
                 .externalMessageId(externalMessageId)
                 .sentAt(timestamp)
                 .build();

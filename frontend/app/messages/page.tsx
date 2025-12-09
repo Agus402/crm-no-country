@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Search, Send, Paperclip, MessageCircle, Mail, MoreVertical, ArrowLeft, Loader2, Wifi, WifiOff, Plus, Download, Trash2 } from "lucide-react";
+import { Search, Send, Paperclip, MessageCircle, Mail, MoreVertical, ArrowLeft, Loader2, Wifi, WifiOff, Plus, Download, Trash2, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -16,6 +16,7 @@ import { messageService, MessageDTO } from "@/services/message.service";
 import { websocketService, WebSocketMessage } from "@/services/websocket.service";
 import { toast } from "sonner";
 import { NewConversationModal } from "@/components/messages/new-conversation-modal";
+import { MessageMedia } from "@/components/messages/message-media";
 import { useAuth } from "@/context/AuthContext";
 
 export default function Message() {
@@ -38,6 +39,9 @@ export default function Message() {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Ref para scroll automático
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -143,14 +147,43 @@ export default function Message() {
   };
 
   const handleSendMessage = async () => {
-    if (!messageInput.trim() || !selectedConversation || sendingMessage) return;
+    if ((!messageInput.trim() && !selectedFile) || !selectedConversation || sendingMessage || uploadingFile) return;
 
     try {
       setSendingMessage(true);
-      await messageService.sendMessage({
-        conversationId: selectedConversation.id,
-        content: messageInput.trim(),
-      });
+
+      // If there's a file, upload it first
+      if (selectedFile) {
+        setUploadingFile(true);
+        try {
+          const uploadResult = await messageService.uploadMedia(selectedFile);
+          const messageType = messageService.getMessageTypeFromMime(uploadResult.mimeType);
+
+          await messageService.sendMessage({
+            conversationId: selectedConversation.id,
+            content: messageInput.trim() || uploadResult.filename,
+            messageType: messageType,
+            mediaUrl: uploadResult.url,
+            mediaFileName: uploadResult.filename,
+            mediaCaption: messageInput.trim() || undefined,
+          });
+
+          setSelectedFile(null);
+          // Reset file input
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        } finally {
+          setUploadingFile(false);
+        }
+      } else {
+        // Text-only message
+        await messageService.sendMessage({
+          conversationId: selectedConversation.id,
+          content: messageInput.trim(),
+        });
+      }
+
       setMessageInput('');
       // Recargar mensajes después de enviar
       await loadMessages(selectedConversation.id);
@@ -567,7 +600,17 @@ export default function Message() {
                                 : 'bg-slate-100 text-slate-900 rounded-tl-none'
                                 }`}
                             >
-                              <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                              {message.mediaUrl ? (
+                                <MessageMedia
+                                  type={message.mediaType || message.messageType}
+                                  url={message.mediaUrl}
+                                  caption={message.mediaCaption}
+                                  fileName={message.mediaFileName}
+                                  isOwn={isOwn}
+                                />
+                              ) : (
+                                <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                              )}
                             </div>
                             <p className={`text-[10px] text-slate-400 mt-1 ${isOwn ? 'text-right mr-1' : 'text-left ml-1'}`}>
                               {formatMessageTime(message.sentAt)}
@@ -583,28 +626,71 @@ export default function Message() {
 
               {/* Message Input */}
               <CardContent className="border-t p-3 md:p-4">
+                {/* File preview */}
+                {selectedFile && (
+                  <div className="flex items-center gap-2 mb-2 p-2 bg-slate-100 rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{selectedFile.name}</p>
+                      <p className="text-xs text-slate-500">
+                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => setSelectedFile(null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" className="shrink-0">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (file.size > 100 * 1024 * 1024) {
+                          toast.error("El archivo es demasiado grande", {
+                            description: "El tamaño máximo permitido es 100 MB"
+                          });
+                          return;
+                        }
+                        setSelectedFile(file);
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingFile}
+                  >
                     <Paperclip className="h-4 w-4" />
                   </Button>
                   <Input
-                    placeholder="Escribe tu mensaje..."
+                    placeholder={selectedFile ? "Añade un mensaje (opcional)..." : "Escribe tu mensaje..."}
                     value={messageInput}
                     onChange={(e) => setMessageInput(e.target.value)}
                     onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
+                      if (e.key === 'Enter' && (messageInput.trim() || selectedFile)) {
                         handleSendMessage();
                       }
                     }}
                     className="flex-1"
-                    disabled={sendingMessage}
+                    disabled={sendingMessage || uploadingFile}
                   />
                   <Button
                     className="bg-purple-600 hover:bg-purple-700 shrink-0"
                     onClick={handleSendMessage}
-                    disabled={sendingMessage || !messageInput.trim()}
+                    disabled={(sendingMessage || uploadingFile) || (!messageInput.trim() && !selectedFile)}
                   >
-                    {sendingMessage ? (
+                    {(sendingMessage || uploadingFile) ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <Send className="h-4 w-4" />

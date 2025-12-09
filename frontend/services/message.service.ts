@@ -5,8 +5,12 @@ export interface MessageDTO {
     conversationId: number;
     senderType: 'USER' | 'LEAD' | 'SYSTEM';
     messageDirection: 'INBOUND' | 'OUTBOUND';
-    messageType: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO' | 'DOCUMENT';
+    messageType: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO' | 'DOCUMENT' | 'STICKER' | 'EMAIL';
     content: string;
+    mediaUrl?: string;
+    mediaFileName?: string;
+    mediaType?: string;
+    mediaCaption?: string;
     sentAt: string;
     externalMessageId?: string;
     senderLead?: {
@@ -24,7 +28,17 @@ export interface SendMessageRequest {
     content: string;
     senderType?: 'USER';
     messageDirection?: 'OUTBOUND';
-    messageType?: 'TEXT';
+    messageType?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO' | 'DOCUMENT';
+    mediaUrl?: string;
+    mediaFileName?: string;
+    mediaCaption?: string;
+}
+
+export interface MediaUploadResponse {
+    url: string;
+    filename: string;
+    storedFilename: string;
+    mimeType: string;
 }
 
 export const messageService = {
@@ -74,5 +88,39 @@ export const messageService = {
         }
 
         return response.json();
+    },
+
+    async uploadMedia(file: File): Promise<MediaUploadResponse> {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch(`${API_URL}/media/upload`, {
+            method: "POST",
+            credentials: "include",
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            let errorMessage = "Error al subir archivo";
+            try {
+                const errorJson = JSON.parse(errorBody);
+                if (errorJson.error) {
+                    errorMessage = errorJson.error;
+                }
+            } catch {
+                if (errorBody) errorMessage = errorBody;
+            }
+            throw new Error(errorMessage);
+        }
+
+        return response.json();
+    },
+
+    getMessageTypeFromMime(mimeType: string): 'IMAGE' | 'VIDEO' | 'AUDIO' | 'DOCUMENT' {
+        if (mimeType.startsWith('image/')) return 'IMAGE';
+        if (mimeType.startsWith('video/')) return 'VIDEO';
+        if (mimeType.startsWith('audio/')) return 'AUDIO';
+        return 'DOCUMENT';
     }
 };

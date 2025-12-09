@@ -49,7 +49,7 @@ export const leadService = {
       credentials: "include",
       body: JSON.stringify({
         ...data,
-        stage: data.stage || 'NEW',
+        stage: data.stage || 'ACTIVE_LEAD',
         channel: data.channel || 'WHATSAPP',
       }),
     });
