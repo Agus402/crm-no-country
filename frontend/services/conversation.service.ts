@@ -21,6 +21,13 @@ export interface ConversationDTO {
     startedAt: string;
 }
 
+export interface CreateConversationRequest {
+    leadId: number;
+    assignedUserId?: number;
+    channel: 'WHATSAPP' | 'EMAIL';
+    status?: 'OPEN' | 'CLOSED' | 'PENDING';
+}
+
 export const conversationService = {
     async getAll(): Promise<ConversationDTO[]> {
         const response = await fetch(`${API_URL}/conversations`, {
@@ -54,6 +61,27 @@ export const conversationService = {
         return response.json();
     },
 
+    async create(data: CreateConversationRequest): Promise<ConversationDTO> {
+        const response = await fetch(`${API_URL}/conversations`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({
+                ...data,
+                status: data.status || 'OPEN',
+            }),
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            throw new Error(errorBody || "Error al crear conversación");
+        }
+
+        return response.json();
+    },
+
     async markAsRead(conversationId: number): Promise<void> {
         await fetch(`${API_URL}/conversations/${conversationId}/read`, {
             method: "POST",
@@ -62,5 +90,29 @@ export const conversationService = {
             },
             credentials: "include",
         });
+    },
+
+    async delete(conversationId: number): Promise<void> {
+        const response = await fetch(`${API_URL}/conversations/${conversationId}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            credentials: "include",
+        });
+
+        if (!response.ok && response.status !== 204) {
+            throw new Error("Error al eliminar conversación");
+        }
+    },
+
+    async findByLeadId(leadId: number): Promise<ConversationDTO | null> {
+        try {
+            const conversations = await this.getAll();
+            return conversations.find(c => c.lead?.id === leadId) || null;
+        } catch {
+            return null;
+        }
     }
 };
+

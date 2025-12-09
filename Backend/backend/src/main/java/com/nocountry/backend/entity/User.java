@@ -46,7 +46,7 @@ public class User implements UserDetails {
     private LocalDateTime createdAt;
 
     // Relación N:1 con ACCOUNT (Empresa a la que pertenece el equipo)
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "account_id")
     @JsonIgnoreProperties({ "owner", "users" })
     private Account account;

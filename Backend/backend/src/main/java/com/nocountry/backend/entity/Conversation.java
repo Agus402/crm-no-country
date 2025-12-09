@@ -31,7 +31,7 @@ public class Conversation {
     @Column(name = "channel", nullable = false)
     private Channel channel;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "assigned_user_id")
     private User assignedUser;
 
@@ -60,4 +60,3 @@ public class Conversation {
     private List<Message> messages = new ArrayList<>();
 
 }
-

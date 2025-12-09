@@ -13,6 +13,16 @@ export interface LeadData {
   account: any;
 }
 
+export interface CreateLeadRequest {
+  name: string;
+  email?: string;
+  phone: string;
+  stage?: string;
+  channel?: 'WHATSAPP' | 'EMAIL';
+  tagIds?: number[];
+  account?: { id: number };
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
 export const leadService = {
@@ -29,4 +39,27 @@ export const leadService = {
 
     return res.json();
   },
+
+  create: async (data: CreateLeadRequest): Promise<LeadData> => {
+    const res = await fetch(API_URL + "/crmleads", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        ...data,
+        stage: data.stage || 'NEW',
+        channel: data.channel || 'WHATSAPP',
+      }),
+    });
+
+    if (!res.ok) {
+      const errorBody = await res.text();
+      throw new Error(errorBody || "Error al crear contacto");
+    }
+
+    return res.json();
+  },
 };
+

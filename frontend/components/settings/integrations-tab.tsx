@@ -7,9 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Mail, Eye, EyeOff, Loader2, ExternalLink } from "lucide-react";
-import { integrationConfigService, IntegrationConfigDTO, WhatsAppCredentials } from "@/services/integration-config.service";
+import { integrationConfigService, WhatsAppCredentials } from "@/services/integration-config.service";
+import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
 export function IntegrationsTab() {
+  const { user } = useAuth();
+
   // --- WHATSAPP ---
   const [editWhatsApp, setEditWhatsApp] = useState(false);
   const [loadingWhatsApp, setLoadingWhatsApp] = useState(true);
@@ -25,7 +29,14 @@ export function IntegrationsTab() {
   });
 
   const [whatsappBackup, setWhatsappBackup] = useState<WhatsAppCredentials>(whatsappForm);
-  const [whatsappStatus, setWhatsappStatus] = useState<"connected" | "disconnected">("disconnected");
+
+  // El estado "connected" depende de que las credenciales estén completas
+  const isWhatsAppConnected = Boolean(
+    whatsappConfigId &&
+    whatsappForm.apiToken &&
+    whatsappForm.baseUrl &&
+    whatsappForm.verifyToken
+  );
 
   // Cargar configuración de WhatsApp
   useEffect(() => {
@@ -38,7 +49,6 @@ export function IntegrationsTab() {
       const config = await integrationConfigService.getByType('WHATSAPP');
       if (config) {
         setWhatsappConfigId(config.id);
-        setWhatsappStatus(config.isConnected ? "connected" : "disconnected");
         const credentials = integrationConfigService.parseWhatsAppCredentials(config.credentials);
         if (credentials) {
           setWhatsappForm(credentials);
@@ -46,7 +56,9 @@ export function IntegrationsTab() {
         }
       }
     } catch (error) {
-      console.error("Error loading WhatsApp config:", error);
+      toast.error("Error al cargar la configuración de WhatsApp", {
+        description: "No se pudo obtener la configuración guardada."
+      });
     } finally {
       setLoadingWhatsApp(false);
     }
@@ -62,36 +74,76 @@ export function IntegrationsTab() {
     setEditWhatsApp(false);
   };
 
+  const validateWhatsAppForm = (): boolean => {
+    if (!whatsappForm.apiToken.trim()) {
+      toast.error("Token de API requerido", {
+        description: "Por favor ingresa el token de acceso de la API de WhatsApp."
+      });
+      return false;
+    }
+    if (!whatsappForm.baseUrl.trim()) {
+      toast.error("URL Base requerida", {
+        description: "Por favor ingresa la URL base de la API (con tu Phone Number ID)."
+      });
+      return false;
+    }
+    if (!whatsappForm.baseUrl.startsWith("https://")) {
+      toast.error("URL Base inválida", {
+        description: "La URL debe comenzar con https://"
+      });
+      return false;
+    }
+    if (!whatsappForm.verifyToken.trim()) {
+      toast.error("Token de Verificación requerido", {
+        description: "Por favor ingresa el token de verificación para el webhook."
+      });
+      return false;
+    }
+    return true;
+  };
+
   const handleWhatsAppSave = async () => {
+    if (!validateWhatsAppForm()) return;
+
+    // Validar que el usuario tenga una cuenta asignada
+    const accountId = user?.account?.id;
+    if (!accountId) {
+      toast.error("Error de cuenta", {
+        description: "No se encontró la cuenta del usuario. Por favor recarga la página."
+      });
+      return;
+    }
+
     try {
       setSavingWhatsApp(true);
       const credentials = integrationConfigService.serializeWhatsAppCredentials(whatsappForm);
 
       if (whatsappConfigId) {
-        // Actualizar existente
         await integrationConfigService.update(whatsappConfigId, {
           integrationType: 'WHATSAPP',
-          accountId: 1, // Default account
+          accountId,
           credentials,
           isConnected: true,
         });
       } else {
-        // Crear nuevo
         const newConfig = await integrationConfigService.create({
           integrationType: 'WHATSAPP',
-          accountId: 1, // Default account
+          accountId,
           credentials,
           isConnected: true,
         });
         setWhatsappConfigId(newConfig.id);
       }
 
-      setWhatsappStatus("connected");
       setEditWhatsApp(false);
       setWhatsappBackup(whatsappForm);
+      toast.success("Configuración guardada", {
+        description: "Las credenciales de WhatsApp Cloud API se guardaron correctamente."
+      });
     } catch (error) {
-      console.error("Error saving WhatsApp config:", error);
-      alert("Error al guardar la configuración de WhatsApp");
+      toast.error("Error al guardar", {
+        description: "No se pudo guardar la configuración de WhatsApp. Verifica los datos e intenta nuevamente."
+      });
     } finally {
       setSavingWhatsApp(false);
     }
@@ -103,10 +155,14 @@ export function IntegrationsTab() {
     try {
       await integrationConfigService.delete(whatsappConfigId);
       setWhatsappConfigId(null);
-      setWhatsappStatus("disconnected");
       setWhatsappForm({ apiToken: "", baseUrl: "", verifyToken: "" });
+      toast.success("WhatsApp desconectado", {
+        description: "Se eliminó la configuración de WhatsApp Cloud API."
+      });
     } catch (error) {
-      console.error("Error disconnecting WhatsApp:", error);
+      toast.error("Error al desconectar", {
+        description: "No se pudo eliminar la configuración de WhatsApp."
+      });
     }
   };
 
@@ -186,8 +242,8 @@ export function IntegrationsTab() {
 
           {/* Status Badge */}
           <div className="pt-3">
-            <Badge className={whatsappStatus === "connected" ? "bg-green-500" : "bg-red-500"}>
-              {whatsappStatus === "connected" ? "Conectado" : "Desconectado"}
+            <Badge className={isWhatsAppConnected ? "bg-green-500" : "bg-red-500"}>
+              {isWhatsAppConnected ? "Conectado" : "Desconectado"}
             </Badge>
           </div>
         </CardHeader>
@@ -262,7 +318,7 @@ export function IntegrationsTab() {
           </div>
 
           {/* Disconnect Button */}
-          {whatsappStatus === "connected" && !editWhatsApp && (
+          {isWhatsAppConnected && !editWhatsApp && (
             <div className="flex flex-col gap-2 pt-2 md:flex-row">
               <Button
                 variant="outline"

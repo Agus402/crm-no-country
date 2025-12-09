@@ -6,15 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Search, Send, Paperclip, MessageCircle, Mail, MoreVertical, ArrowLeft, Loader2, Wifi, WifiOff } from "lucide-react";
+import { Search, Send, Paperclip, MessageCircle, Mail, MoreVertical, ArrowLeft, Loader2, Wifi, WifiOff, Plus, Download, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { conversationService, ConversationDTO } from "@/services/conversation.service";
 import { messageService, MessageDTO } from "@/services/message.service";
 import { websocketService, WebSocketMessage } from "@/services/websocket.service";
+import { toast } from "sonner";
+import { NewConversationModal } from "@/components/messages/new-conversation-modal";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Message() {
+  const { user } = useAuth();
+
   // Estado de datos
   const [conversations, setConversations] = useState<ConversationDTO[]>([]);
   const [messages, setMessages] = useState<MessageDTO[]>([]);
@@ -31,6 +37,7 @@ export default function Message() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
+  const [showNewConversationModal, setShowNewConversationModal] = useState(false);
 
   // Ref para scroll automático
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -113,7 +120,9 @@ export default function Message() {
         hasSelectedInitialRef.current = true;
       }
     } catch (error) {
-      console.error("Error cargando conversaciones:", error);
+      toast.error("Error al cargar conversaciones", {
+        description: "No se pudieron obtener las conversaciones. Verifica tu conexión."
+      });
     } finally {
       setLoadingConversations(false);
     }
@@ -125,7 +134,9 @@ export default function Message() {
       const data = await messageService.getByConversation(conversationId);
       setMessages(data);
     } catch (error) {
-      console.error("Error cargando mensajes:", error);
+      toast.error("Error al cargar mensajes", {
+        description: "No se pudieron obtener los mensajes de esta conversación."
+      });
     } finally {
       setLoadingMessages(false);
     }
@@ -145,10 +156,81 @@ export default function Message() {
       await loadMessages(selectedConversation.id);
       // Actualizar lista de conversaciones para reflejar último mensaje
       await loadConversations();
-    } catch (error) {
-      console.error("Error enviando mensaje:", error);
+    } catch (error: unknown) {
+      // Mostrar el mensaje de error del backend o uno genérico
+      const errorMessage = error instanceof Error
+        ? error.message
+        : "No se pudo enviar el mensaje. Intenta nuevamente.";
+
+      toast.error("Error al enviar mensaje", {
+        description: errorMessage,
+        duration: 6000,
+      });
     } finally {
       setSendingMessage(false);
+    }
+  };
+
+  // Exportar conversación a CSV
+  const exportConversationCSV = async (conv: ConversationDTO) => {
+    try {
+      const msgs = await messageService.getByConversation(conv.id);
+      const csvContent = [
+        "Fecha,Autor,Dirección,Contenido",
+        ...msgs.map((m: MessageDTO) => {
+          // Determinar el autor del mensaje según la dirección
+          // OUTBOUND = enviado por el usuario asignado (o usuario actual si no hay asignado)
+          // INBOUND = recibido del lead
+          const author = m.messageDirection === 'OUTBOUND'
+            ? (conv.assignedUser?.name || user?.name || 'Usuario')
+            : (conv.lead?.name || 'Lead');
+
+          const direction = m.messageDirection === 'OUTBOUND' ? 'Enviado' : 'Recibido';
+          const content = m.content?.replace(/"/g, '""') || '';
+          const date = new Date(m.sentAt).toLocaleString();
+
+          return `"${date}","${author}","${direction}","${content}"`;
+        })
+      ].join("\n");
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `conversacion_${conv.lead?.name || conv.id}_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      toast.success("Conversación exportada", {
+        description: `Se descargó el archivo CSV con ${msgs.length} mensajes.`
+      });
+    } catch {
+      toast.error("Error al exportar", {
+        description: "No se pudo exportar la conversación."
+      });
+    }
+  };
+
+  // Eliminar conversación
+  const handleDeleteConversation = async (conv: ConversationDTO, e: React.MouseEvent) => {
+    e.stopPropagation(); // Evitar seleccionar la conversación
+
+    if (!confirm(`¿Estás seguro de eliminar la conversación con ${conv.lead?.name || 'este contacto'}?`)) {
+      return;
+    }
+
+    try {
+      await conversationService.delete(conv.id);
+      setConversations(prev => prev.filter(c => c.id !== conv.id));
+      if (selectedConversation?.id === conv.id) {
+        setSelectedConversation(null);
+        setMessages([]);
+      }
+      toast.success("Conversación eliminada");
+    } catch {
+      toast.error("Error al eliminar", {
+        description: "No se pudo eliminar la conversación."
+      });
     }
   };
 
@@ -233,14 +315,24 @@ export default function Message() {
           showMobileChat ? "hidden lg:flex" : "flex"
         )}>
           <CardHeader className="pb-4 px-4 pt-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Buscar conversaciones..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Buscar conversaciones..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Button
+                size="icon"
+                className="bg-purple-600 hover:bg-purple-700 shrink-0"
+                onClick={() => setShowNewConversationModal(true)}
+                title="Nueva conversación"
+              >
+                <Plus className="h-5 w-5" />
+              </Button>
             </div>
           </CardHeader>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4">
@@ -281,7 +373,52 @@ export default function Message() {
                       <div className="flex-1 min-w-0 overflow-hidden">
                         <div className="flex items-center justify-between mb-1 gap-2">
                           <p className="text-sm font-medium truncate flex-1">{conv.lead?.name || 'Lead sin nombre'}</p>
-                          <span className="text-xs text-slate-500 shrink-0">{formatTime(conv.lastMessageAt)}</span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <span className="text-xs text-slate-500">{formatTime(conv.lastMessageAt)}</span>
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <button
+                                    className="h-6 w-6 inline-flex items-center justify-center rounded-md hover:bg-slate-200 transition-colors"
+                                    aria-label="Opciones de conversación"
+                                  >
+                                    <MoreVertical className="h-3 w-3" />
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48" side="bottom">
+                                  <DropdownMenuItem onSelect={(e) => {
+                                    e.preventDefault();
+                                    exportConversationCSV(conv);
+                                  }}>
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Exportar CSV
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onSelect={(e) => {
+                                      e.preventDefault();
+                                      if (confirm(`¿Estás seguro de eliminar la conversación con ${conv.lead?.name || 'este contacto'}?`)) {
+                                        conversationService.delete(conv.id).then(() => {
+                                          setConversations(prev => prev.filter(c => c.id !== conv.id));
+                                          if (selectedConversation?.id === conv.id) {
+                                            setSelectedConversation(null);
+                                            setMessages([]);
+                                          }
+                                          toast.success("Conversación eliminada");
+                                        }).catch(() => {
+                                          toast.error("Error al eliminar");
+                                        });
+                                      }
+                                    }}
+                                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Eliminar conversación
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
                         </div>
                         <p
                           className="text-sm text-slate-600"
@@ -364,9 +501,39 @@ export default function Message() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem onSelect={() => exportConversationCSV(selectedConversation)}>
+                          <Download className="h-4 w-4 mr-2" />
+                          Exportar CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            if (confirm(`¿Estás seguro de eliminar la conversación con ${selectedConversation.lead?.name || 'este contacto'}?`)) {
+                              conversationService.delete(selectedConversation.id).then(() => {
+                                setConversations(prev => prev.filter(c => c.id !== selectedConversation.id));
+                                setSelectedConversation(null);
+                                setMessages([]);
+                                setShowMobileChat(false);
+                                toast.success("Conversación eliminada");
+                              }).catch(() => {
+                                toast.error("Error al eliminar");
+                              });
+                            }
+                          }}
+                          className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Eliminar conversación
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </CardHeader>
@@ -453,6 +620,21 @@ export default function Message() {
           )}
         </Card>
       </div>
+
+      {/* Modal para nueva conversación */}
+      <NewConversationModal
+        open={showNewConversationModal}
+        onOpenChange={setShowNewConversationModal}
+        existingConversations={conversations}
+        onConversationCreated={(conversation) => {
+          // Agregar la nueva conversación al inicio de la lista
+          setConversations(prev => [conversation, ...prev]);
+          // Seleccionar la nueva conversación
+          setSelectedConversation(conversation);
+          // Mostrar el chat en móvil
+          setShowMobileChat(true);
+        }}
+      />
     </div >
   );
 }
