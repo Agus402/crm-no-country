@@ -22,9 +22,10 @@ const tagColors: Record<string, string> = {
 interface ContactTableProps {
   contacts: any[];
   onEdit: (contact: any) => void;
+  onDelete?: (id: number) => void;
 }
 
-export function ContactTable({ contacts, onEdit }: ContactTableProps) {
+export function ContactTable({ contacts, onEdit, onDelete }: ContactTableProps) {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       <div className="px-6 py-4  border-gray-200">
@@ -69,7 +70,12 @@ export function ContactTable({ contacts, onEdit }: ContactTableProps) {
                         
                         <DropdownMenuItem><FileDown className="mr-2 h-4 w-4" /> Export to PDF</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50"><Trash className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                          onClick={() => onDelete && onDelete(contact.id)}
+                        >
+                          <Trash className="mr-2 h-4 w-4" /> Delete
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>

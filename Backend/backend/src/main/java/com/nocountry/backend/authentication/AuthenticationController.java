@@ -58,6 +58,10 @@ public class AuthenticationController {
 
     @GetMapping("/me")
     public ResponseEntity<AuthenticationResponse> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            // Si no hay usuario autenticado, retornar 401 Unauthorized
+            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
+        }
         User user = (User) userDetails;
         return ResponseEntity.ok(AuthenticationResponse.builder()
                 .token("valid-session")
