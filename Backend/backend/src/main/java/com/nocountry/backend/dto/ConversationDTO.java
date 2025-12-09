@@ -1,30 +1,33 @@
 package com.nocountry.backend.dto;
 
+import com.nocountry.backend.enums.Channel;
 import com.nocountry.backend.enums.Direction;
 import com.nocountry.backend.enums.ConversationStatus;
 import java.time.LocalDateTime;
 
 public record ConversationDTO(
 
-        Long id,
+                Long id,
 
-        CrmLeadDTO lead,
+                CrmLeadDTO lead,
 
-        UserDTO assignedUser,
+                UserDTO assignedUser,
 
-        String externalId,
+                Channel channel,
 
-        String lastMessageText,
+                String externalId,
 
-        Direction lastMessageDirection,
+                String lastMessageText,
 
-        Integer unreadCount,
+                Direction lastMessageDirection,
 
-        LocalDateTime startedAt,
+                Integer unreadCount,
 
-        LocalDateTime lastMessageAt,
+                LocalDateTime startedAt,
 
-        ConversationStatus status,
+                LocalDateTime lastMessageAt,
 
-        LocalDateTime firstInbound
-) {}
+                ConversationStatus status,
+
+                LocalDateTime firstInbound) {
+}

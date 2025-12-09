@@ -269,7 +269,7 @@ export default function Message() {
                   <div
                     key={conv.id}
                     onClick={() => handleConversationClick(conv)}
-                    className={`p-3 rounded-lg cursor-pointer transition-colors ${selectedConversation?.id === conv.id ? 'bg-purple-50 border border-purple-200' : 'hover:bg-slate-50'
+                    className={`p-3 rounded-lg cursor-pointer transition-colors w-full overflow-hidden ${selectedConversation?.id === conv.id ? 'bg-purple-50 border border-purple-200' : 'hover:bg-slate-50'
                       }`}
                   >
                     <div className="flex items-start gap-3">
@@ -278,12 +278,23 @@ export default function Message() {
                           {getInitials(conv.lead?.name || 'Lead')}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-sm font-medium truncate">{conv.lead?.name || 'Lead sin nombre'}</p>
-                          <span className="text-xs text-slate-500">{formatTime(conv.lastMessageAt)}</span>
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <div className="flex items-center justify-between mb-1 gap-2">
+                          <p className="text-sm font-medium truncate flex-1">{conv.lead?.name || 'Lead sin nombre'}</p>
+                          <span className="text-xs text-slate-500 shrink-0">{formatTime(conv.lastMessageAt)}</span>
                         </div>
-                        <p className="text-sm text-slate-600 truncate">{conv.lastMessageText || 'Sin mensajes'}</p>
+                        <p
+                          className="text-sm text-slate-600"
+                          style={{
+                            whiteSpace: 'nowrap',
+                            width: 'clamp(100px, 12vw, 200px)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                        >
+                          {conv.lastMessageDirection === 'OUTBOUND' && <span className="font-medium">Tú: </span>}
+                          {conv.lastMessageText || 'Sin mensajes'}
+                        </p>
                         <div className="flex items-center gap-2 mt-2">
                           {conv.channel === 'WHATSAPP' ? (
                             <MessageCircle className="h-3 w-3 text-emerald-600" />
@@ -308,7 +319,7 @@ export default function Message() {
 
         {/* --- PANEL DE CHAT --- */}
         <Card className={cn(
-          "lg:col-span-2 flex-col h-full",
+          "lg:col-span-2 flex-col h-full overflow-hidden",
           showMobileChat ? "flex" : "hidden lg:flex"
         )}>
           {selectedConversation ? (
@@ -361,8 +372,8 @@ export default function Message() {
               </CardHeader>
 
               {/* Messages */}
-              <ScrollArea className="flex-1 p-4 md:p-6">
-                <div className="space-y-4">
+              <ScrollArea className="flex-1 min-h-0 p-4 md:p-6 overflow-x-hidden">
+                <div className="space-y-4 w-full overflow-hidden">
                   {loadingMessages && messages.length === 0 ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
@@ -384,12 +395,12 @@ export default function Message() {
                               <p className="text-xs text-slate-600 mb-1 ml-1">{message.senderLead.name}</p>
                             )}
                             <div
-                              className={`p-3 rounded-2xl text-sm ${isOwn
+                              className={`p-3 rounded-2xl text-sm break-words ${isOwn
                                 ? 'bg-purple-600 text-white rounded-tr-none'
                                 : 'bg-slate-100 text-slate-900 rounded-tl-none'
                                 }`}
                             >
-                              <p>{message.content}</p>
+                              <p className="whitespace-pre-wrap break-words">{message.content}</p>
                             </div>
                             <p className={`text-[10px] text-slate-400 mt-1 ${isOwn ? 'text-right mr-1' : 'text-left ml-1'}`}>
                               {formatMessageTime(message.sentAt)}
