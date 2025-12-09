@@ -1,5 +1,6 @@
 package com.nocountry.backend.entity;
 
+import com.nocountry.backend.enums.Channel;
 import com.nocountry.backend.enums.ConversationStatus;
 import com.nocountry.backend.enums.Direction;
 import jakarta.persistence.*;
@@ -24,9 +25,13 @@ public class Conversation {
 
     @ManyToOne
     @JoinColumn(name = "lead_id")
-    private CrmLead lead;
+    private CrmLead crm_lead;
 
-    @ManyToOne
+    @Enumerated(EnumType.STRING)
+    @Column(name = "channel", nullable = false)
+    private Channel channel;
+
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "assigned_user_id")
     private User assignedUser;
 
@@ -55,4 +60,3 @@ public class Conversation {
     private List<Message> messages = new ArrayList<>();
 
 }
-

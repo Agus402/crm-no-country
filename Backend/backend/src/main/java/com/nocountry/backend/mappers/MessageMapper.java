@@ -1,25 +1,31 @@
 package com.nocountry.backend.mappers;
 
 import com.nocountry.backend.dto.MessageDTO;
+import com.nocountry.backend.dto.CreateMessageDTO;
 import com.nocountry.backend.entity.Message;
-import org.springframework.stereotype.Component;
+import org.mapstruct.*;
+import java.util.List;
 
-@Component
-public class MessageMapper {
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, uses = { ConversationMapper.class,
+        EmailTemplateMapper.class })
+public interface MessageMapper {
 
-    public MessageDTO toDTO(Message m) {
-        return new MessageDTO(
-                m.getId(),
-                m.getSenderType(),
-                m.getSenderLeadId(),
-                m.getMessageDirection(),
-                m.getMessageType(),
-                m.getContent(),
-                m.getMediaType(),
-                m.getMediaCaption(),
-                m.getExternalMessageId(),
-                m.getEmailTemplate() != null ? m.getEmailTemplate().getId() : null,
-                m.getSentAt()
-        );
-    }
+    @Mapping(target = "conversation", source = "conversation")
+    @Mapping(target = "templateId", source = "emailTemplate.id")
+    MessageDTO toDTO(Message entity);
+
+    List<MessageDTO> toDTOList(List<Message> entities);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "conversation", ignore = true)
+    @Mapping(target = "emailTemplate", ignore = true)
+    @Mapping(target = "sentAt", ignore = true)
+    @Mapping(target = "externalMessageId", ignore = true)
+    @Mapping(target = "senderLeadId", source = "senderLeadId")
+    @Mapping(target = "mediaUrl", ignore = true)
+    @Mapping(target = "mediaFileName", ignore = true)
+    @Mapping(target = "mediaType", ignore = true)
+    @Mapping(target = "mediaCaption", ignore = true)
+    Message toEntity(CreateMessageDTO dto);
+
 }

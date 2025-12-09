@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { leadService } from "@/services/lead-service";
+import { leadService } from "@/services/lead.service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, MessageSquare, Activity, Clock } from "lucide-react";
 

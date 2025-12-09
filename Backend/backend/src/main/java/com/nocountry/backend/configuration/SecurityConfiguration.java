@@ -33,7 +33,7 @@ public class SecurityConfiguration {
          * Aquí se configuran las reglas de acceso, el manejo de sesiones STATLESS y
          * se inyecta el filtro JWT.
          * * @param http Objeto para configurar la seguridad HTTP.
-         * 
+         *
          * @return SecurityFilterChain configurado.
          */
         @Bean
@@ -47,7 +47,9 @@ public class SecurityConfiguration {
                                                 // Permite acceso libre a las rutas de autenticación
                                                 .requestMatchers("/api/auth/**").permitAll()
                                                 .requestMatchers(
-                                                                "/api/accounts",
+                                                                "/api/webhooks/whatsapp",
+                                                                "/api/media/**",
+                                                                "/ws/**",
                                                                 "/swagger-ui/**",
                                                                 "/swagger-ui.html",
                                                                 "/v3/api-docs/**",

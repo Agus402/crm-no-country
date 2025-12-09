@@ -7,15 +7,34 @@ import com.nocountry.backend.enums.SenderType;
 import java.time.LocalDateTime;
 
 public record MessageDTO(
-        Long id,
-        SenderType senderType,
-        Long senderLeadId,
-        Direction direction,
-        MessageType messageType,
-        String content,
-        String mediaType,
-        String mediaCaption,
-        String externalMessageId,
-        Long templateId,
-        LocalDateTime sentAt
-) {}
+
+                Long id,
+
+                ConversationDTO conversation,
+
+                SenderType senderType,
+
+                Long senderLeadId,
+
+                Direction messageDirection,
+
+                MessageType messageType,
+
+                String content,
+
+                String mediaUrl,
+
+                String mediaFileName,
+
+                String mediaType,
+
+                String mediaCaption,
+
+                String externalMessageId,
+
+                Long templateId,
+
+                LocalDateTime sentAt
+
+) {
+}

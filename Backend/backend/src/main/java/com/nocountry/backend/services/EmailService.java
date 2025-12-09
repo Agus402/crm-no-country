@@ -51,7 +51,8 @@ public class EmailService {
         } else {
             subject = request.subject();
             body = request.body();
-            if (body == null) throw new RuntimeException("Either templateId or body must be provided");
+            if (body == null)
+                throw new RuntimeException("Either templateId or body must be provided");
         }
 
         Map<String, String> vars = request.templateVars() == null ? Map.of() : request.templateVars();
@@ -63,11 +64,13 @@ public class EmailService {
         Conversation conversation = conversationRepository.findFirstByLead(lead)
                 .orElseGet(() -> {
                     Conversation c = Conversation.builder()
-                            .lead(lead)
+                            .crm_lead(lead)
+                            .channel(com.nocountry.backend.enums.Channel.EMAIL)
                             .assignedUser(lead.getOwner())
                             .startedAt(LocalDateTime.now())
                             .lastMessageAt(LocalDateTime.now())
-                            .lastMessageText(renderedBody.length() > 200 ? renderedBody.substring(0,200) : renderedBody)
+                            .lastMessageText(
+                                    renderedBody.length() > 200 ? renderedBody.substring(0, 200) : renderedBody)
                             .lastMessageDirection(com.nocountry.backend.enums.Direction.OUTBOUND)
                             .status(com.nocountry.backend.enums.ConversationStatus.OPEN)
                             .build();
@@ -75,7 +78,7 @@ public class EmailService {
                 });
 
         conversation.setLastMessageAt(LocalDateTime.now());
-        conversation.setLastMessageText(renderedBody.length() > 200 ? renderedBody.substring(0,200) : renderedBody);
+        conversation.setLastMessageText(renderedBody.length() > 200 ? renderedBody.substring(0, 200) : renderedBody);
         conversation.setLastMessageDirection(com.nocountry.backend.enums.Direction.OUTBOUND);
         conversationRepository.save(conversation);
 
@@ -107,8 +110,9 @@ public class EmailService {
         }
     }
 
-    private String renderTemplate(String template, CrmLead lead, Map<String,String> vars) {
-        if (template == null) return "";
+    private String renderTemplate(String template, CrmLead lead, Map<String, String> vars) {
+        if (template == null)
+            return "";
 
         String out = template;
 

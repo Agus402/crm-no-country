@@ -21,20 +21,16 @@ public class Message {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "conversation_id")
     private Conversation conversation;
-
 
     @Enumerated(EnumType.STRING)
     @Column(name = "sender_type", nullable = false)
     private SenderType senderType;
 
-
     @Column(name = "sender_lead_id")
     private Long senderLeadId;
-
 
     @Enumerated(EnumType.STRING)
     @Column(name = "direction", nullable = false)
@@ -47,13 +43,16 @@ public class Message {
     @Column(columnDefinition = "TEXT")
     private String content;
 
+    private String mediaUrl;
+
+    private String mediaFileName;
+
     private String mediaType;
 
     @Column(columnDefinition = "TEXT")
     private String mediaCaption;
 
     private String externalMessageId;
-
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "email_template_id")
@@ -62,4 +61,3 @@ public class Message {
     private LocalDateTime sentAt;
 
 }
-

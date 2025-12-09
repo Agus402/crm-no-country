@@ -30,14 +30,14 @@ public class UserService {
     public List<UserDTO> findAllUsers() {
         // Llama al mapper para convertir la lista de Entidades a lista de DTOs.
         List<User> users = userRepository.findAll();
-        return userMapper.toResponseDTOList(users);
+        return userMapper.toDTOList(users);
     }
 
     public UserDTO findUserById(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
 
-        return userMapper.toResponseDTO(user);
+        return userMapper.toDTO(user);
     }
 
     // --- CREACIÓN ---
@@ -67,7 +67,7 @@ public class UserService {
                 .build();
 
         User savedUser = userRepository.save(newUser);
-        return userMapper.toResponseDTO(savedUser);
+        return userMapper.toDTO(savedUser);
     }
 
     // --- ACTUALIZACIÓN ---
@@ -104,7 +104,7 @@ public class UserService {
         }
 
         User updatedUser = userRepository.save(user);
-        return userMapper.toResponseDTO(updatedUser);
+        return userMapper.toDTO(updatedUser);
     }
 
     // --- GESTIÓN DE ESTADO ---
@@ -118,7 +118,7 @@ public class UserService {
         user.setActive(!user.isActive());
 
         User updatedUser = userRepository.save(user);
-        return userMapper.toResponseDTO(updatedUser);
+        return userMapper.toDTO(updatedUser);
     }
 
     // --- ELIMINACIÓN ---

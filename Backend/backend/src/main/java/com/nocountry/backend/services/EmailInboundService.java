@@ -63,8 +63,7 @@ public class EmailInboundService {
             Folder folder = store.getFolder(folderName);
             folder.open(Folder.READ_WRITE);
 
-            jakarta.mail.Message[] messages =
-                    folder.search(new FlagTerm(new Flags(Flags.Flag.SEEN), false));
+            jakarta.mail.Message[] messages = folder.search(new FlagTerm(new Flags(Flags.Flag.SEEN), false));
 
             for (jakarta.mail.Message mail : messages) {
                 processInboundEmail(mail);
@@ -99,12 +98,12 @@ public class EmailInboundService {
         Conversation conversation = conversationRepository.findFirstByLead(lead)
                 .orElseGet(() -> conversationRepository.save(
                         Conversation.builder()
-                                .lead(lead)
+                                .crm_lead(lead)
+                                .channel(com.nocountry.backend.enums.Channel.EMAIL)
                                 .assignedUser(lead.getOwner())
                                 .startedAt(LocalDateTime.now())
                                 .status(com.nocountry.backend.enums.ConversationStatus.OPEN)
-                                .build()
-                ));
+                                .build()));
 
         Message inbound = Message.builder()
                 .conversation(conversation)
@@ -145,12 +144,14 @@ public class EmailInboundService {
     }
 
     private String cleanHtml(String rawHtml) {
-        if (rawHtml == null) return "";
+        if (rawHtml == null)
+            return "";
         return Jsoup.parse(rawHtml).text().trim();
     }
 
     private String cleanReply(String raw) {
-        if (raw == null) return "";
+        if (raw == null)
+            return "";
 
         String cleaned = raw.replaceAll("[\\u00A0\\u2007\\u202F]+", " ").trim();
 
@@ -170,7 +171,6 @@ public class EmailInboundService {
         }
 
         String regexGmail = "(?i)(?:El|On)\\s+.+?\\d{4}.*?(?:a\\s+la\\(s\\)|at)\\s+\\d{1,2}:\\d{2}.*";
-
 
         cleaned = cleaned.replaceAll("(?s)" + regexGmail, "").trim();
 

@@ -16,4 +16,3 @@ public interface EmailTemplateMapper {
 
     void updateEntityFromDto(UpdateEmailTemplateDTO dto, @MappingTarget EmailTemplate entity);
 }
-
