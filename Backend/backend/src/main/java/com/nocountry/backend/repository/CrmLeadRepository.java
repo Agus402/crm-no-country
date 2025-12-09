@@ -24,6 +24,8 @@ public interface CrmLeadRepository extends JpaRepository<CrmLead, Long> {
 
     boolean existsByEmailIgnoreCase(String email);
 
+    Optional<CrmLead> findFirstByEmailIgnoreCase(String email);
+
     /**
      * Busca un Lead por número de teléfono.
      * Utilizado para identificar o crear Leads desde mensajes de WhatsApp.

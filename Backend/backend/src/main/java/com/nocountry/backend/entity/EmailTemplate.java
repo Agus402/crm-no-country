@@ -1,5 +1,6 @@
 package com.nocountry.backend.entity;
 
+import com.nocountry.backend.enums.EmailTemplateType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -23,6 +24,10 @@ public class EmailTemplate {
 
     @Column(columnDefinition = "TEXT")
     private String body;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EmailTemplateType type;
 
 }
 

@@ -17,6 +17,8 @@ import { websocketService, WebSocketMessage } from "@/services/websocket.service
 import { toast } from "sonner";
 import { NewConversationModal } from "@/components/messages/new-conversation-modal";
 import { MessageMedia } from "@/components/messages/message-media";
+import { EmailComposer } from "@/components/messages/email-composer";
+import { EmailThread } from "@/components/messages/email-thread";
 import { useAuth } from "@/context/AuthContext";
 
 export default function Message() {
@@ -572,131 +574,179 @@ export default function Message() {
               </CardHeader>
 
               {/* Messages */}
-              <ScrollArea className="flex-1 min-h-0 p-4 md:p-6 overflow-x-hidden">
-                <div className="space-y-4 w-full overflow-hidden">
-                  {loadingMessages && messages.length === 0 ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
-                    </div>
-                  ) : messages.length === 0 ? (
-                    <div className="text-center py-8 text-slate-500">
-                      No hay mensajes todavía
-                    </div>
-                  ) : (
-                    messages.map((message) => {
-                      const isOwn = message.messageDirection === 'OUTBOUND';
-                      return (
-                        <div
-                          key={message.id}
-                          className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div className={`max-w-[85%] md:max-w-[70%] ${isOwn ? 'order-2' : 'order-1'}`}>
-                            {!isOwn && message.senderLead && (
-                              <p className="text-xs text-slate-600 mb-1 ml-1">{message.senderLead.name}</p>
-                            )}
-                            <div
-                              className={`p-3 rounded-2xl text-sm break-words ${isOwn
-                                ? 'bg-purple-600 text-white rounded-tr-none'
-                                : 'bg-slate-100 text-slate-900 rounded-tl-none'
-                                }`}
-                            >
-                              {message.mediaUrl ? (
-                                <MessageMedia
-                                  type={message.mediaType || message.messageType}
-                                  url={message.mediaUrl}
-                                  caption={message.mediaCaption}
-                                  fileName={message.mediaFileName}
-                                  isOwn={isOwn}
-                                />
-                              ) : (
-                                <p className="whitespace-pre-wrap break-words">{message.content}</p>
+              <ScrollArea className="flex-1 min-h-0 p-2 md:p-4 overflow-x-hidden">
+                {loadingMessages && messages.length === 0 ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                  </div>
+                ) : selectedConversation.channel === 'EMAIL' ? (
+                  /* EMAIL: Gmail-style thread view */
+                  <EmailThread
+                    messages={messages}
+                    leadName={selectedConversation.lead?.name || 'Lead'}
+                    userName={user?.name || 'Tú'}
+                  />
+                ) : (
+                  /* WHATSAPP: Chat bubbles */
+                  <div className="space-y-4 w-full overflow-hidden">
+                    {messages.length === 0 ? (
+                      <div className="text-center py-8 text-slate-500">
+                        No hay mensajes todavía
+                      </div>
+                    ) : (
+                      messages.map((message) => {
+                        const isOwn = message.messageDirection === 'OUTBOUND';
+                        return (
+                          <div
+                            key={message.id}
+                            className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div className={`max-w-[85%] md:max-w-[70%] ${isOwn ? 'order-2' : 'order-1'}`}>
+                              {!isOwn && message.senderLead && (
+                                <p className="text-xs text-slate-600 mb-1 ml-1">{message.senderLead.name}</p>
                               )}
+                              <div
+                                className={`p-3 rounded-2xl text-sm break-words ${isOwn
+                                  ? 'bg-purple-600 text-white rounded-tr-none'
+                                  : 'bg-slate-100 text-slate-900 rounded-tl-none'
+                                  }`}
+                              >
+                                {message.mediaUrl ? (
+                                  <MessageMedia
+                                    type={message.mediaType || message.messageType}
+                                    url={message.mediaUrl}
+                                    caption={message.mediaCaption}
+                                    fileName={message.mediaFileName}
+                                    isOwn={isOwn}
+                                  />
+                                ) : (
+                                  <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                                )}
+                              </div>
+                              <p className={`text-[10px] text-slate-400 mt-1 ${isOwn ? 'text-right mr-1' : 'text-left ml-1'}`}>
+                                {formatMessageTime(message.sentAt)}
+                              </p>
                             </div>
-                            <p className={`text-[10px] text-slate-400 mt-1 ${isOwn ? 'text-right mr-1' : 'text-left ml-1'}`}>
-                              {formatMessageTime(message.sentAt)}
-                            </p>
                           </div>
-                        </div>
-                      );
-                    })
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
+                        );
+                      })
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+                )}
               </ScrollArea>
 
               {/* Message Input */}
               <CardContent className="border-t p-3 md:p-4">
-                {/* File preview */}
-                {selectedFile && (
-                  <div className="flex items-center gap-2 mb-2 p-2 bg-slate-100 rounded-lg">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{selectedFile.name}</p>
-                      <p className="text-xs text-slate-500">
-                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => setSelectedFile(null)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        if (file.size > 100 * 1024 * 1024) {
-                          toast.error("El archivo es demasiado grande", {
-                            description: "El tamaño máximo permitido es 100 MB"
-                          });
-                          return;
-                        }
-                        setSelectedFile(file);
+                {selectedConversation.channel === 'EMAIL' ? (
+                  /* EMAIL: Mostrar EmailComposer con rich text */
+                  <EmailComposer
+                    onSend={async (subject, htmlContent) => {
+                      try {
+                        setSendingMessage(true);
+                        // Solo mostrar subject en el primer mensaje de la conversación
+                        const isFirstMessage = messages.length === 0;
+                        await messageService.sendMessage({
+                          conversationId: selectedConversation.id,
+                          content: htmlContent,
+                          subject: isFirstMessage ? subject : undefined,
+                        });
+                        await loadMessages(selectedConversation.id);
+                        await loadConversations();
+                        toast.success("Email enviado correctamente");
+                      } catch (error: unknown) {
+                        const errorMessage = error instanceof Error
+                          ? error.message
+                          : "No se pudo enviar el email. Intenta nuevamente.";
+                        toast.error("Error al enviar email", {
+                          description: errorMessage,
+                          duration: 6000,
+                        });
+                      } finally {
+                        setSendingMessage(false);
                       }
                     }}
+                    sending={sendingMessage}
+                    showSubject={messages.length === 0}
+                    recipientEmail={selectedConversation.lead?.email}
+                    recipientName={selectedConversation.lead?.name}
                   />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="shrink-0"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingFile}
-                  >
-                    <Paperclip className="h-4 w-4" />
-                  </Button>
-                  <Input
-                    placeholder={selectedFile ? "Añade un mensaje (opcional)..." : "Escribe tu mensaje..."}
-                    value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && (messageInput.trim() || selectedFile)) {
-                        handleSendMessage();
-                      }
-                    }}
-                    className="flex-1"
-                    disabled={sendingMessage || uploadingFile}
-                  />
-                  <Button
-                    className="bg-purple-600 hover:bg-purple-700 shrink-0"
-                    onClick={handleSendMessage}
-                    disabled={(sendingMessage || uploadingFile) || (!messageInput.trim() && !selectedFile)}
-                  >
-                    {(sendingMessage || uploadingFile) ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
+                ) : (
+                  /* WHATSAPP: Chat input estándar */
+                  <>
+                    {/* File preview */}
+                    {selectedFile && (
+                      <div className="flex items-center gap-2 mb-2 p-2 bg-slate-100 rounded-lg">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{selectedFile.name}</p>
+                          <p className="text-xs text-slate-500">
+                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => setSelectedFile(null)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                     )}
-                  </Button>
-                </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            if (file.size > 100 * 1024 * 1024) {
+                              toast.error("El archivo es demasiado grande", {
+                                description: "El tamaño máximo permitido es 100 MB"
+                              });
+                              return;
+                            }
+                            setSelectedFile(file);
+                          }
+                        }}
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingFile}
+                      >
+                        <Paperclip className="h-4 w-4" />
+                      </Button>
+                      <Input
+                        placeholder={selectedFile ? "Añade un mensaje (opcional)..." : "Escribe tu mensaje..."}
+                        value={messageInput}
+                        onChange={(e) => setMessageInput(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && (messageInput.trim() || selectedFile)) {
+                            handleSendMessage();
+                          }
+                        }}
+                        className="flex-1"
+                        disabled={sendingMessage || uploadingFile}
+                      />
+                      <Button
+                        className="bg-purple-600 hover:bg-purple-700 shrink-0"
+                        onClick={handleSendMessage}
+                        disabled={(sendingMessage || uploadingFile) || (!messageInput.trim() && !selectedFile)}
+                      >
+                        {(sendingMessage || uploadingFile) ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </>
           ) : (

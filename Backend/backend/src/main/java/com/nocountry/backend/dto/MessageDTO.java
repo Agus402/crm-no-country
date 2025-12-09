@@ -12,8 +12,6 @@ public record MessageDTO(
 
                 ConversationDTO conversation,
 
-                // EmailTemplateDTO emailTemplate,
-
                 SenderType senderType,
 
                 Long senderLeadId,
@@ -33,6 +31,8 @@ public record MessageDTO(
                 String mediaCaption,
 
                 String externalMessageId,
+
+                Long templateId,
 
                 LocalDateTime sentAt
 
