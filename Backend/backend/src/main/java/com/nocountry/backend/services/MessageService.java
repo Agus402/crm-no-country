@@ -25,6 +25,7 @@ public class MessageService {
     private final MessageRepository messageRepository;
     private final ConversationRepository conversationRepository;
     private final WhatsAppApiService whatsAppApiService;
+    private final EmailService emailService;
     private final MessageMapper messageMapper;
 
     // --- CREATE OUTBOUND MESSAGE (POST) ---
@@ -80,6 +81,21 @@ public class MessageService {
             if (externalId != null) {
                 savedMessage.setExternalMessageId(externalId);
                 messageRepository.save(savedMessage);
+            }
+        } else if (conversation.getChannel() == Channel.EMAIL) {
+            // 2b. Si el canal es Email, enviar el correo real
+            String recipientEmail = conversation.getCrm_lead().getEmail();
+            if (recipientEmail != null && !recipientEmail.isBlank()) {
+                String subject = dto.subject() != null ? dto.subject() : "Mensaje del CRM";
+                String htmlBody = dto.content();
+
+                try {
+                    emailService.sendHtmlEmail(recipientEmail, subject, htmlBody);
+                } catch (Exception e) {
+                    throw new RuntimeException("Error al enviar email: " + e.getMessage(), e);
+                }
+            } else {
+                throw new RuntimeException("El lead no tiene email configurado");
             }
         }
 

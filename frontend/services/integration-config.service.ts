@@ -15,6 +15,16 @@ export interface WhatsAppCredentials {
     verifyToken: string;
 }
 
+export interface EmailCredentials {
+    smtpHost: string;
+    smtpPort: number;
+    imapHost: string;
+    imapPort: number;
+    username: string;
+    password: string;
+    folderName: string;
+}
+
 export interface CreateUpdateIntegrationConfigDTO {
     integrationType: 'WHATSAPP' | 'EMAIL';
     accountId: number;
@@ -107,6 +117,20 @@ export const integrationConfigService = {
 
     // Helper para serializar credenciales de WhatsApp
     serializeWhatsAppCredentials(credentials: WhatsAppCredentials): string {
+        return JSON.stringify(credentials);
+    },
+
+    // Helper para parsear credenciales de Email
+    parseEmailCredentials(credentials: string): EmailCredentials | null {
+        try {
+            return JSON.parse(credentials);
+        } catch {
+            return null;
+        }
+    },
+
+    // Helper para serializar credenciales de Email
+    serializeEmailCredentials(credentials: EmailCredentials): string {
         return JSON.stringify(credentials);
     }
 };

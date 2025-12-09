@@ -166,17 +166,57 @@ export function IntegrationsTab() {
     }
   };
 
-  // --- EMAIL (mantener el código existente) ---
+  // --- EMAIL ---
   const [editEmail, setEditEmail] = useState(false);
+  const [loadingEmail, setLoadingEmail] = useState(true);
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [emailConfigId, setEmailConfigId] = useState<number | null>(null);
+  const [showEmailPassword, setShowEmailPassword] = useState(false);
 
-  const [emailForm, setEmailForm] = useState({
-    smtp: "smtp.brevo.com",
-    port: "587",
-    email: "hello@startupcrm.com",
-    apiKey: "",
-  });
+  const defaultEmailForm = {
+    smtpHost: "smtp.gmail.com",
+    smtpPort: 587,
+    imapHost: "imap.gmail.com",
+    imapPort: 993,
+    username: "",
+    password: "",
+    folderName: "INBOX",
+  };
 
+  const [emailForm, setEmailForm] = useState(defaultEmailForm);
   const [emailBackup, setEmailBackup] = useState(emailForm);
+
+  const isEmailConnected = Boolean(
+    emailConfigId &&
+    emailForm.username &&
+    emailForm.password
+  );
+
+  // Cargar configuración de Email
+  useEffect(() => {
+    loadEmailConfig();
+  }, []);
+
+  const loadEmailConfig = async () => {
+    try {
+      setLoadingEmail(true);
+      const config = await integrationConfigService.getByType('EMAIL');
+      if (config) {
+        setEmailConfigId(config.id);
+        const credentials = integrationConfigService.parseEmailCredentials(config.credentials);
+        if (credentials) {
+          setEmailForm(credentials);
+          setEmailBackup(credentials);
+        }
+      }
+    } catch (error) {
+      toast.error("Error al cargar la configuración de Email", {
+        description: "No se pudo obtener la configuración guardada."
+      });
+    } finally {
+      setLoadingEmail(false);
+    }
+  };
 
   const handleEmailEdit = () => {
     setEmailBackup(emailForm);
@@ -188,11 +228,84 @@ export function IntegrationsTab() {
     setEditEmail(false);
   };
 
-  const handleEmailSave = () => {
-    setEditEmail(false);
+  const validateEmailForm = (): boolean => {
+    if (!emailForm.username.trim()) {
+      toast.error("Email requerido", {
+        description: "Por favor ingresa el email de la cuenta."
+      });
+      return false;
+    }
+    if (!emailForm.password.trim()) {
+      toast.error("Contraseña requerida", {
+        description: "Por favor ingresa la contraseña de aplicación."
+      });
+      return false;
+    }
+    return true;
   };
 
-  const [showApiKey, setShowApiKey] = useState(false);
+  const handleEmailSave = async () => {
+    if (!validateEmailForm()) return;
+
+    const accountId = user?.account?.id;
+    if (!accountId) {
+      toast.error("Error de cuenta", {
+        description: "No se encontró la cuenta del usuario."
+      });
+      return;
+    }
+
+    try {
+      setSavingEmail(true);
+      const credentials = integrationConfigService.serializeEmailCredentials(emailForm);
+
+      if (emailConfigId) {
+        await integrationConfigService.update(emailConfigId, {
+          integrationType: 'EMAIL',
+          accountId,
+          credentials,
+          isConnected: true,
+        });
+      } else {
+        const newConfig = await integrationConfigService.create({
+          integrationType: 'EMAIL',
+          accountId,
+          credentials,
+          isConnected: true,
+        });
+        setEmailConfigId(newConfig.id);
+      }
+
+      setEditEmail(false);
+      setEmailBackup(emailForm);
+      toast.success("Configuración guardada", {
+        description: "Las credenciales de Email se guardaron correctamente."
+      });
+    } catch (error) {
+      toast.error("Error al guardar", {
+        description: "No se pudo guardar la configuración de Email."
+      });
+    } finally {
+      setSavingEmail(false);
+    }
+  };
+
+  const handleEmailDisconnect = async () => {
+    if (!emailConfigId) return;
+
+    try {
+      await integrationConfigService.delete(emailConfigId);
+      setEmailConfigId(null);
+      setEmailForm(defaultEmailForm);
+      toast.success("Email desconectado", {
+        description: "Se eliminó la configuración de Email."
+      });
+    } catch (error) {
+      toast.error("Error al desconectar", {
+        description: "No se pudo eliminar la configuración de Email."
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -341,21 +454,35 @@ export function IntegrationsTab() {
                 <Mail className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <CardTitle className="text-base">Email (SMTP / Brevo)</CardTitle>
-                <CardDescription>Configura tu integración de email</CardDescription>
+                <CardTitle className="text-base">Email (Gmail SMTP/IMAP)</CardTitle>
+                <CardDescription>Configura tu integración de email para enviar y recibir correos</CardDescription>
               </div>
             </div>
 
-            {!editEmail ? (
+            {loadingEmail ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : !editEmail ? (
               <Button variant="outline" onClick={handleEmailEdit}>
                 Editar
               </Button>
             ) : (
               <div className="flex gap-2">
-                <Button size="sm" onClick={handleEmailSave}>Guardar</Button>
-                <Button size="sm" variant="outline" onClick={handleEmailCancel}>Cancelar</Button>
+                <Button size="sm" onClick={handleEmailSave} disabled={savingEmail}>
+                  {savingEmail ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Guardar
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleEmailCancel} disabled={savingEmail}>
+                  Cancelar
+                </Button>
               </div>
             )}
+          </div>
+
+          {/* Status Badge */}
+          <div className="pt-3">
+            <Badge className={isEmailConnected ? "bg-green-500" : "bg-red-500"}>
+              {isEmailConnected ? "Conectado" : "Desconectado"}
+            </Badge>
           </div>
         </CardHeader>
 
@@ -363,62 +490,108 @@ export function IntegrationsTab() {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 
-            {/* SMTP */}
+            {/* SMTP Host */}
             <div className="space-y-2">
               <Label>Servidor SMTP</Label>
               <Input
-                value={emailForm.smtp}
+                value={emailForm.smtpHost}
                 readOnly={!editEmail}
-                onChange={(e) => setEmailForm({ ...emailForm, smtp: e.target.value })}
+                onChange={(e) => setEmailForm({ ...emailForm, smtpHost: e.target.value })}
                 className={!editEmail ? "bg-gray-50" : ""}
+                placeholder="smtp.gmail.com"
               />
             </div>
 
-            {/* Port */}
+            {/* SMTP Port */}
             <div className="space-y-2">
-              <Label>Puerto</Label>
+              <Label>Puerto SMTP</Label>
               <Input
-                value={emailForm.port}
+                type="number"
+                value={emailForm.smtpPort}
                 readOnly={!editEmail}
-                onChange={(e) => setEmailForm({ ...emailForm, port: e.target.value })}
+                onChange={(e) => setEmailForm({ ...emailForm, smtpPort: parseInt(e.target.value) || 587 })}
                 className={!editEmail ? "bg-gray-50" : ""}
+                placeholder="587"
               />
             </div>
 
-            {/* Email */}
+            {/* IMAP Host */}
+            <div className="space-y-2">
+              <Label>Servidor IMAP</Label>
+              <Input
+                value={emailForm.imapHost}
+                readOnly={!editEmail}
+                onChange={(e) => setEmailForm({ ...emailForm, imapHost: e.target.value })}
+                className={!editEmail ? "bg-gray-50" : ""}
+                placeholder="imap.gmail.com"
+              />
+            </div>
+
+            {/* IMAP Port */}
+            <div className="space-y-2">
+              <Label>Puerto IMAP</Label>
+              <Input
+                type="number"
+                value={emailForm.imapPort}
+                readOnly={!editEmail}
+                onChange={(e) => setEmailForm({ ...emailForm, imapPort: parseInt(e.target.value) || 993 })}
+                className={!editEmail ? "bg-gray-50" : ""}
+                placeholder="993"
+              />
+            </div>
+
+            {/* Email/Username */}
             <div className="space-y-2">
               <Label>Dirección de Email</Label>
               <Input
-                value={emailForm.email}
+                value={emailForm.username}
                 readOnly={!editEmail}
-                onChange={(e) => setEmailForm({ ...emailForm, email: e.target.value })}
+                onChange={(e) => setEmailForm({ ...emailForm, username: e.target.value })}
                 className={!editEmail ? "bg-gray-50" : ""}
+                placeholder="tu-email@gmail.com"
               />
             </div>
 
-            {/* API KEY */}
+            {/* Password */}
             <div className="space-y-2">
-              <Label>API Key</Label>
+              <Label>Contraseña de Aplicación</Label>
+              <p className="text-xs text-muted-foreground">
+                Genera una en myaccount.google.com/apppasswords
+              </p>
               <div className="relative">
                 <Input
-                  type={showApiKey ? "text" : "password"}
-                  value={emailForm.apiKey}
+                  type={showEmailPassword ? "text" : "password"}
+                  value={emailForm.password}
                   readOnly={!editEmail}
-                  onChange={(e) => setEmailForm({ ...emailForm, apiKey: e.target.value })}
+                  onChange={(e) => setEmailForm({ ...emailForm, password: e.target.value })}
                   className={!editEmail ? "bg-gray-50 pr-10" : "pr-10"}
+                  placeholder="xxxx xxxx xxxx xxxx"
                 />
 
                 <button
                   type="button"
-                  onClick={() => setShowApiKey((p) => !p)}
+                  onClick={() => setShowEmailPassword((p) => !p)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600"
                 >
-                  {showApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showEmailPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
 
           </div>
+
+          {/* Disconnect Button */}
+          {isEmailConnected && !editEmail && (
+            <div className="flex flex-col gap-2 pt-2 md:flex-row">
+              <Button
+                variant="outline"
+                onClick={handleEmailDisconnect}
+                className="w-full md:w-auto text-red-500 hover:text-red-600 hover:border-red-300"
+              >
+                Desconectar
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -26,6 +26,7 @@ export interface MessageDTO {
 export interface SendMessageRequest {
     conversationId: number;
     content: string;
+    subject?: string; // Para emails
     senderType?: 'USER';
     messageDirection?: 'OUTBOUND';
     messageType?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO' | 'DOCUMENT';

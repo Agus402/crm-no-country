@@ -9,12 +9,14 @@ import com.nocountry.backend.enums.SenderType;
 import com.nocountry.backend.repository.ConversationRepository;
 import com.nocountry.backend.repository.CrmLeadRepository;
 import com.nocountry.backend.repository.MessageRepository;
+import com.nocountry.backend.services.email.EmailConfigService;
+import com.nocountry.backend.services.email.EmailConfigService.EmailCredentials;
 import jakarta.mail.*;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.search.FlagTerm;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,27 +25,14 @@ import java.time.LocalDateTime;
 import java.util.Properties;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class EmailInboundService {
 
     private final CrmLeadRepository leadRepository;
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
-
-    @Value("${mail.imap.host}")
-    private String host;
-
-    @Value("${mail.imap.port}")
-    private Integer port;
-
-    @Value("${mail.imap.username}")
-    private String username;
-
-    @Value("${mail.imap.password}")
-    private String password;
-
-    @Value("${mail.imap.folder}")
-    private String folderName;
+    private final EmailConfigService emailConfigService;
 
     /**
      * Corre cada 1 minuto. Lee correos nuevos y los guarda como Message.
@@ -51,6 +40,13 @@ public class EmailInboundService {
     @Scheduled(fixedDelay = 60000)
     @Transactional
     public void checkInbox() {
+        // Obtener credenciales dinámicamente
+        EmailCredentials credentials = emailConfigService.getEmailCredentials().orElse(null);
+        if (credentials == null || !credentials.isValid()) {
+            log.debug("Email not configured, skipping inbox check");
+            return;
+        }
+
         try {
             Properties props = new Properties();
             props.put("mail.store.protocol", "imap");
@@ -58,8 +54,10 @@ public class EmailInboundService {
 
             Session session = Session.getInstance(props);
             Store store = session.getStore();
-            store.connect(host, port, username, password);
+            store.connect(credentials.imapHost(), credentials.imapPort(), credentials.username(),
+                    credentials.password());
 
+            String folderName = credentials.folderName() != null ? credentials.folderName() : "INBOX";
             Folder folder = store.getFolder(folderName);
             folder.open(Folder.READ_WRITE);
 
@@ -74,7 +72,7 @@ public class EmailInboundService {
             store.close();
 
         } catch (Exception e) {
-            System.out.println("ERROR reading IMAP: " + e.getMessage());
+            log.error("ERROR reading IMAP: {}", e.getMessage());
         }
     }
 

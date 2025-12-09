@@ -17,6 +17,7 @@ import { websocketService, WebSocketMessage } from "@/services/websocket.service
 import { toast } from "sonner";
 import { NewConversationModal } from "@/components/messages/new-conversation-modal";
 import { MessageMedia } from "@/components/messages/message-media";
+import { EmailComposer } from "@/components/messages/email-composer";
 import { useAuth } from "@/context/AuthContext";
 
 export default function Message() {
@@ -626,77 +627,115 @@ export default function Message() {
 
               {/* Message Input */}
               <CardContent className="border-t p-3 md:p-4">
-                {/* File preview */}
-                {selectedFile && (
-                  <div className="flex items-center gap-2 mb-2 p-2 bg-slate-100 rounded-lg">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{selectedFile.name}</p>
-                      <p className="text-xs text-slate-500">
-                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => setSelectedFile(null)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        if (file.size > 100 * 1024 * 1024) {
-                          toast.error("El archivo es demasiado grande", {
-                            description: "El tamaño máximo permitido es 100 MB"
-                          });
-                          return;
-                        }
-                        setSelectedFile(file);
+                {selectedConversation.channel === 'EMAIL' ? (
+                  /* EMAIL: Mostrar EmailComposer con rich text */
+                  <EmailComposer
+                    onSend={async (subject, htmlContent) => {
+                      try {
+                        setSendingMessage(true);
+                        // Solo mostrar subject en el primer mensaje de la conversación
+                        const isFirstMessage = messages.length === 0;
+                        await messageService.sendMessage({
+                          conversationId: selectedConversation.id,
+                          content: htmlContent,
+                          subject: isFirstMessage ? subject : undefined,
+                        });
+                        await loadMessages(selectedConversation.id);
+                        await loadConversations();
+                        toast.success("Email enviado correctamente");
+                      } catch (error: unknown) {
+                        const errorMessage = error instanceof Error
+                          ? error.message
+                          : "No se pudo enviar el email. Intenta nuevamente.";
+                        toast.error("Error al enviar email", {
+                          description: errorMessage,
+                          duration: 6000,
+                        });
+                      } finally {
+                        setSendingMessage(false);
                       }
                     }}
+                    sending={sendingMessage}
+                    showSubject={messages.length === 0}
+                    recipientEmail={selectedConversation.lead?.email}
+                    recipientName={selectedConversation.lead?.name}
                   />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="shrink-0"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingFile}
-                  >
-                    <Paperclip className="h-4 w-4" />
-                  </Button>
-                  <Input
-                    placeholder={selectedFile ? "Añade un mensaje (opcional)..." : "Escribe tu mensaje..."}
-                    value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && (messageInput.trim() || selectedFile)) {
-                        handleSendMessage();
-                      }
-                    }}
-                    className="flex-1"
-                    disabled={sendingMessage || uploadingFile}
-                  />
-                  <Button
-                    className="bg-purple-600 hover:bg-purple-700 shrink-0"
-                    onClick={handleSendMessage}
-                    disabled={(sendingMessage || uploadingFile) || (!messageInput.trim() && !selectedFile)}
-                  >
-                    {(sendingMessage || uploadingFile) ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
+                ) : (
+                  /* WHATSAPP: Chat input estándar */
+                  <>
+                    {/* File preview */}
+                    {selectedFile && (
+                      <div className="flex items-center gap-2 mb-2 p-2 bg-slate-100 rounded-lg">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{selectedFile.name}</p>
+                          <p className="text-xs text-slate-500">
+                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => setSelectedFile(null)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                     )}
-                  </Button>
-                </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            if (file.size > 100 * 1024 * 1024) {
+                              toast.error("El archivo es demasiado grande", {
+                                description: "El tamaño máximo permitido es 100 MB"
+                              });
+                              return;
+                            }
+                            setSelectedFile(file);
+                          }
+                        }}
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingFile}
+                      >
+                        <Paperclip className="h-4 w-4" />
+                      </Button>
+                      <Input
+                        placeholder={selectedFile ? "Añade un mensaje (opcional)..." : "Escribe tu mensaje..."}
+                        value={messageInput}
+                        onChange={(e) => setMessageInput(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && (messageInput.trim() || selectedFile)) {
+                            handleSendMessage();
+                          }
+                        }}
+                        className="flex-1"
+                        disabled={sendingMessage || uploadingFile}
+                      />
+                      <Button
+                        className="bg-purple-600 hover:bg-purple-700 shrink-0"
+                        onClick={handleSendMessage}
+                        disabled={(sendingMessage || uploadingFile) || (!messageInput.trim() && !selectedFile)}
+                      >
+                        {(sendingMessage || uploadingFile) ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </>
           ) : (

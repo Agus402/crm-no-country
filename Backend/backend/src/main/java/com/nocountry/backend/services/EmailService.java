@@ -97,7 +97,11 @@ public class EmailService {
         messageRepository.save(message);
     }
 
-    private void sendHtmlEmail(String to, String subject, String htmlBody) {
+    /**
+     * Envía un email HTML a la dirección especificada.
+     * Método público para uso desde otros servicios como MessageService.
+     */
+    public void sendHtmlEmail(String to, String subject, String htmlBody) {
         try {
             MimeMessage mime = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mime, true, "UTF-8");
