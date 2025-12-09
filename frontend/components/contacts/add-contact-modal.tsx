@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus, UserPlus, MessageCircle, Mail, Pencil } from "lucide-react";
+import { X, UserPlus, MessageCircle, Mail, Pencil, Loader2 } from "lucide-react";
+import { tagService, TagData } from "@/services/tag.service";
 
 export interface NewContactData {
   id?: string;
@@ -16,7 +17,7 @@ export interface NewContactData {
   phone: string;
   channel: "WhatsApp" | "Email";
   stage: string;
-  tags: string[];
+  tagIds: number[];
 }
 
 interface AddContactModalProps {
@@ -26,24 +27,13 @@ interface AddContactModalProps {
   contactToEdit?: NewContactData | null;
 }
 
-const SUGGESTED_TAGS = [
-  "Empresarial",
-  "Alta prioridad",
-  "Demo solicitada",
-  "VIP",
-  "Pagado",
-  "Interesado",
-  "Onboarding",
-  "Reunión programada",
-];
-
 const defaultFormData: NewContactData = {
   name: "",
   email: "",
   phone: "",
   channel: "WhatsApp",
   stage: "Active Lead",
-  tags: [],
+  tagIds: [],
 };
 
 export function AddContactModal({
@@ -54,7 +44,27 @@ export function AddContactModal({
 }: AddContactModalProps) {
   const [formData, setFormData] = useState<NewContactData>(defaultFormData);
   const [errors, setErrors] = useState<{ name?: string; email?: string; phone?: string }>({});
-  const [tagInput, setTagInput] = useState("");
+  const [availableTags, setAvailableTags] = useState<TagData[]>([]);
+  const [loadingTags, setLoadingTags] = useState(false);
+
+  // Cargar tags de la BD
+  useEffect(() => {
+    if (isOpen) {
+      loadTags();
+    }
+  }, [isOpen]);
+
+  const loadTags = async () => {
+    try {
+      setLoadingTags(true);
+      const tags = await tagService.getAll();
+      setAvailableTags(tags);
+    } catch (error) {
+      console.error("Error loading tags:", error);
+    } finally {
+      setLoadingTags(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -74,17 +84,12 @@ export function AddContactModal({
     }
   };
 
-  const addTag = (tag: string) => {
-    if (!formData.tags.includes(tag)) {
-      setFormData((prev) => ({ ...prev, tags: [...prev.tags, tag] }));
-    }
-    setTagInput("");
-  };
-
-  const removeTag = (tagToRemove: string) => {
+  const toggleTag = (tagId: number) => {
     setFormData((prev) => ({
       ...prev,
-      tags: prev.tags.filter((tag) => tag !== tagToRemove),
+      tagIds: prev.tagIds.includes(tagId)
+        ? prev.tagIds.filter((id) => id !== tagId)
+        : [...prev.tagIds, tagId],
     }));
   };
 
@@ -97,7 +102,7 @@ export function AddContactModal({
       hasError = true;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; //VALIDACION PARA EL MAIL
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!formData.email.trim()) {
       newErrors.email = "El correo electrónico es obligatorio.";
       hasError = true;
@@ -106,10 +111,7 @@ export function AddContactModal({
       hasError = true;
     }
 
-
-
     const phoneRegex = /^[+]?[\d\s\-()]*$/;
-    // Sacamos todo lo que no sea número para contar la longitud real
     const phoneDigits = formData.phone.replace(/\D/g, '');
 
     if (formData.phone.trim()) {
@@ -117,7 +119,6 @@ export function AddContactModal({
         newErrors.phone = "El formato contiene caracteres inválidos.";
         hasError = true;
       }
-      // Mínimo 7 (ej: +683 4000), Máximo 15 (Estándar E.164)
       else if (phoneDigits.length < 7 || phoneDigits.length > 15) {
         newErrors.phone = "El número debe tener entre 7 y 15 dígitos válidos.";
         hasError = true;
@@ -176,7 +177,7 @@ export function AddContactModal({
               </Label>
               <Input
                 id="email"
-                placeholder="john@example.com"
+                placeholder="juan@ejemplo.com"
                 value={formData.email}
                 onChange={(e) => handleInputChange("email", e.target.value)}
                 className={errors.email ? "border-red-500 focus-visible:ring-red-500" : ""}
@@ -248,55 +249,47 @@ export function AddContactModal({
 
           <div className="grid gap-2">
             <Label>Etiquetas</Label>
-            <div className="flex flex-wrap gap-2 p-3 border rounded-md min-h-10">
-              {formData.tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="gap-1 pr-1">
-                  {tag}
-                  <button
-                    onClick={() => removeTag(tag)}
-                    className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-            <div className="space-y-3 mt-2">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Escribir etiqueta personalizada..."
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      if (tagInput) addTag(tagInput);
-                    }
-                  }}
-                  className="h-9"
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    if (tagInput) addTag(tagInput);
-                  }}
-                >
-                  Agregar
-                </Button>
+            {loadingTags ? (
+              <div className="flex items-center gap-2 p-3 border rounded-md">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm text-gray-500">Cargando etiquetas...</span>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {SUGGESTED_TAGS.map((tag) => (
-                  <button
-                    key={tag}
-                    onClick={() => addTag(tag)}
-                    className="text-xs border rounded-full px-2 py-1 hover:bg-purple-50 hover:text-purple-600 transition-colors flex items-center gap-1"
-                  >
-                    <Plus className="h-3 w-3" /> {tag}
-                  </button>
-                ))}
+            ) : availableTags.length === 0 ? (
+              <div className="p-3 border rounded-md text-sm text-gray-500">
+                No hay etiquetas disponibles. Puedes crearlas en Configuración → Etiquetas.
               </div>
-            </div>
+            ) : (
+              <div className="flex flex-wrap gap-2 p-3 border rounded-md min-h-10">
+                {availableTags.map((tag) => {
+                  const isSelected = formData.tagIds.includes(tag.id!);
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => toggleTag(tag.id!)}
+                      className={`
+                        px-3 py-1 rounded-full text-sm font-medium transition-all
+                        flex items-center gap-1
+                        ${isSelected
+                          ? 'ring-2 ring-offset-1 ring-purple-500'
+                          : 'hover:opacity-80'
+                        }
+                      `}
+                      style={{
+                        backgroundColor: tag.color + '20',
+                        color: tag.color,
+                        borderColor: tag.color,
+                        borderWidth: '1px',
+                        borderStyle: 'solid',
+                      }}
+                    >
+                      {tag.name}
+                      {isSelected && <X className="h-3 w-3" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 

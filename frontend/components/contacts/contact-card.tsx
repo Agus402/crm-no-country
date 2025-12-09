@@ -11,13 +11,19 @@ const stageColors: Record<string, string> = {
   Client: "bg-green-100 text-green-700",
 };
 
+interface TagData {
+  id?: number;
+  name: string;
+  color: string;
+}
+
 interface Contact {
   id: string | number;
   name: string;
   email: string;
   initials: string;
   stage: string;
-  tags: string[];
+  tags: TagData[];
   lastContact: string;
   channel: "WhatsApp" | "Email";
   phone?: string;
@@ -72,6 +78,19 @@ export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
           <div><p className="text-gray-500 text-xs">Etapa</p><Badge variant="secondary" className={cn("mt-1", stageColors[contact.stage])}>{contact.stage}</Badge></div>
           <div><p className="text-gray-500 text-xs">Último contacto</p><p className="font-medium mt-1 text-gray-700">{contact.lastContact}</p></div>
         </div>
+
+        {contact.tags && contact.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {contact.tags.map((tag) => (
+              <span
+                key={tag.id || tag.name}
+                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${tag.color}`}
+              >
+                {tag.name}
+              </span>
+            ))}
+          </div>
+        )}
 
         <div className="pt-2 flex items-center justify-between border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs text-gray-500">{contact.channel === "WhatsApp" ? <MessageCircle className="h-3 w-3 text-green-600" /> : <Mail className="h-3 w-3 text-blue-600" />}{contact.channel}</div>

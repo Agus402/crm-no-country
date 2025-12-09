@@ -8,6 +8,7 @@ import { ContactCard } from "@/components/contacts/contact-card";
 import { AddContactModal, NewContactData } from "@/components/contacts/add-contact-modal";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { contactService, CrmLeadDTO } from "@/services/contact.service";
+import { tagService, TagData } from "@/services/tag.service";
 import { toast } from "sonner";
 
 const STAGES = ["All Stages", "Active Lead", "Follow-up", "Client"];
@@ -40,15 +41,17 @@ const getInitials = (name: string): string => {
 
 export default function ContactPage() {
   const [contacts, setContacts] = useState<CrmLeadDTO[]>([]);
+  const [allTags, setAllTags] = useState<TagData[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [stageFilter, setStageFilter] = useState("All Stages");
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<NewContactData | null>(null);
 
-  // Load contacts on mount
+  // Load contacts and tags on mount
   useEffect(() => {
     loadContacts();
+    loadTags();
   }, []);
 
   const loadContacts = async () => {
@@ -62,6 +65,23 @@ export default function ContactPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const loadTags = async () => {
+    try {
+      const tags = await tagService.getAll();
+      setAllTags(tags);
+    } catch (error) {
+      console.error("Error loading tags:", error);
+    }
+  };
+
+  // Helper to get tag info by ID
+  const getTagsForContact = (tagIds: number[]): TagData[] => {
+    if (!tagIds || tagIds.length === 0) return [];
+    // Convertir a números para asegurar comparación correcta
+    const numericTagIds = tagIds.map(id => Number(id));
+    return allTags.filter(tag => tag.id !== undefined && numericTagIds.includes(Number(tag.id)));
   };
 
   const handleOpenCreate = () => {
@@ -78,7 +98,7 @@ export default function ContactPage() {
       phone: contact.phone || "",
       channel: contact.channel as "WhatsApp" | "Email",
       stage: contact.stage,
-      tags: [], // Tags will be handled separately if needed
+      tagIds: contact.tagIds || [],
     });
     setIsModalOpen(true);
   };
@@ -93,6 +113,7 @@ export default function ContactPage() {
           phone: contactData.phone || undefined,
           stage: contactData.stage,
           channel: contactData.channel,
+          tagIds: contactData.tagIds,
         });
         toast.success("Contacto actualizado exitosamente");
       } else {
@@ -103,6 +124,7 @@ export default function ContactPage() {
           phone: contactData.phone || undefined,
           stage: contactData.stage,
           channel: contactData.channel,
+          tagIds: contactData.tagIds,
         });
         toast.success("Contacto creado exitosamente");
       }
@@ -129,12 +151,15 @@ export default function ContactPage() {
   };
 
   const filteredContacts = contacts
-    .map((contact) => ({
-      ...contact,
-      initials: getInitials(contact.name),
-      lastContact: formatDate(contact.updatedAt || contact.createdAt),
-      tags: [], // Tags will be handled separately if needed
-    }))
+    .map((contact) => {
+      const mappedTags = getTagsForContact(contact.tagIds);
+      return {
+        ...contact,
+        initials: getInitials(contact.name),
+        lastContact: formatDate(contact.updatedAt || contact.createdAt),
+        tags: mappedTags,
+      };
+    })
     .filter((contact) => {
       const matchesSearch =
         contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -169,7 +194,7 @@ export default function ContactPage() {
             />
 
             <DropdownMenu>
-              <DropdownMenuTrigger asChild><Button variant="outline" className={stageFilter !== "All Stages" ? "bg-purple-50 border-purple-200 text-purple-700" : ""}><Filter className="h-4 w-4 mr-2" />{stageFilter === "All Stages" ? "Filter" : stageFilter}</Button></DropdownMenuTrigger>
+              <DropdownMenuTrigger asChild><Button variant="outline" className={stageFilter !== "All Stages" ? "bg-purple-50 border-purple-200 text-purple-700" : ""}><Filter className="h-4 w-4 mr-2" />{stageFilter === "All Stages" ? "Filtrar" : stageFilter}</Button></DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48"><DropdownMenuLabel>Filtrar por etapa</DropdownMenuLabel><DropdownMenuSeparator />{STAGES.map((stage) => (<DropdownMenuItem key={stage} onClick={() => setStageFilter(stage)} className="justify-between">{stage}{stageFilter === stage && <Check className="h-4 w-4 text-purple-600" />}</DropdownMenuItem>))}</DropdownMenuContent>
             </DropdownMenu>
 
