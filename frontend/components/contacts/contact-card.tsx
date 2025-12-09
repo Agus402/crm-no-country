@@ -24,9 +24,9 @@ interface Contact {
 }
 
 interface ContactCardProps {
-    contact: Contact;
-    onEdit: (contact: Contact) => void;
-    onDelete?: (id: number) => void;
+  contact: Contact;
+  onEdit: (contact: any) => void;
+  onDelete?: (id: number) => void;
 }
 
 export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
@@ -41,7 +41,7 @@ export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
               <p className="text-sm text-gray-500">{contact.email}</p>
             </div>
           </div>
-          
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
@@ -49,36 +49,36 @@ export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                
-                {/* CONECTADO EL EDITAR */}
-                <DropdownMenuItem onClick={() => onEdit(contact)}>
-                    <Pencil className="mr-2 h-4 w-4" /> Edit Contact
-                </DropdownMenuItem>
-                
-                <DropdownMenuItem><FileDown className="mr-2 h-4 w-4" /> Export to PDF</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                  onClick={() => onDelete && onDelete(Number(contact.id))}
-                >
-                  <Trash className="mr-2 h-4 w-4" /> Delete
-                </DropdownMenuItem>
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+
+              {/* CONECTADO EL EDITAR */}
+              <DropdownMenuItem onClick={() => onEdit(contact)}>
+                <Pencil className="mr-2 h-4 w-4" /> Edit Contact
+              </DropdownMenuItem>
+
+              <DropdownMenuItem><FileDown className="mr-2 h-4 w-4" /> Export to PDF</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                onClick={() => onDelete && onDelete(Number(contact.id))}
+              >
+                <Trash className="mr-2 h-4 w-4" /> Delete
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
         <div className="grid grid-cols-2 gap-4 text-sm">
-            <div><p className="text-gray-500 text-xs">Stage</p><Badge variant="secondary" className={cn("mt-1", stageColors[contact.stage])}>{contact.stage}</Badge></div>
-            <div><p className="text-gray-500 text-xs">Last Contact</p><p className="font-medium mt-1 text-gray-700">{contact.lastContact}</p></div>
+          <div><p className="text-gray-500 text-xs">Stage</p><Badge variant="secondary" className={cn("mt-1", stageColors[contact.stage])}>{contact.stage}</Badge></div>
+          <div><p className="text-gray-500 text-xs">Last Contact</p><p className="font-medium mt-1 text-gray-700">{contact.lastContact}</p></div>
         </div>
 
         <div className="pt-2 flex items-center justify-between border-t border-gray-100">
-             <div className="flex items-center gap-2 text-xs text-gray-500">{contact.channel === "WhatsApp" ? <MessageCircle className="h-3 w-3 text-green-600"/> : <Mail className="h-3 w-3 text-blue-600"/>}{contact.channel}</div>
-             <div className="flex gap-2">
-                 <Button size="icon" variant="outline" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"><MessageCircle className="h-4 w-4" /></Button>
-                 <Button size="icon" variant="outline" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"><Mail className="h-4 w-4" /></Button>
-             </div>
+          <div className="flex items-center gap-2 text-xs text-gray-500">{contact.channel === "WhatsApp" ? <MessageCircle className="h-3 w-3 text-green-600" /> : <Mail className="h-3 w-3 text-blue-600" />}{contact.channel}</div>
+          <div className="flex gap-2">
+            <Button size="icon" variant="outline" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"><MessageCircle className="h-4 w-4" /></Button>
+            <Button size="icon" variant="outline" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"><Mail className="h-4 w-4" /></Button>
+          </div>
         </div>
       </CardContent>
     </Card>
