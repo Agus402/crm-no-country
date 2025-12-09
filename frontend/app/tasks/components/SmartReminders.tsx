@@ -11,7 +11,7 @@ export default function SmartReminders({ reminders }: SmartRemindersProps) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Smart Reminders</h2>
+        <h2 className="text-lg font-semibold">Recordatorios inteligentes</h2>
         <Bell className="h-5 w-5 text-purple-600" />
       </div>
       <div className="space-y-3">

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader,DialogTitle, DialogFooter, } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select,SelectContent,SelectItem,SelectTrigger,SelectValue, } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { X, Plus, UserPlus, MessageCircle, Mail, Pencil } from "lucide-react";
 
@@ -27,14 +27,14 @@ interface AddContactModalProps {
 }
 
 const SUGGESTED_TAGS = [
-  "Enterprise",
-  "High Priority",
-  "Demo Requested",
+  "Empresarial",
+  "Alta prioridad",
+  "Demo solicitada",
   "VIP",
-  "Paid",
-  "Interested",
+  "Pagado",
+  "Interesado",
   "Onboarding",
-  "Meeting Scheduled",
+  "Reunión programada",
 ];
 
 const defaultFormData: NewContactData = {
@@ -106,22 +106,22 @@ export function AddContactModal({
       hasError = true;
     }
 
-   
+
 
     const phoneRegex = /^[+]?[\d\s\-()]*$/;
     // Sacamos todo lo que no sea número para contar la longitud real
-    const phoneDigits = formData.phone.replace(/\D/g, ''); 
+    const phoneDigits = formData.phone.replace(/\D/g, '');
 
     if (formData.phone.trim()) {
-        if (!phoneRegex.test(formData.phone)) {
-            newErrors.phone = "El formato contiene caracteres inválidos.";
-            hasError = true;
-        } 
-        // Mínimo 7 (ej: +683 4000), Máximo 15 (Estándar E.164)
-        else if (phoneDigits.length < 7 || phoneDigits.length > 15) {
-            newErrors.phone = "El número debe tener entre 7 y 15 dígitos válidos.";
-            hasError = true;
-        }
+      if (!phoneRegex.test(formData.phone)) {
+        newErrors.phone = "El formato contiene caracteres inválidos.";
+        hasError = true;
+      }
+      // Mínimo 7 (ej: +683 4000), Máximo 15 (Estándar E.164)
+      else if (phoneDigits.length < 7 || phoneDigits.length > 15) {
+        newErrors.phone = "El número debe tener entre 7 y 15 dígitos válidos.";
+        hasError = true;
+      }
     }
 
     if (hasError) {
@@ -141,12 +141,12 @@ export function AddContactModal({
             {contactToEdit ? (
               <>
                 <Pencil className="h-5 w-5 text-purple-600" />
-                Edit Contact
+                Editar contacto
               </>
             ) : (
               <>
                 <UserPlus className="h-5 w-5 text-purple-600" />
-                Add New Contact
+                Agregar nuevo contacto
               </>
             )}
           </DialogTitle>
@@ -155,11 +155,11 @@ export function AddContactModal({
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="name" className={errors.name ? "text-red-500" : ""}>
-              Full Name *
+              Nombre completo *
             </Label>
             <Input
               id="name"
-              placeholder="John Doe"
+              placeholder="Juan Pérez"
               value={formData.name}
               onChange={(e) => handleInputChange("name", e.target.value)}
               className={errors.name ? "border-red-500 focus-visible:ring-red-500" : ""}
@@ -172,7 +172,7 @@ export function AddContactModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email" className={errors.email ? "text-red-500" : ""}>
-                Email *
+                Correo electrónico *
               </Label>
               <Input
                 id="email"
@@ -187,7 +187,7 @@ export function AddContactModal({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="phone" className={errors.phone ? "text-red-500" : ""}>
-                Phone Number
+                Teléfono
               </Label>
               <Input
                 id="phone"
@@ -196,7 +196,7 @@ export function AddContactModal({
                 onChange={(e) => handleInputChange("phone", e.target.value)}
                 className={errors.phone ? "border-red-500 focus-visible:ring-red-500" : ""}
               />
-               {errors.phone && (
+              {errors.phone && (
                 <p className="text-xs text-red-500 font-medium">{errors.phone}</p>
               )}
             </div>
@@ -204,13 +204,13 @@ export function AddContactModal({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label>Channel</Label>
+              <Label>Canal</Label>
               <Select
                 value={formData.channel}
                 onValueChange={(val: any) => handleInputChange("channel", val)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select channel" />
+                  <SelectValue placeholder="Seleccionar canal" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="WhatsApp">
@@ -229,13 +229,13 @@ export function AddContactModal({
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label>Stage</Label>
+              <Label>Etapa</Label>
               <Select
                 value={formData.stage}
                 onValueChange={(val) => handleInputChange("stage", val)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select stage" />
+                  <SelectValue placeholder="Seleccionar etapa" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Active Lead">Active Lead</SelectItem>
@@ -247,7 +247,7 @@ export function AddContactModal({
           </div>
 
           <div className="grid gap-2">
-            <Label>Tags</Label>
+            <Label>Etiquetas</Label>
             <div className="flex flex-wrap gap-2 p-3 border rounded-md min-h-10">
               {formData.tags.map((tag) => (
                 <Badge key={tag} variant="secondary" className="gap-1 pr-1">
@@ -264,7 +264,7 @@ export function AddContactModal({
             <div className="space-y-3 mt-2">
               <div className="flex gap-2">
                 <Input
-                  placeholder="Type custom tag..."
+                  placeholder="Escribir etiqueta personalizada..."
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -282,7 +282,7 @@ export function AddContactModal({
                     if (tagInput) addTag(tagInput);
                   }}
                 >
-                  Add
+                  Agregar
                 </Button>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -302,13 +302,13 @@ export function AddContactModal({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            Cancelar
           </Button>
           <Button
             onClick={handleSubmit}
             className="bg-purple-600 hover:bg-purple-700"
           >
-            {contactToEdit ? "Save Changes" : "Add Contact"}
+            {contactToEdit ? "Guardar cambios" : "Agregar contacto"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, UserPlus, Filter, Download, Check } from "lucide-react"; 
+import { Search, UserPlus, Filter, Download, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ContactTable } from "@/components/contacts/contact-table";
 import { ContactCard } from "@/components/contacts/contact-card";
@@ -21,10 +21,10 @@ const formatDate = (dateString: string): string => {
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);
 
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? "s" : ""} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
-  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+  if (diffMins < 1) return "Ahora";
+  if (diffMins < 60) return `hace ${diffMins} min`;
+  if (diffHours < 24) return `hace ${diffHours} hora${diffHours > 1 ? "s" : ""}`;
+  if (diffDays < 7) return `hace ${diffDays} día${diffDays > 1 ? "s" : ""}`;
   return date.toLocaleDateString();
 };
 
@@ -65,7 +65,7 @@ export default function ContactPage() {
   };
 
   const handleOpenCreate = () => {
-    setEditingContact(null); 
+    setEditingContact(null);
     setIsModalOpen(true);
   };
 
@@ -79,7 +79,7 @@ export default function ContactPage() {
       channel: contact.channel as "WhatsApp" | "Email",
       stage: contact.stage,
       tags: [], // Tags will be handled separately if needed
-    }); 
+    });
     setIsModalOpen(true);
   };
 
@@ -147,33 +147,33 @@ export default function ContactPage() {
     <div className="flex flex-col min-h-screen bg-gray-50">
       <div className="border-b border-gray-200 p-4 md:px-8 md:py-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-          <div><h1 className="text-2xl md:text-3xl font-bold text-gray-900">Contacts</h1><p className="text-sm md:text-base text-gray-600 mt-1">Manage and segment your contacts across the sales funnel.</p></div>
+          <div><h1 className="text-2xl md:text-3xl font-bold text-gray-900">Contactos</h1><p className="text-sm md:text-base text-gray-600 mt-1">Administra y segmenta tus contactos a través del embudo de ventas.</p></div>
         </div>
 
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input type="text" placeholder="Search contacts..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+            <input type="text" placeholder="Buscar contactos..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
           </div>
 
           <div className="grid grid-cols-2 gap-2 lg:flex lg:gap-3">
-             <Button onClick={handleOpenCreate} className="bg-purple-600 hover:bg-purple-700 text-white col-span-2 lg:col-span-1">
-                <UserPlus className="h-4 w-4 mr-2" /> Add Contact
-             </Button>
+            <Button onClick={handleOpenCreate} className="bg-purple-600 hover:bg-purple-700 text-white col-span-2 lg:col-span-1">
+              <UserPlus className="h-4 w-4 mr-2" /> Agregar contacto
+            </Button>
 
-             <AddContactModal 
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onSave={handleSaveContact}
-                contactToEdit={editingContact}
-             />
+            <AddContactModal
+              isOpen={isModalOpen}
+              onClose={() => setIsModalOpen(false)}
+              onSave={handleSaveContact}
+              contactToEdit={editingContact}
+            />
 
-             <DropdownMenu>
-               <DropdownMenuTrigger asChild><Button variant="outline" className={stageFilter !== "All Stages" ? "bg-purple-50 border-purple-200 text-purple-700" : ""}><Filter className="h-4 w-4 mr-2" />{stageFilter === "All Stages" ? "Filter" : stageFilter}</Button></DropdownMenuTrigger>
-               <DropdownMenuContent align="end" className="w-48"><DropdownMenuLabel>Filter by Stage</DropdownMenuLabel><DropdownMenuSeparator />{STAGES.map((stage) => (<DropdownMenuItem key={stage} onClick={() => setStageFilter(stage)} className="justify-between">{stage}{stageFilter === stage && <Check className="h-4 w-4 text-purple-600" />}</DropdownMenuItem>))}</DropdownMenuContent>
-             </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild><Button variant="outline" className={stageFilter !== "All Stages" ? "bg-purple-50 border-purple-200 text-purple-700" : ""}><Filter className="h-4 w-4 mr-2" />{stageFilter === "All Stages" ? "Filter" : stageFilter}</Button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48"><DropdownMenuLabel>Filtrar por etapa</DropdownMenuLabel><DropdownMenuSeparator />{STAGES.map((stage) => (<DropdownMenuItem key={stage} onClick={() => setStageFilter(stage)} className="justify-between">{stage}{stageFilter === stage && <Check className="h-4 w-4 text-purple-600" />}</DropdownMenuItem>))}</DropdownMenuContent>
+            </DropdownMenu>
 
-             <Button variant="outline"><Download className="h-4 w-4 mr-2" /> Export</Button>
+            <Button variant="outline"><Download className="h-4 w-4 mr-2" /> Exportar</Button>
           </div>
         </div>
       </div>
@@ -186,16 +186,16 @@ export default function ContactPage() {
         ) : (
           <>
             <div className="hidden xl:block">
-                <ContactTable contacts={filteredContacts} onEdit={handleOpenEdit} onDelete={handleDeleteContact} />
+              <ContactTable contacts={filteredContacts} onEdit={handleOpenEdit} onDelete={handleDeleteContact} />
             </div>
             <div className="xl:hidden space-y-4">
-                <p className="text-sm text-gray-500 mb-2">Showing {filteredContacts.length} contacts {stageFilter !== "All Stages" && ` in ${stageFilter}`}</p>
-                <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-                  {filteredContacts.map(contact => (
-                      <ContactCard key={contact.id} contact={contact as any} onEdit={handleOpenEdit} onDelete={handleDeleteContact} />
-                  ))}
-                  {filteredContacts.length === 0 && <div className="col-span-full text-center py-12 text-gray-500">No contacts found matching your filters.</div>}
-                </div>
+              <p className="text-sm text-gray-500 mb-2">Mostrando {filteredContacts.length} contactos {stageFilter !== "All Stages" && ` en ${stageFilter}`}</p>
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                {filteredContacts.map(contact => (
+                  <ContactCard key={contact.id} contact={contact as any} onEdit={handleOpenEdit} onDelete={handleDeleteContact} />
+                ))}
+                {filteredContacts.length === 0 && <div className="col-span-full text-center py-12 text-gray-500">No se encontraron contactos que coincidan con tus filtros.</div>}
+              </div>
             </div>
           </>
         )}

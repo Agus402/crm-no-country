@@ -23,7 +23,7 @@ export default function StatsCards({
             <Clock className="h-5 w-5 text-purple-600" />
           </div>
           <div>
-            <p className="text-sm text-gray-600">Pending Tasks</p>
+            <p className="text-sm text-gray-600">Tareas pendientes</p>
             <p className="text-2xl font-semibold">{pendingCount}</p>
           </div>
         </div>
@@ -35,7 +35,7 @@ export default function StatsCards({
             <CheckCircle2 className="h-5 w-5 text-green-600" />
           </div>
           <div>
-            <p className="text-sm text-gray-600">Completed</p>
+            <p className="text-sm text-gray-600">Completadas</p>
             <p className="text-2xl font-semibold">{completedCount}</p>
           </div>
         </div>
@@ -47,7 +47,7 @@ export default function StatsCards({
             <Bell className="h-5 w-5 text-blue-600" />
           </div>
           <div>
-            <p className="text-sm text-gray-600">Automated</p>
+            <p className="text-sm text-gray-600">Automatizadas</p>
             <p className="text-2xl font-semibold">{automatedCount}</p>
           </div>
         </div>
@@ -59,7 +59,7 @@ export default function StatsCards({
             <CalendarClock className="h-5 w-5 text-orange-600" />
           </div>
           <div>
-            <p className="text-sm text-gray-600">Due Today</p>
+            <p className="text-sm text-gray-600">Vencen hoy</p>
             <p className="text-2xl font-semibold">{dueTodayCount}</p>
           </div>
         </div>

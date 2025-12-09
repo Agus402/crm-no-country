@@ -16,43 +16,43 @@ type ActivityItem = {
 const activities: ActivityItem[] = [
   {
     id: "1",
-    name: "Sarah Chen",
-    action: "Interested in Enterprise plan",
+    name: "Sara Chen",
+    action: "Interesada en plan Empresarial",
     type: "whatsapp",
     status: "new",
-    time: "5 min ago",
+    time: "hace 5 min",
   },
   {
     id: "2",
-    name: "Marcus Brown",
-    action: "Requested product demo",
+    name: "Marcos Brown",
+    action: "Solicitud de demo",
     type: "email",
     status: "pending",
-    time: "12 min ago",
+    time: "hace 12 min",
   },
   {
     id: "3",
     name: "Jessica Park",
-    action: "Payment confirmation sent",
+    action: "Confirmación de pago enviada",
     type: "whatsapp",
     status: "completed",
-    time: "1 hour ago",
+    time: "hace 1 hora",
   },
   {
     id: "4",
     name: "David Liu",
-    action: "Follow-up scheduled",
+    action: "Seguimiento programado",
     type: "email",
     status: "scheduled",
-    time: "2 hours ago",
+    time: "hace 2 horas",
   },
   {
     id: "5",
     name: "Jon Snow",
-    action: "Follow-up scheduled",
+    action: "Seguimiento programado",
     type: "whatsapp",
     status: "scheduled",
-    time: "3 hours ago",
+    time: "hace 3 horas",
   },
 
 ];
@@ -91,8 +91,8 @@ export function RecentActivity() {
           </div>
 
           <div className="flex flex-col items-end gap-1">
-            <Badge 
-              variant="secondary" 
+            <Badge
+              variant="secondary"
               className={`
                 text-[10px] font-medium px-2 py-0.5 rounded-full uppercase
                 ${item.status === 'new' ? 'bg-black text-white hover:bg-black/80' : ''}

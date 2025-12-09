@@ -53,15 +53,15 @@ export default function TaskList({ tasks, onToggleTask, onEditTask, onDeleteTask
   const getFilterLabel = (filterType: FilterType) => {
     switch (filterType) {
       case "all":
-        return "All Tasks";
+        return "Todas las tareas";
       case "pending":
-        return "Pending";
+        return "Pendientes";
       case "completed":
-        return "Completed";
+        return "Completadas";
       case "automated":
-        return "Automated";
+        return "Automatizadas";
       default:
-        return "All Tasks";
+        return "Todas las tareas";
     }
   };
 
@@ -82,7 +82,7 @@ export default function TaskList({ tasks, onToggleTask, onEditTask, onDeleteTask
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Your Tasks</h2>
+        <h2 className="text-lg font-semibold">Tus tareas</h2>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="text-sm">
@@ -97,7 +97,7 @@ export default function TaskList({ tasks, onToggleTask, onEditTask, onDeleteTask
               className="cursor-pointer"
             >
               <div className="flex items-center justify-between w-full">
-                <span>All Tasks</span>
+                <span>Todas las tareas</span>
                 {filter === "all" && <Check className="h-4 w-4 text-purple-600" />}
               </div>
             </DropdownMenuItem>
@@ -106,7 +106,7 @@ export default function TaskList({ tasks, onToggleTask, onEditTask, onDeleteTask
               className="cursor-pointer"
             >
               <div className="flex items-center justify-between w-full">
-                <span>Pending</span>
+                <span>Pendientes</span>
                 {filter === "pending" && <Check className="h-4 w-4 text-purple-600" />}
               </div>
             </DropdownMenuItem>
@@ -115,7 +115,7 @@ export default function TaskList({ tasks, onToggleTask, onEditTask, onDeleteTask
               className="cursor-pointer"
             >
               <div className="flex items-center justify-between w-full">
-                <span>Completed</span>
+                <span>Completadas</span>
                 {filter === "completed" && <Check className="h-4 w-4 text-purple-600" />}
               </div>
             </DropdownMenuItem>
@@ -124,7 +124,7 @@ export default function TaskList({ tasks, onToggleTask, onEditTask, onDeleteTask
               className="cursor-pointer"
             >
               <div className="flex items-center justify-between w-full">
-                <span>Automated</span>
+                <span>Automatizadas</span>
                 {filter === "automated" && <Check className="h-4 w-4 text-purple-600" />}
               </div>
             </DropdownMenuItem>
@@ -136,16 +136,15 @@ export default function TaskList({ tasks, onToggleTask, onEditTask, onDeleteTask
         {filteredTasks.length === 0 ? (
           <Card className="p-8 text-center">
             <p className="text-gray-500 text-sm">
-              No {filter !== "all" && `${filter} `}tasks found
+              No se encontraron tareas {filter !== "all" && `${getFilterLabel(filter).toLowerCase()} `}
             </p>
           </Card>
         ) : (
           filteredTasks.map((task) => (
             <Card
               key={task.id}
-              className={`p-4 transition-all ${
-                task.completed ? "opacity-60 bg-gray-50" : ""
-              }`}
+              className={`p-4 transition-all ${task.completed ? "opacity-60 bg-gray-50" : ""
+                }`}
             >
               <div className="flex items-start gap-3">
                 <input
@@ -156,9 +155,8 @@ export default function TaskList({ tasks, onToggleTask, onEditTask, onDeleteTask
                 />
                 <div className="flex-1">
                   <h3
-                    className={`font-medium text-sm mb-2 ${
-                      task.completed ? "line-through text-gray-500" : ""
-                    }`}
+                    className={`font-medium text-sm mb-2 ${task.completed ? "line-through text-gray-500" : ""
+                      }`}
                   >
                     {task.title}
                   </h3>
@@ -174,7 +172,7 @@ export default function TaskList({ tasks, onToggleTask, onEditTask, onDeleteTask
                         <span className="mx-2">•</span>
                         <Badge variant="secondary" className="text-xs">
                           <Bell className="h-3 w-3 mr-1" />
-                          Automated
+                          Automatizada
                         </Badge>
                       </>
                     )}
@@ -201,7 +199,7 @@ export default function TaskList({ tasks, onToggleTask, onEditTask, onDeleteTask
                             className="cursor-pointer"
                           >
                             <Edit className="h-4 w-4 mr-2" />
-                            Edit
+                            Editar
                           </DropdownMenuItem>
                         )}
                         {onDeleteTask && (
@@ -214,7 +212,7 @@ export default function TaskList({ tasks, onToggleTask, onEditTask, onDeleteTask
                             className="cursor-pointer text-red-600"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
+                            Eliminar
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>

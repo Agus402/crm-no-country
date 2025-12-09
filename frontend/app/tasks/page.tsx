@@ -20,20 +20,20 @@ function mapTaskDTOToTask(dto: TaskDTO): Task {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const taskDate = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
-  
+
   let dueDateStr = "";
   if (taskDate.getTime() === today.getTime()) {
-    dueDateStr = "Today";
+    dueDateStr = "Hoy";
   } else if (taskDate.getTime() === today.getTime() + 86400000) {
-    dueDateStr = "Tomorrow";
+    dueDateStr = "Mañana";
   } else {
-    dueDateStr = dueDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    dueDateStr = dueDate.toLocaleDateString("es-ES", { month: "short", day: "numeric" });
   }
 
-  const dueTimeStr = dueDate.toLocaleTimeString("en-US", { 
-    hour: "numeric", 
+  const dueTimeStr = dueDate.toLocaleTimeString("en-US", {
+    hour: "numeric",
     minute: "2-digit",
-    hour12: true 
+    hour12: true
   });
 
   // Handle null/undefined crmLeadDTO
@@ -174,7 +174,7 @@ export default function TasksPage() {
       setTaskDTOs([...taskDTOs, createdTask]);
       const mappedTask = mapTaskDTOToTask(createdTask);
       setTasks([...tasks, mappedTask]);
-      
+
       // Reload smart reminders and workflows if task was created with reminder or automated
       if (newTask.enableReminder || newTask.isAutomated) {
         // Reload smart reminders
@@ -184,7 +184,7 @@ export default function TasksPage() {
         } catch (err) {
           console.error("Error reloading smart reminders:", err);
         }
-        
+
         // Reload workflows if task was automated
         if (newTask.isAutomated) {
           try {
@@ -299,7 +299,7 @@ export default function TasksPage() {
       };
 
       const createdRule = await automationRuleService.create(ruleDTO);
-      
+
       // Reload workflows from backend
       const allRules = await automationRuleService.getAll();
       const mappedWorkflows: Workflow[] = allRules.map(rule => ({
@@ -308,7 +308,7 @@ export default function TasksPage() {
         contactCount: "0 contacts in sequence", // This could be calculated from backend
         status: rule.isActive ? "Active" : "Paused",
       }));
-      
+
       setWorkflows(mappedWorkflows);
     } catch (err) {
       console.error("Error creating automation rule:", err);
@@ -347,9 +347,9 @@ export default function TasksPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-semibold mb-1">Tasks & Reminders</h1>
+          <h1 className="text-2xl font-semibold mb-1">Tareas y Recordatorios</h1>
           <p className="text-gray-600 text-sm">
-            Manage your follow-ups and automated workflows
+            Administra tus seguimientos y flujos automatizados
           </p>
         </div>
         <Button
@@ -357,7 +357,7 @@ export default function TasksPage() {
           onClick={() => setShowCreateModal(true)}
         >
           <Plus className="h-4 w-4 mr-2" />
-          Create Task
+          Crear tarea
         </Button>
       </div>
 
@@ -373,8 +373,8 @@ export default function TasksPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Your Tasks */}
         <div className="lg:col-span-2">
-          <TaskList 
-            tasks={tasks} 
+          <TaskList
+            tasks={tasks}
             onToggleTask={handleToggleTask}
             onEditTask={handleEditTask}
             onDeleteTask={handleDeleteTask}

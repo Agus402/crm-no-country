@@ -49,28 +49,28 @@ export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuLabel>Acciones</DropdownMenuLabel>
 
               {/* CONECTADO EL EDITAR */}
               <DropdownMenuItem onClick={() => onEdit(contact)}>
-                <Pencil className="mr-2 h-4 w-4" /> Edit Contact
+                <Pencil className="mr-2 h-4 w-4" /> Editar contacto
               </DropdownMenuItem>
 
-              <DropdownMenuItem><FileDown className="mr-2 h-4 w-4" /> Export to PDF</DropdownMenuItem>
+              <DropdownMenuItem><FileDown className="mr-2 h-4 w-4" /> Exportar a PDF</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-red-600 focus:text-red-600 focus:bg-red-50"
                 onClick={() => onDelete && onDelete(Number(contact.id))}
               >
-                <Trash className="mr-2 h-4 w-4" /> Delete
+                <Trash className="mr-2 h-4 w-4" /> Eliminar
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
         <div className="grid grid-cols-2 gap-4 text-sm">
-          <div><p className="text-gray-500 text-xs">Stage</p><Badge variant="secondary" className={cn("mt-1", stageColors[contact.stage])}>{contact.stage}</Badge></div>
-          <div><p className="text-gray-500 text-xs">Last Contact</p><p className="font-medium mt-1 text-gray-700">{contact.lastContact}</p></div>
+          <div><p className="text-gray-500 text-xs">Etapa</p><Badge variant="secondary" className={cn("mt-1", stageColors[contact.stage])}>{contact.stage}</Badge></div>
+          <div><p className="text-gray-500 text-xs">Último contacto</p><p className="font-medium mt-1 text-gray-700">{contact.lastContact}</p></div>
         </div>
 
         <div className="pt-2 flex items-center justify-between border-t border-gray-100">

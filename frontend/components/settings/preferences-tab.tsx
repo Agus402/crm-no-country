@@ -40,21 +40,21 @@ export function PreferencesTab() {
       <Card>
         <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
           <div className="space-y-1">
-            <CardTitle className="text-base">General Preferences</CardTitle>
-            <CardDescription>Customize your CRM experience</CardDescription>
+            <CardTitle className="text-base">Preferencias generales</CardTitle>
+            <CardDescription>Personaliza tu experiencia en el CRM</CardDescription>
           </div>
 
           {!isEditing ? (
             <Button variant="outline" onClick={handleEdit}>
-              Edit
+              Editar
             </Button>
           ) : (
             <div className="flex gap-2">
               <Button size="sm" onClick={handleSave}>
-                Save
+                Guardar
               </Button>
               <Button size="sm" variant="outline" onClick={handleCancel}>
-                Cancel
+                Cancelar
               </Button>
             </div>
           )}
@@ -63,7 +63,7 @@ export function PreferencesTab() {
         <CardContent className="space-y-6">
           {/* Company Name */}
           <div className="space-y-2">
-            <Label>Company Name</Label>
+            <Label>Nombre de la empresa</Label>
             <Input
               value={formData.companyName}
               readOnly={!isEditing}
@@ -78,7 +78,7 @@ export function PreferencesTab() {
 
           {/* Time Zone */}
           <div className="space-y-2">
-            <Label>Time Zone</Label>
+            <Label>Zona horaria</Label>
             <Select
               disabled={!isEditing}
               value={formData.timeZone}
@@ -91,7 +91,7 @@ export function PreferencesTab() {
                     : ""
                 }
               >
-                <SelectValue placeholder="Select a time zone" />
+                <SelectValue placeholder="Seleccionar zona horaria" />
               </SelectTrigger>
 
               <SelectContent>
@@ -106,7 +106,7 @@ export function PreferencesTab() {
 
           {/* Date Format */}
           <div className="space-y-2">
-            <Label>Date Format</Label>
+            <Label>Formato de fecha</Label>
             <Select
               disabled={!isEditing}
               value={formData.dateFormat}
@@ -119,7 +119,7 @@ export function PreferencesTab() {
                     : ""
                 }
               >
-                <SelectValue placeholder="Select a date format" />
+                <SelectValue placeholder="Seleccionar formato de fecha" />
               </SelectTrigger>
 
               <SelectContent>
@@ -137,14 +137,14 @@ export function PreferencesTab() {
       {/* Export Data */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Export Data</CardTitle>
-          <CardDescription>Download your CRM data</CardDescription>
+          <CardTitle className="text-base">Exportar datos</CardTitle>
+          <CardDescription>Descarga los datos de tu CRM</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4">
-            <Button variant="outline">Export Contacts (CSV)</Button>
-            <Button variant="outline">Export Messages (PDF)</Button>
-            <Button variant="outline">Export All Data</Button>
+            <Button variant="outline">Exportar contactos (CSV)</Button>
+            <Button variant="outline">Exportar mensajes (PDF)</Button>
+            <Button variant="outline">Exportar todos los datos</Button>
           </div>
         </CardContent>
       </Card>

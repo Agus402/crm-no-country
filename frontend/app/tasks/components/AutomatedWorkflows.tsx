@@ -32,13 +32,13 @@ export default function AutomatedWorkflows({
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <h2 className="text-lg font-semibold">Automated Workflows</h2>
+        <h2 className="text-lg font-semibold">Flujos automatizados</h2>
         <Button
           onClick={() => setShowCreateModal(true)}
           className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto"
         >
           <Plus className="h-4 w-4 mr-2" />
-          New Rule
+          Nueva regla
         </Button>
       </div>
       <div className="space-y-3">

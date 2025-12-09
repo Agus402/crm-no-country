@@ -24,33 +24,33 @@ export function StatsCards() {
 
   const stats = [
     {
-      title: "Active Contacts",
+      title: "Contactos activos",
       value: totalContacts,
       change: "+12.5%", //  MOCKEADO 
       trend: "up",
-      period: "from last month",
+      period: "desde el mes pasado",
       icon: Users,
     },
     {
-      title: "Messages Sent",
+      title: "Mensajes enviados",
       value: "1,284",
       change: "+8.2%",
       trend: "up",
-      period: "from last week",
+      period: "desde la semana pasada",
       icon: MessageSquare,
     },
     {
-      title: "Response Rate",
+      title: "Tasa de respuesta",
       value: "81%",
       change: "+6.1%",
       trend: "up",
-      period: "from last week",
+      period: "desde la semana pasada",
       icon: Activity,
     },
     {
-      title: "Pending Follow-ups",
+      title: "Seguimientos pendientes",
       value: "23",
-      change: "8 due today",
+      change: "8 vencen hoy",
       trend: "neutral",
       period: "",
       icon: Clock,

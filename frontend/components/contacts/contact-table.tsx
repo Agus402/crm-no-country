@@ -1,7 +1,7 @@
 import { MessageCircle, Mail, MoreVertical, Pencil, Trash, FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button"; 
+import { Button } from "@/components/ui/button";
 
 const stageColors: Record<string, string> = {
   "Active Lead": "bg-blue-100 text-blue-700",
@@ -29,18 +29,18 @@ export function ContactTable({ contacts, onEdit, onDelete }: ContactTableProps) 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       <div className="px-6 py-4  border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900">All Contacts ({contacts.length})</h2>
+        <h2 className="text-lg font-semibold text-gray-900">Todos los contactos ({contacts.length})</h2>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="border-b border-gray-200">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Contact</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Stage</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Tags</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Last Contact</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Channel</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Contacto</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Etapa</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Etiquetas</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Último contacto</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Canal</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -51,30 +51,30 @@ export function ContactTable({ contacts, onEdit, onDelete }: ContactTableProps) 
                 <td className="px-6 py-4"><div className="flex flex-wrap gap-1">{contact.tags.map((tag: string) => (<span key={tag} className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium", tagColors[tag] || "bg-gray-100 text-gray-700")}>{tag}</span>))}</div></td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{contact.lastContact}</td>
                 <td className="px-6 py-4 whitespace-nowrap"><div className="flex items-center gap-2 text-sm text-gray-700">{contact.channel === "WhatsApp" ? <MessageCircle className="h-4 w-4 text-green-600" /> : <Mail className="h-4 w-4 text-blue-600" />}<span>{contact.channel}</span></div></td>
-                
+
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex items-center justify-end gap-2">
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"><MessageCircle className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"><Mail className="h-4 w-4" /></Button>
-                    
+
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-gray-900"><MoreVertical className="h-4 w-4" /></Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        
+                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+
                         <DropdownMenuItem onClick={() => onEdit(contact)}>
-                          <Pencil className="mr-2 h-4 w-4" /> Edit Contact
+                          <Pencil className="mr-2 h-4 w-4" /> Editar contacto
                         </DropdownMenuItem>
-                        
-                        <DropdownMenuItem><FileDown className="mr-2 h-4 w-4" /> Export to PDF</DropdownMenuItem>
+
+                        <DropdownMenuItem><FileDown className="mr-2 h-4 w-4" /> Exportar a PDF</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           className="text-red-600 focus:text-red-600 focus:bg-red-50"
                           onClick={() => onDelete && onDelete(contact.id)}
                         >
-                          <Trash className="mr-2 h-4 w-4" /> Delete
+                          <Trash className="mr-2 h-4 w-4" /> Eliminar
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

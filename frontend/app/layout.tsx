@@ -56,7 +56,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
+      <head>
+        <title>CRM Startup</title>
+      </head>
       <body className={inter.className}>
         <AuthProvider>
           <ProtectedLayout>{children}</ProtectedLayout>

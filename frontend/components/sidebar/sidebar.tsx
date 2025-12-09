@@ -77,7 +77,7 @@ function SidebarContent({ onClick }: { onClick?: () => void }) {
               Startup CRM
             </h1>
             <p className="text-xs text-gray-500">
-              Smart Contact Management
+              Gestión inteligente de contactos
             </p>
           </div>
         </div>
@@ -134,7 +134,7 @@ function SidebarContent({ onClick }: { onClick?: () => void }) {
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="end" className="w-56" side="top" sideOffset={10}>
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuLabel>Mi cuenta</DropdownMenuLabel>
             <DropdownMenuSeparator />
 
             {/* Botón de Log out */}
@@ -143,7 +143,7 @@ function SidebarContent({ onClick }: { onClick?: () => void }) {
               className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
             >
               <LogOut className="mr-2 h-4 w-4" />
-              Log out
+              Cerrar sesión
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -179,13 +179,13 @@ export function MobileSidebar() {
       <SheetTrigger asChild>
         <Button variant="outline" size="icon" className="md:hidden bg-white shadow-sm">
           <Menu className="h-5 w-5" />
-          <span className="sr-only">Open menu</span>
+          <span className="sr-only">Abrir menú</span>
         </Button>
       </SheetTrigger>
 
       <SheetContent side="left" className="p-0 w-64 border-r">
         <SheetHeader className="sr-only">
-          <SheetTitle>Menu</SheetTitle>
+          <SheetTitle>Menú</SheetTitle>
         </SheetHeader>
 
         <SidebarContent onClick={() => setOpen(false)} />
