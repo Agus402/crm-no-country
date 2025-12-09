@@ -95,7 +95,7 @@ public class EmailInboundService {
             return;
         }
 
-        Conversation conversation = conversationRepository.findFirstByLead(lead)
+        Conversation conversation = conversationRepository.findFirstByCrmLead(lead)
                 .orElseGet(() -> conversationRepository.save(
                         Conversation.builder()
                                 .crm_lead(lead)

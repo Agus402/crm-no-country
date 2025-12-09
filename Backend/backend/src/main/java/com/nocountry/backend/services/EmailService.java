@@ -61,7 +61,7 @@ public class EmailService {
 
         sendHtmlEmail(lead.getEmail(), renderedSubject, renderedBody);
 
-        Conversation conversation = conversationRepository.findFirstByLead(lead)
+        Conversation conversation = conversationRepository.findFirstByCrmLead(lead)
                 .orElseGet(() -> {
                     Conversation c = Conversation.builder()
                             .crm_lead(lead)

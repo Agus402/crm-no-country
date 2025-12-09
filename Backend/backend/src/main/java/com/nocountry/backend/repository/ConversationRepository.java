@@ -13,7 +13,8 @@ import java.util.Optional;
 @Repository
 public interface ConversationRepository extends JpaRepository<Conversation, Long> {
 
-    Optional<Conversation> findFirstByLead(CrmLead lead);
+    @Query("SELECT c FROM Conversation c WHERE c.crm_lead = :lead ORDER BY c.startedAt DESC")
+    Optional<Conversation> findFirstByCrmLead(@Param("lead") CrmLead lead);
 
     /**
      * Busca una conversación por Lead ID y Canal.
