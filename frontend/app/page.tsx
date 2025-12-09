@@ -11,9 +11,9 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Panel de control</h2>
           <p className="text-muted-foreground text-sm md:text-base">
-            Welcome back! Here's what's happening with your contacts today.
+            ¡Bienvenido de nuevo! Aquí está lo que pasa con tus contactos hoy.
           </p>
         </div>
       </div>
@@ -21,13 +21,13 @@ export default function DashboardPage() {
       {/* Stats Cards*/}
       <StatsCards />
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
-        
+
         {/* Communication Activity */}
         <Card className="lg:col-span-4 shadow-sm">
           <CardHeader>
-            <CardTitle>Communication Activity</CardTitle>
+            <CardTitle>Actividad de comunicación</CardTitle>
           </CardHeader>
-          <CardContent className="pl-0 md:pl-2"> 
+          <CardContent className="pl-0 md:pl-2">
             <CommunicationChart />
           </CardContent>
         </Card>
@@ -35,10 +35,10 @@ export default function DashboardPage() {
         {/* Response Rate Trend */}
         <Card className="lg:col-span-3 shadow-sm">
           <CardHeader>
-            <CardTitle>Response Rate Trend</CardTitle>
+            <CardTitle>Tendencia de tasa de respuesta</CardTitle>
           </CardHeader>
-          <CardContent className="pt-12 md:pt-24"> 
-             <ResponseTrendChart />
+          <CardContent className="pt-12 md:pt-24">
+            <ResponseTrendChart />
           </CardContent>
         </Card>
       </div>
@@ -47,20 +47,20 @@ export default function DashboardPage() {
         {/* Recent Activity */}
         <Card className="lg:col-span-4 shadow-sm">
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
+            <CardTitle>Actividad reciente</CardTitle>
           </CardHeader>
           <CardContent className="px-2 md:px-6">
-              <RecentActivity />
+            <RecentActivity />
           </CardContent>
         </Card>
 
         {/* Contact Segments */}
         <Card className="lg:col-span-3 flex flex-col shadow-sm">
           <CardHeader>
-            <CardTitle>Contact Segments</CardTitle>
+            <CardTitle>Segmentos de contactos</CardTitle>
           </CardHeader>
           <CardContent className="flex-1">
-             <SegmentsChart />
+            <SegmentsChart />
           </CardContent>
         </Card>
       </div>

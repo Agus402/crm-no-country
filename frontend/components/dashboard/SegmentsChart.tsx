@@ -1,53 +1,51 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Label, Pie, PieChart, Cell } from "recharts"
+import * as React from "react";
+import { Pie, PieChart, Cell } from "recharts";
+
 import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart"
+} from "@/components/ui/chart";
 
-// Datos Mockeados 
-const chartData = [
-  { segment: "active", visitors: 145, fill: "#8b5cf6" }, 
-  { segment: "followup", visitors: 89, fill: "#f97316" }, 
-  { segment: "converted", visitors: 67, fill: "#10b981" }, 
-  { segment: "inactive", visitors: 34, fill: "#94a3b8" }, 
-]
+import { leadStatsService } from "@/services/lead-stats.service";
 
-// Configuración de etiquetas y colores
+// Configuración con client, NO converted
 const chartConfig = {
-  visitors: {
-    label: "Contacts",
-  },
-  active: {
-    label: "Active Leads",
-    color: "#8b5cf6",
-  },
-  followup: {
-    label: "Follow-up",
-    color: "#f97316",
-  },
-  converted: {
-    label: "Converted",
-    color: "#10b981",
-  },
-  inactive: {
-    label: "Inactive",
-    color: "#94a3b8",
-  },
-} satisfies ChartConfig
+  visitors: { label: "Contacts" },
+  active: { label: "Active Leads", color: "#8b5cf6" },
+  followup: { label: "Follow-up", color: "#f97316" },
+  client: { label: "Client", color: "#10b981" }, 
+  inactive: { label: "Inactive", color: "#94a3b8" }, // inactive
+} satisfies ChartConfig;
 
 export function SegmentsChart() {
-  const totalVisitors = React.useMemo(() => {
-    return chartData.reduce((acc, curr) => acc + curr.visitors, 0)
-  }, [])
+  const [chartData, setChartData] = React.useState([
+    { segment: "active", visitors: 0, fill: "#8b5cf6" },
+    { segment: "followup", visitors: 0, fill: "#f97316" },
+    { segment: "client", visitors: 0, fill: "#10b981" }, 
+    { segment: "inactive", visitors: 0, fill: "#94a3b8" }, // inactive
+  ]);
+
+  React.useEffect(() => {
+    async function loadStats() {
+      const stats = await leadStatsService.getStageStats();
+
+      setChartData([
+        { segment: "active", visitors: stats.active, fill: chartConfig.active.color },
+        { segment: "followup", visitors: stats.followup, fill: chartConfig.followup.color },
+        { segment: "client", visitors: stats.client, fill: chartConfig.client.color },
+        { segment: "inactive", visitors: stats.inactive, fill: chartConfig.inactive.color },
+      ]);
+    }
+
+    loadStats();
+  }, []);
 
   return (
     <div className="flex flex-col h-full">
-      {/* Chart Section */}
       <div className="flex-1 pb-0">
         <ChartContainer
           config={chartConfig}
@@ -75,23 +73,23 @@ export function SegmentsChart() {
 
       <div className="mt-4 grid gap-2">
         {chartData.map((item) => {
-           const configKey = item.segment as keyof typeof chartConfig;
-           const label = chartConfig[configKey]?.label;
-           
-           return (
+          const configKey = item.segment as keyof typeof chartConfig;
+          const label = chartConfig[configKey].label;
+
+          return (
             <div key={item.segment} className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
-                <span 
-                  className="h-2.5 w-2.5 rounded-full" 
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
                   style={{ backgroundColor: item.fill }}
                 />
                 <span className="text-muted-foreground">{label}</span>
               </div>
               <span className="font-medium">{item.visitors}</span>
             </div>
-           )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }

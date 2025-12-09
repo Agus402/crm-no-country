@@ -1,0 +1,14 @@
+package com.nocountry.backend.enums;
+
+public enum EmailTemplateType {
+    CLIENT_WELCOME,
+    CLIENT_FOLLOWUP,
+    CLIENT_NO_RESPONSE,
+    CLIENT_QUOTE,
+    CLIENT_MEETING_REMINDER,
+
+    INTERNAL_LEAD_ASSIGNED,
+    INTERNAL_TASK_REMINDER,
+    INTERNAL_LEAD_CLOSED
+}
+

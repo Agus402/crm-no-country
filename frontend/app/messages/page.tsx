@@ -1,64 +1,376 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Search, Send, Paperclip, MessageCircle, Mail, Tag, MoreVertical } from "lucide-react";
+import { Search, Send, Paperclip, MessageCircle, Mail, MoreVertical, ArrowLeft, Loader2, Wifi, WifiOff, Plus, Download, Trash2, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-const conversations = [
-  { id: 1, name: 'Sarah Chen', lastMessage: 'Interesada en el plan Enterprise', time: 'hace 5 min', unread: 2, channel: 'whatsapp', stage: 'Lead Activo' },
-  { id: 2, name: 'Marcus Brown', lastMessage: '¡Gracias por la demo!', time: 'hace 12 min', unread: 0, channel: 'email', stage: 'Seguimiento' },
-  { id: 3, name: 'Jessica Park', lastMessage: 'Envié la confirmación de pago', time: 'hace 1 hora', unread: 1, channel: 'whatsapp', stage: 'Cliente' },
-  { id: 4, name: 'David Liu', lastMessage: '¿Cuándo podemos agendar?', time: 'hace 2 horas', unread: 0, channel: 'email', stage: 'Lead Activo' },
-  { id: 5, name: 'Thomas Anderson', lastMessage: 'Con ganas de nuestra reunión', time: 'hace 3 horas', unread: 3, channel: 'whatsapp', stage: 'Lead Activo' },
-];
-
-const messages = [
-  { id: 1, sender: 'Sarah Chen', content: '¡Hola! Vi su producto y estoy muy interesada en el plan Enterprise.', time: '10:23 AM', isOwn: false },
-  { id: 2, sender: 'Tú', content: '¡Hola Sarah! Gracias por contactarte. Con gusto te ayudo con el plan Enterprise. ¿En qué funciones específicas estás interesada?', time: '10:25 AM', isOwn: true },
-  { id: 3, sender: 'Sarah Chen', content: 'Necesitamos las analíticas avanzadas y la opción de marca blanca. ¿Cuántos usuarios podemos tener?', time: '10:27 AM', isOwn: false },
-  { id: 4, sender: 'Tú', content: 'El plan Enterprise soporta usuarios ilimitados e incluye todas las funciones premium. Puedo agendar una demo para mostrarte el panel de analíticas y las opciones de personalización de marca blanca.', time: '10:30 AM', isOwn: true },
-  { id: 5, sender: 'Sarah Chen', content: '¡Perfecto! ¿Cuándo estás disponible esta semana?', time: '10:32 AM', isOwn: false },
-];
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { conversationService, ConversationDTO } from "@/services/conversation.service";
+import { messageService, MessageDTO } from "@/services/message.service";
+import { websocketService, WebSocketMessage } from "@/services/websocket.service";
+import { toast } from "sonner";
+import { NewConversationModal } from "@/components/messages/new-conversation-modal";
+import { MessageMedia } from "@/components/messages/message-media";
+import { EmailComposer } from "@/components/messages/email-composer";
+import { EmailThread } from "@/components/messages/email-thread";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Message() {
-  const [selectedConversation, setSelectedConversation] = useState(conversations[0]);
+  const { user } = useAuth();
+
+  // Estado de datos
+  const [conversations, setConversations] = useState<ConversationDTO[]>([]);
+  const [messages, setMessages] = useState<MessageDTO[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<ConversationDTO | null>(null);
+
+  // Estado de UI
   const [messageInput, setMessageInput] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [search, setSearch] = useState("");
+  const [showMobileChat, setShowMobileChat] = useState(false);
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('');
+  // Estado de carga
+  const [loadingConversations, setLoadingConversations] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
+  const [showNewConversationModal, setShowNewConversationModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Ref para scroll automático
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Ref para evitar auto-selección después de la primera carga
+  const hasSelectedInitialRef = useRef(false);
+  // Ref para la conversación seleccionada (para usar en callbacks de WebSocket)
+  const selectedConversationRef = useRef<ConversationDTO | null>(null);
+  // Ref para suscripciones WebSocket
+  const wsSubscriptionsRef = useRef<string[]>([]);
+
+  // Mantener ref sincronizada con state
+  useEffect(() => {
+    selectedConversationRef.current = selectedConversation;
+  }, [selectedConversation]);
+
+  // Handler para notificaciones WebSocket
+  const handleWebSocketMessage = useCallback((notification: WebSocketMessage) => {
+    console.log('📩 Notificación WebSocket recibida:', notification);
+
+    if (notification.type === 'NEW_MESSAGE' || notification.type === 'MESSAGE_SENT') {
+      // Recargar mensajes si la conversación activa recibió el mensaje
+      if (selectedConversationRef.current?.id === notification.conversationId) {
+        loadMessages(notification.conversationId);
+      }
+      // Siempre recargar lista de conversaciones para actualizar último mensaje
+      loadConversations(false);
+    }
+  }, []);
+
+  // Conectar WebSocket y suscribirse al montar
+  useEffect(() => {
+    loadConversations(true);
+
+    // Conectar WebSocket
+    websocketService.connect(() => {
+      setWsConnected(true);
+      // Suscribirse al topic global de conversaciones
+      const subId = websocketService.subscribe('/topic/conversations', handleWebSocketMessage);
+      if (subId) wsSubscriptionsRef.current.push(subId);
+    });
+
+    return () => {
+      // Limpiar suscripciones al desmontar
+      wsSubscriptionsRef.current.forEach(id => websocketService.unsubscribe(id));
+      wsSubscriptionsRef.current = [];
+    };
+  }, [handleWebSocketMessage]);
+
+  // Suscribirse a la conversación específica cuando cambia la selección
+  useEffect(() => {
+    if (selectedConversation && wsConnected) {
+      loadMessages(selectedConversation.id);
+
+      // Suscribirse al topic específico de la conversación
+      const subId = websocketService.subscribe(
+        `/topic/conversations/${selectedConversation.id}`,
+        handleWebSocketMessage
+      );
+      if (subId) wsSubscriptionsRef.current.push(subId);
+
+      return () => {
+        // No desuscribir aquí, mantener las suscripciones activas
+      };
+    }
+  }, [selectedConversation?.id, wsConnected, handleWebSocketMessage]);
+
+  // Scroll automático al final de los mensajes
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const loadConversations = async (allowAutoSelect: boolean = false) => {
+    try {
+      const data = await conversationService.getAll();
+      setConversations(data);
+
+      // Solo auto-seleccionar en la primera carga si no hay conversación seleccionada
+      if (allowAutoSelect && !hasSelectedInitialRef.current && data.length > 0) {
+        setSelectedConversation(data[0]);
+        hasSelectedInitialRef.current = true;
+      }
+    } catch (error) {
+      toast.error("Error al cargar conversaciones", {
+        description: "No se pudieron obtener las conversaciones. Verifica tu conexión."
+      });
+    } finally {
+      setLoadingConversations(false);
+    }
   };
 
-  const filteredConversations = conversations.filter(conv => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'whatsapp') return conv.channel === 'whatsapp';
-    if (activeTab === 'email') return conv.channel === 'email';
-    return true;
+  const loadMessages = async (conversationId: number) => {
+    try {
+      setLoadingMessages(true);
+      const data = await messageService.getByConversation(conversationId);
+      setMessages(data);
+    } catch (error) {
+      toast.error("Error al cargar mensajes", {
+        description: "No se pudieron obtener los mensajes de esta conversación."
+      });
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if ((!messageInput.trim() && !selectedFile) || !selectedConversation || sendingMessage || uploadingFile) return;
+
+    try {
+      setSendingMessage(true);
+
+      // If there's a file, upload it first
+      if (selectedFile) {
+        setUploadingFile(true);
+        try {
+          const uploadResult = await messageService.uploadMedia(selectedFile);
+          const messageType = messageService.getMessageTypeFromMime(uploadResult.mimeType);
+
+          await messageService.sendMessage({
+            conversationId: selectedConversation.id,
+            content: messageInput.trim() || uploadResult.filename,
+            messageType: messageType,
+            mediaUrl: uploadResult.url,
+            mediaFileName: uploadResult.filename,
+            mediaCaption: messageInput.trim() || undefined,
+          });
+
+          setSelectedFile(null);
+          // Reset file input
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        } finally {
+          setUploadingFile(false);
+        }
+      } else {
+        // Text-only message
+        await messageService.sendMessage({
+          conversationId: selectedConversation.id,
+          content: messageInput.trim(),
+        });
+      }
+
+      setMessageInput('');
+      // Recargar mensajes después de enviar
+      await loadMessages(selectedConversation.id);
+      // Actualizar lista de conversaciones para reflejar último mensaje
+      await loadConversations();
+    } catch (error: unknown) {
+      // Mostrar el mensaje de error del backend o uno genérico
+      const errorMessage = error instanceof Error
+        ? error.message
+        : "No se pudo enviar el mensaje. Intenta nuevamente.";
+
+      toast.error("Error al enviar mensaje", {
+        description: errorMessage,
+        duration: 6000,
+      });
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  // Exportar conversación a CSV
+  const exportConversationCSV = async (conv: ConversationDTO) => {
+    try {
+      const msgs = await messageService.getByConversation(conv.id);
+      const csvContent = [
+        "Fecha,Autor,Dirección,Contenido",
+        ...msgs.map((m: MessageDTO) => {
+          // Determinar el autor del mensaje según la dirección
+          // OUTBOUND = enviado por el usuario asignado (o usuario actual si no hay asignado)
+          // INBOUND = recibido del lead
+          const author = m.messageDirection === 'OUTBOUND'
+            ? (conv.assignedUser?.name || user?.name || 'Usuario')
+            : (conv.lead?.name || 'Lead');
+
+          const direction = m.messageDirection === 'OUTBOUND' ? 'Enviado' : 'Recibido';
+          const content = m.content?.replace(/"/g, '""') || '';
+          const date = new Date(m.sentAt).toLocaleString();
+
+          return `"${date}","${author}","${direction}","${content}"`;
+        })
+      ].join("\n");
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `conversacion_${conv.lead?.name || conv.id}_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      toast.success("Conversación exportada", {
+        description: `Se descargó el archivo CSV con ${msgs.length} mensajes.`
+      });
+    } catch {
+      toast.error("Error al exportar", {
+        description: "No se pudo exportar la conversación."
+      });
+    }
+  };
+
+  // Eliminar conversación
+  const handleDeleteConversation = async (conv: ConversationDTO, e: React.MouseEvent) => {
+    e.stopPropagation(); // Evitar seleccionar la conversación
+
+    if (!confirm(`¿Estás seguro de eliminar la conversación con ${conv.lead?.name || 'este contacto'}?`)) {
+      return;
+    }
+
+    try {
+      await conversationService.delete(conv.id);
+      setConversations(prev => prev.filter(c => c.id !== conv.id));
+      if (selectedConversation?.id === conv.id) {
+        setSelectedConversation(null);
+        setMessages([]);
+      }
+      toast.success("Conversación eliminada");
+    } catch {
+      toast.error("Error al eliminar", {
+        description: "No se pudo eliminar la conversación."
+      });
+    }
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return '??';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
+  const formatTime = (dateString: string | null) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+
+    if (diffMins < 1) return 'ahora';
+    if (diffMins < 60) return `hace ${diffMins} min`;
+    if (diffHours < 24) return `hace ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
+    return date.toLocaleDateString();
+  };
+
+  const formatMessageTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const filteredConversations = conversations.filter((conv) => {
+    const matchTab =
+      activeTab === "all" ||
+      (activeTab === "whatsapp" && conv.channel === "WHATSAPP") ||
+      (activeTab === "email" && conv.channel === "EMAIL");
+
+    const searchText = search.toLowerCase();
+    const leadName = conv.lead?.name?.toLowerCase() || '';
+    const lastMessage = conv.lastMessageText?.toLowerCase() || '';
+
+    const matchSearch =
+      leadName.includes(searchText) ||
+      lastMessage.includes(searchText);
+
+    return matchTab && matchSearch;
   });
 
+  const handleConversationClick = (conv: ConversationDTO) => {
+    setSelectedConversation(conv);
+    setShowMobileChat(true);
+  };
+
+  const getLeadStage = (conv: ConversationDTO) => {
+    // Por ahora retornamos un valor por defecto, se puede mejorar
+    return conv.lead ? 'Lead Activo' : 'Desconocido';
+  };
+
   return (
-    <div className="p-8">
-      <div className="mb-6">
-        <h1 className="mb-2">Mensajes</h1>
-        <p className="text-slate-600">Conversaciones en tiempo real a través de WhatsApp y Email.</p>
+    <div className="p-4 md:p-8 h-[calc(100vh-60px)] flex flex-col">
+      <div className={cn("mb-6", showMobileChat ? "hidden lg:block" : "block")}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="mb-2 text-2xl font-bold">Mensajes</h1>
+            <p className="text-slate-600">Conversaciones en tiempo real a través de WhatsApp y Email.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {wsConnected ? (
+              <div className="flex items-center gap-1 text-emerald-600">
+                <Wifi className="h-4 w-4" />
+                <span className="text-xs hidden sm:inline">Conectado</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 text-yellow-600">
+                <WifiOff className="h-4 w-4" />
+                <span className="text-xs hidden sm:inline">Conectando...</span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-250px)]">
-        {/* Conversations List */}
-        <Card className="lg:col-span-1 flex flex-col">
-          <CardHeader className="pb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input placeholder="Buscar conversaciones..." className="pl-10" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
+        <Card className={cn(
+          "lg:col-span-1 flex-col h-full",
+          showMobileChat ? "hidden lg:flex" : "flex"
+        )}>
+          <CardHeader className="pb-4 px-4 pt-4">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Buscar conversaciones..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Button
+                size="icon"
+                className="bg-purple-600 hover:bg-purple-700 shrink-0"
+                onClick={() => setShowNewConversationModal(true)}
+                title="Nueva conversación"
+              >
+                <Plus className="h-5 w-5" />
+              </Button>
             </div>
           </CardHeader>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="px-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4">
             <TabsList className="w-full">
               <TabsTrigger value="all" className="flex-1">Todos</TabsTrigger>
               <TabsTrigger value="whatsapp" className="flex-1">
@@ -69,149 +381,396 @@ export default function Message() {
               </TabsTrigger>
             </TabsList>
           </Tabs>
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 mt-2">
             <div className="px-4 pb-4 space-y-1">
-              {filteredConversations.map((conv) => (
-                <div
-                  key={conv.id}
-                  onClick={() => setSelectedConversation(conv)}
-                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                    selectedConversation.id === conv.id ? 'bg-purple-50 border border-purple-200' : 'hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
+              {loadingConversations ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                </div>
+              ) : filteredConversations.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  No hay conversaciones
+                </div>
+              ) : (
+                filteredConversations.map((conv) => (
+                  <div
+                    key={conv.id}
+                    onClick={() => handleConversationClick(conv)}
+                    className={`p-3 rounded-lg cursor-pointer transition-colors w-full overflow-hidden ${selectedConversation?.id === conv.id ? 'bg-purple-50 border border-purple-200' : 'hover:bg-slate-50'
+                      }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <Avatar>
+                        <AvatarFallback className={selectedConversation?.id === conv.id ? 'bg-purple-600 text-white' : 'bg-slate-200'}>
+                          {getInitials(conv.lead?.name || 'Lead')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <div className="flex items-center justify-between mb-1 gap-2">
+                          <p className="text-sm font-medium truncate flex-1">{conv.lead?.name || 'Lead sin nombre'}</p>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <span className="text-xs text-slate-500">{formatTime(conv.lastMessageAt)}</span>
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <button
+                                    className="h-6 w-6 inline-flex items-center justify-center rounded-md hover:bg-slate-200 transition-colors"
+                                    aria-label="Opciones de conversación"
+                                  >
+                                    <MoreVertical className="h-3 w-3" />
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48" side="bottom">
+                                  <DropdownMenuItem onSelect={(e) => {
+                                    e.preventDefault();
+                                    exportConversationCSV(conv);
+                                  }}>
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Exportar CSV
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onSelect={(e) => {
+                                      e.preventDefault();
+                                      if (confirm(`¿Estás seguro de eliminar la conversación con ${conv.lead?.name || 'este contacto'}?`)) {
+                                        conversationService.delete(conv.id).then(() => {
+                                          setConversations(prev => prev.filter(c => c.id !== conv.id));
+                                          if (selectedConversation?.id === conv.id) {
+                                            setSelectedConversation(null);
+                                            setMessages([]);
+                                          }
+                                          toast.success("Conversación eliminada");
+                                        }).catch(() => {
+                                          toast.error("Error al eliminar");
+                                        });
+                                      }
+                                    }}
+                                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Eliminar conversación
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
+                        </div>
+                        <p
+                          className="text-sm text-slate-600"
+                          style={{
+                            whiteSpace: 'nowrap',
+                            width: 'clamp(100px, 12vw, 200px)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                        >
+                          {conv.lastMessageDirection === 'OUTBOUND' && <span className="font-medium">Tú: </span>}
+                          {conv.lastMessageText || 'Sin mensajes'}
+                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          {conv.channel === 'WHATSAPP' ? (
+                            <MessageCircle className="h-3 w-3 text-emerald-600" />
+                          ) : (
+                            <Mail className="h-3 w-3 text-blue-600" />
+                          )}
+                          <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal">
+                            {getLeadStage(conv)}
+                          </Badge>
+                          {conv.unreadCount > 0 && (
+                            <Badge className="bg-purple-600 text-[10px] h-5 px-1.5 ml-auto">{conv.unreadCount}</Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </Card>
+
+        {/* --- PANEL DE CHAT --- */}
+        <Card className={cn(
+          "lg:col-span-2 flex-col h-full overflow-hidden",
+          showMobileChat ? "flex" : "hidden lg:flex"
+        )}>
+          {selectedConversation ? (
+            <>
+              {/* Chat Header */}
+              <CardHeader className="border-b py-3 px-4 md:py-4 md:px-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="lg:hidden -ml-2"
+                      onClick={() => setShowMobileChat(false)}
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                    </Button>
+
                     <Avatar>
-                      <AvatarFallback className={selectedConversation.id === conv.id ? 'bg-purple-600 text-white' : 'bg-slate-200'}>
-                        {getInitials(conv.name)}
+                      <AvatarFallback className="bg-purple-100 text-purple-600">
+                        {getInitials(selectedConversation.lead?.name || 'Lead')}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-sm truncate">{conv.name}</p>
-                        <span className="text-xs text-slate-500">{conv.time}</span>
-                      </div>
-                      <p className="text-sm text-slate-600 truncate">{conv.lastMessage}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        {conv.channel === 'whatsapp' ? (
-                          <MessageCircle className="h-3 w-3 text-emerald-600" />
+                    <div>
+                      <CardTitle className="text-base">{selectedConversation.lead?.name || 'Lead sin nombre'}</CardTitle>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {selectedConversation.channel === 'WHATSAPP' ? (
+                          <div className="flex items-center gap-1 text-emerald-600">
+                            <MessageCircle className="h-3 w-3" />
+                            <span className="text-xs">WhatsApp</span>
+                          </div>
                         ) : (
-                          <Mail className="h-3 w-3 text-blue-600" />
+                          <div className="flex items-center gap-1 text-blue-600">
+                            <Mail className="h-3 w-3" />
+                            <span className="text-xs">Email</span>
+                          </div>
                         )}
-                        <Badge variant="outline" className="text-xs">
-                          {conv.stage}
+                        <Separator orientation="vertical" className="h-3" />
+                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal">
+                          {getLeadStage(selectedConversation)}
                         </Badge>
-                        {conv.unread > 0 && (
-                          <Badge className="bg-purple-600 text-xs ml-auto">{conv.unread}</Badge>
-                        )}
                       </div>
                     </div>
                   </div>
+                  <div className="flex items-center gap-1">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem onSelect={() => exportConversationCSV(selectedConversation)}>
+                          <Download className="h-4 w-4 mr-2" />
+                          Exportar CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            if (confirm(`¿Estás seguro de eliminar la conversación con ${selectedConversation.lead?.name || 'este contacto'}?`)) {
+                              conversationService.delete(selectedConversation.id).then(() => {
+                                setConversations(prev => prev.filter(c => c.id !== selectedConversation.id));
+                                setSelectedConversation(null);
+                                setMessages([]);
+                                setShowMobileChat(false);
+                                toast.success("Conversación eliminada");
+                              }).catch(() => {
+                                toast.error("Error al eliminar");
+                              });
+                            }
+                          }}
+                          className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Eliminar conversación
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </ScrollArea>
-        </Card>
+              </CardHeader>
 
-        {/* Chat Panel */}
-        <Card className="lg:col-span-2 flex flex-col">
-          {/* Chat Header */}
-          <CardHeader className="border-b">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarFallback className="bg-purple-100 text-purple-600">
-                    {getInitials(selectedConversation.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <CardTitle className="text-base">{selectedConversation.name}</CardTitle>
-                  <div className="flex items-center gap-2 mt-1">
-                    {selectedConversation.channel === 'whatsapp' ? (
-                      <div className="flex items-center gap-1 text-emerald-600">
-                        <MessageCircle className="h-3 w-3" />
-                        <span className="text-xs">WhatsApp</span>
+              {/* Messages */}
+              <ScrollArea className="flex-1 min-h-0 p-2 md:p-4 overflow-x-hidden">
+                {loadingMessages && messages.length === 0 ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                  </div>
+                ) : selectedConversation.channel === 'EMAIL' ? (
+                  /* EMAIL: Gmail-style thread view */
+                  <EmailThread
+                    messages={messages}
+                    leadName={selectedConversation.lead?.name || 'Lead'}
+                    userName={user?.name || 'Tú'}
+                  />
+                ) : (
+                  /* WHATSAPP: Chat bubbles */
+                  <div className="space-y-4 w-full overflow-hidden">
+                    {messages.length === 0 ? (
+                      <div className="text-center py-8 text-slate-500">
+                        No hay mensajes todavía
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1 text-blue-600">
-                        <Mail className="h-3 w-3" />
-                        <span className="text-xs">Email</span>
+                      messages.map((message) => {
+                        const isOwn = message.messageDirection === 'OUTBOUND';
+                        return (
+                          <div
+                            key={message.id}
+                            className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div className={`max-w-[85%] md:max-w-[70%] ${isOwn ? 'order-2' : 'order-1'}`}>
+                              {!isOwn && message.senderLead && (
+                                <p className="text-xs text-slate-600 mb-1 ml-1">{message.senderLead.name}</p>
+                              )}
+                              <div
+                                className={`p-3 rounded-2xl text-sm break-words ${isOwn
+                                  ? 'bg-purple-600 text-white rounded-tr-none'
+                                  : 'bg-slate-100 text-slate-900 rounded-tl-none'
+                                  }`}
+                              >
+                                {message.mediaUrl ? (
+                                  <MessageMedia
+                                    type={message.mediaType || message.messageType}
+                                    url={message.mediaUrl}
+                                    caption={message.mediaCaption}
+                                    fileName={message.mediaFileName}
+                                    isOwn={isOwn}
+                                  />
+                                ) : (
+                                  <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                                )}
+                              </div>
+                              <p className={`text-[10px] text-slate-400 mt-1 ${isOwn ? 'text-right mr-1' : 'text-left ml-1'}`}>
+                                {formatMessageTime(message.sentAt)}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+                )}
+              </ScrollArea>
+
+              {/* Message Input */}
+              <CardContent className="border-t p-3 md:p-4">
+                {selectedConversation.channel === 'EMAIL' ? (
+                  /* EMAIL: Mostrar EmailComposer con rich text */
+                  <EmailComposer
+                    onSend={async (subject, htmlContent) => {
+                      try {
+                        setSendingMessage(true);
+                        // Solo mostrar subject en el primer mensaje de la conversación
+                        const isFirstMessage = messages.length === 0;
+                        await messageService.sendMessage({
+                          conversationId: selectedConversation.id,
+                          content: htmlContent,
+                          subject: isFirstMessage ? subject : undefined,
+                        });
+                        await loadMessages(selectedConversation.id);
+                        await loadConversations();
+                        toast.success("Email enviado correctamente");
+                      } catch (error: unknown) {
+                        const errorMessage = error instanceof Error
+                          ? error.message
+                          : "No se pudo enviar el email. Intenta nuevamente.";
+                        toast.error("Error al enviar email", {
+                          description: errorMessage,
+                          duration: 6000,
+                        });
+                      } finally {
+                        setSendingMessage(false);
+                      }
+                    }}
+                    sending={sendingMessage}
+                    showSubject={messages.length === 0}
+                    recipientEmail={selectedConversation.lead?.email}
+                    recipientName={selectedConversation.lead?.name}
+                  />
+                ) : (
+                  /* WHATSAPP: Chat input estándar */
+                  <>
+                    {/* File preview */}
+                    {selectedFile && (
+                      <div className="flex items-center gap-2 mb-2 p-2 bg-slate-100 rounded-lg">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{selectedFile.name}</p>
+                          <p className="text-xs text-slate-500">
+                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => setSelectedFile(null)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
                     )}
-                    <Separator orientation="vertical" className="h-3" />
-                    <Badge variant="outline" className="text-xs">
-                      {selectedConversation.stage}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm">
-                  <Tag className="h-4 w-4 mr-1" />
-                  Agregar Etiqueta
-                </Button>
-                <Button variant="ghost" size="sm">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-
-          {/* Messages */}
-          <ScrollArea className="flex-1 p-6">
-            <div className="space-y-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className={`max-w-[70%] ${message.isOwn ? 'order-2' : 'order-1'}`}>
-                    {!message.isOwn && (
-                      <p className="text-xs text-slate-600 mb-1">{message.sender}</p>
-                    )}
-                    <div
-                      className={`p-3 rounded-lg ${
-                        message.isOwn
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-slate-100 text-slate-900'
-                      }`}
-                    >
-                      <p className="text-sm">{message.content}</p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            if (file.size > 100 * 1024 * 1024) {
+                              toast.error("El archivo es demasiado grande", {
+                                description: "El tamaño máximo permitido es 100 MB"
+                              });
+                              return;
+                            }
+                            setSelectedFile(file);
+                          }
+                        }}
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingFile}
+                      >
+                        <Paperclip className="h-4 w-4" />
+                      </Button>
+                      <Input
+                        placeholder={selectedFile ? "Añade un mensaje (opcional)..." : "Escribe tu mensaje..."}
+                        value={messageInput}
+                        onChange={(e) => setMessageInput(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && (messageInput.trim() || selectedFile)) {
+                            handleSendMessage();
+                          }
+                        }}
+                        className="flex-1"
+                        disabled={sendingMessage || uploadingFile}
+                      />
+                      <Button
+                        className="bg-purple-600 hover:bg-purple-700 shrink-0"
+                        onClick={handleSendMessage}
+                        disabled={(sendingMessage || uploadingFile) || (!messageInput.trim() && !selectedFile)}
+                      >
+                        {(sendingMessage || uploadingFile) ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                      </Button>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">{message.time}</p>
-                  </div>
-                </div>
-              ))}
+                  </>
+                )}
+              </CardContent>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-slate-500">
+              Selecciona una conversación para ver los mensajes
             </div>
-          </ScrollArea>
-
-          {/* Message Input */}
-          <CardContent className="border-t pt-4">
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon">
-                <Paperclip className="h-4 w-4" />
-              </Button>
-              <Input
-                placeholder="Type your message..."
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    setMessageInput('');
-                  }
-                }}
-              />
-              <Button className="bg-purple-600 hover:bg-purple-700">
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex items-center gap-2 mt-3">
-              <Badge variant="outline" className="text-xs cursor-pointer hover:bg-slate-100">Respuesta Rápida: Precio</Badge>
-              <Badge variant="outline" className="text-xs cursor-pointer hover:bg-slate-100">Respuesta Rápida: Demo</Badge>
-              <Badge variant="outline" className="text-xs cursor-pointer hover:bg-slate-100">Respuesta Rápida: Seguimiento</Badge>
-            </div>
-          </CardContent>
+          )}
         </Card>
       </div>
-    </div>
+
+      {/* Modal para nueva conversación */}
+      <NewConversationModal
+        open={showNewConversationModal}
+        onOpenChange={setShowNewConversationModal}
+        existingConversations={conversations}
+        onConversationCreated={(conversation) => {
+          // Agregar la nueva conversación al inicio de la lista
+          setConversations(prev => [conversation, ...prev]);
+          // Seleccionar la nueva conversación
+          setSelectedConversation(conversation);
+          // Mostrar el chat en móvil
+          setShowMobileChat(true);
+        }}
+      />
+    </div >
   );
 }
