@@ -1,4 +1,4 @@
 .env
 certbot/
 init-certbot.sh.save
-
+media-storage/

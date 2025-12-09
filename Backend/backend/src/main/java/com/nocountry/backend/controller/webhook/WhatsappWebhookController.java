@@ -1,8 +1,9 @@
 package com.nocountry.backend.controller.webhook;
 
 import com.nocountry.backend.services.whatsapp.WhatsAppApiService;
+import com.nocountry.backend.services.whatsapp.WhatsAppConfigService;
+import com.nocountry.backend.services.whatsapp.WhatsAppConfigService.WhatsAppCredentials;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,19 +12,11 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/webhooks/whatsapp")
+@RequiredArgsConstructor
 public class WhatsappWebhookController {
 
     private final WhatsAppApiService whatsAppApiService;
-    private String VERIFY_TOKEN;
-
-    public WhatsappWebhookController(
-            WhatsAppApiService whatsAppApiService,
-            // Inyección directa del valor de entorno en el constructor
-            @Value("${WHATSAPP_VERIFY_TOKEN}") String verifyToken) {
-
-        this.whatsAppApiService = whatsAppApiService;
-        this.VERIFY_TOKEN = verifyToken;
-    }
+    private final WhatsAppConfigService configService;
 
     // ==========================================
     // 1. VERIFICACIÓN DE WEBHOOK (GET)
@@ -36,9 +29,13 @@ public class WhatsappWebhookController {
             @RequestParam("hub.verify_token") String token,
             @RequestParam("hub.challenge") String challenge) {
 
+        // Obtener el token de verificación desde la configuración
+        String verifyToken = configService.getWhatsAppCredentials()
+                .map(WhatsAppCredentials::verifyToken)
+                .orElse(null);
+
         // Verifica si el modo es 'subscribe' y el token coincide
-        if ("subscribe".equals(mode) && VERIFY_TOKEN.equals(token)) {
-            // Si la verificación es exitosa, devolvemos el 'challenge'
+        if ("subscribe".equals(mode) && verifyToken != null && verifyToken.equals(token)) {
             return ResponseEntity.ok(challenge);
         }
 
