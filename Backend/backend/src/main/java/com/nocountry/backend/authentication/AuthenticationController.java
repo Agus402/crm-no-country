@@ -2,6 +2,7 @@ package com.nocountry.backend.authentication;
 
 import com.nocountry.backend.dto.CreateOnBoardingDTO;
 import com.nocountry.backend.entity.User;
+import com.nocountry.backend.mappers.AccountMapper;
 import lombok.RequiredArgsConstructor;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
@@ -22,6 +23,7 @@ public class AuthenticationController {
 
     // Inyectamos el servicio que contiene la lógica de registro, login y JWT
     private final AuthenticationService authenticationService;
+    private final AccountMapper accountMapper;
 
     @Value("${app.cookie.secure}")
     private boolean secureCookie;
@@ -63,8 +65,10 @@ public class AuthenticationController {
         User user = (User) userDetails;
         return ResponseEntity.ok(AuthenticationResponse.builder()
                 .token("valid-session")
+                .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
+                .account(user.getAccount() != null ? accountMapper.toDTO(user.getAccount()) : null)
                 .build());
     }
 

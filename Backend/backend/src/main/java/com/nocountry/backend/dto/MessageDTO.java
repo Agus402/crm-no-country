@@ -8,30 +8,33 @@ import java.time.LocalDateTime;
 
 public record MessageDTO(
 
-        Long id,
+                Long id,
 
-        ConversationDTO conversation,
+                ConversationDTO conversation,
 
-        //EmailTemplateDTO emailTemplate,
+                SenderType senderType,
 
-        SenderType senderType,
+                Long senderLeadId,
 
-        Long senderLeadId,
+                Direction messageDirection,
 
-        Direction messageDirection,
+                MessageType messageType,
 
-        MessageType messageType,
+                String content,
 
-        String content,
+                String mediaUrl,
 
-        String mediaType,
+                String mediaFileName,
 
-        String mediaCaption,
+                String mediaType,
 
-        String externalMessageId,
+                String mediaCaption,
 
+                String externalMessageId,
 
-        LocalDateTime sentAt
+                Long templateId,
+
+                LocalDateTime sentAt
 
 ) {
 }

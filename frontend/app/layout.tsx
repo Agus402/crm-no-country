@@ -60,9 +60,10 @@ export default function RootLayout({
       <body className={inter.className}>
         <AuthProvider>
           <ProtectedLayout>{children}</ProtectedLayout>
-          <Toaster />
+          <Toaster position="top-right" closeButton />
         </AuthProvider>
       </body>
     </html>
   );
 }
+

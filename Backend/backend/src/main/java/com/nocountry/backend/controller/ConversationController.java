@@ -2,10 +2,14 @@ package com.nocountry.backend.controller;
 
 import com.nocountry.backend.dto.ConversationDTO;
 import com.nocountry.backend.dto.CreateConversationDTO;
+import com.nocountry.backend.dto.MessageDTO;
+import com.nocountry.backend.entity.User;
 import com.nocountry.backend.services.ConversationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,6 +20,14 @@ import java.util.List;
 public class ConversationController {
 
     private final ConversationService conversationService;
+
+    private Long getCurrentUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof User user) {
+            return user.getId();
+        }
+        throw new IllegalStateException("Unauthenticated user");
+    }
 
     // POST /api/conversations: CREAR (Iniciar) una nueva conversación
     @PostMapping
@@ -36,6 +48,14 @@ public class ConversationController {
     public ResponseEntity<ConversationDTO> getConversationById(@PathVariable Long id) {
         ConversationDTO conversation = conversationService.findConversationById(id);
         return ResponseEntity.ok(conversation);
+    }
+
+    // GET /api/conversations/{id}/messages: LEER (Obtener mensajes de una
+    // conversación)
+    @GetMapping("/{id}/messages")
+    public List<MessageDTO> getMessages(@PathVariable Long id) {
+        Long userId = getCurrentUserId();
+        return conversationService.getConversationMessages(id, userId);
     }
 
     // DELETE /api/conversations/{id}: ELIMINAR (Cerrar o archivar)
