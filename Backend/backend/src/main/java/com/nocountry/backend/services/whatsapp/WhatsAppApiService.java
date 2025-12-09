@@ -113,6 +113,82 @@ public class WhatsAppApiService {
         }
     }
 
+    /**
+     * Envía un mensaje con multimedia (image, video, audio, document) a través de
+     * WhatsApp Cloud API.
+     * Usa la URL pública del archivo para enviar el media.
+     */
+    public Map<String, String> sendMediaMessage(
+            String recipientPhoneNumber,
+            String mediaUrl,
+            MessageType messageType,
+            String caption,
+            String filename) {
+
+        WhatsAppCredentials credentials = getCredentialsOrThrow();
+        RestClient restClient = createRestClient(credentials);
+
+        // Determine the media type for WhatsApp API
+        String waMediaType = switch (messageType) {
+            case IMAGE -> "image";
+            case VIDEO -> "video";
+            case AUDIO -> "audio";
+            case DOCUMENT -> "document";
+            default -> throw new IllegalArgumentException("Unsupported media type: " + messageType);
+        };
+
+        // Build media object based on type
+        Map<String, Object> mediaObject = new java.util.HashMap<>();
+        mediaObject.put("link", mediaUrl);
+
+        // Add caption for image, video, document (not supported for audio)
+        if (caption != null && !caption.isEmpty() && messageType != MessageType.AUDIO) {
+            mediaObject.put("caption", caption);
+        }
+
+        // Add filename for documents
+        if (filename != null && messageType == MessageType.DOCUMENT) {
+            mediaObject.put("filename", filename);
+        }
+
+        Map<String, Object> requestBody = Map.of(
+                "messaging_product", "whatsapp",
+                "to", recipientPhoneNumber,
+                "type", waMediaType,
+                waMediaType, mediaObject);
+
+        log.info("📤 Enviando {} a WhatsApp: {} -> {}", waMediaType, recipientPhoneNumber, mediaUrl);
+
+        try {
+            Map<String, Object> response = restClient.post()
+                    .uri("/messages")
+                    .header("Authorization", "Bearer " + credentials.apiToken())
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .body(requestBody)
+                    .retrieve()
+                    .body(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {
+                    });
+
+            if (response != null && response.containsKey("messages")) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, String>> messages = (List<Map<String, String>>) response.get("messages");
+
+                if (!messages.isEmpty()) {
+                    String messageId = messages.get(0).get("id");
+                    log.info("✅ Media enviado exitosamente. ID de Meta: {}", messageId);
+                    return Map.of("external_message_id", messageId);
+                }
+            }
+
+            return Collections.emptyMap();
+
+        } catch (Exception e) {
+            log.error("❌ Error al enviar media a WhatsApp: {}", e.getMessage(), e);
+            throw new RuntimeException("Fallo en la comunicación con la API de WhatsApp.", e);
+        }
+    }
+
     public void processInboundWebhook(Map<String, Object> payload) {
 
         log.info("📢 Webhook recibido. Iniciando procesamiento de mensaje INBOUND...");

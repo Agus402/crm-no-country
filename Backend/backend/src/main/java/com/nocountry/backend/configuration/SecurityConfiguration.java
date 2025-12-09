@@ -48,6 +48,7 @@ public class SecurityConfiguration {
                                                 .requestMatchers("/api/auth/**").permitAll()
                                                 .requestMatchers(
                                                                 "/api/webhooks/whatsapp",
+                                                                "/api/media/**",
                                                                 "/ws/**",
                                                                 "/swagger-ui/**",
                                                                 "/swagger-ui.html",

@@ -56,19 +56,31 @@ public class MessageService {
         if (conversation.getChannel() == Channel.WHATSAPP) {
 
             String recipientPhoneNumber = conversation.getCrm_lead().getPhone();
+            Map<String, String> metaResponse;
 
-            // TODO: For media messages, implement sendMediaMessage in WhatsAppApiService
-            // For now, only send text messages via WhatsApp
+            // Send based on message type
             if (dto.messageType() == com.nocountry.backend.enums.MessageType.TEXT) {
-                Map<String, String> metaResponse = whatsAppApiService.sendTextMessage(
+                metaResponse = whatsAppApiService.sendTextMessage(
                         recipientPhoneNumber,
                         dto.content());
+            } else if (dto.mediaUrl() != null) {
+                // Send media message (IMAGE, VIDEO, AUDIO, DOCUMENT)
+                metaResponse = whatsAppApiService.sendMediaMessage(
+                        recipientPhoneNumber,
+                        dto.mediaUrl(),
+                        dto.messageType(),
+                        dto.mediaCaption(),
+                        dto.mediaFileName());
+            } else {
+                metaResponse = java.util.Collections.emptyMap();
+            }
 
-                String externalId = metaResponse.get("external_message_id");
+            // Update with external message ID if available
+            String externalId = metaResponse.get("external_message_id");
+            if (externalId != null) {
                 savedMessage.setExternalMessageId(externalId);
                 messageRepository.save(savedMessage);
             }
-            // Media messages are saved locally but not sent via WhatsApp API yet
         }
 
         // 3. Actualizar la conversación (último mensaje)
