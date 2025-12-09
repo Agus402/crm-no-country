@@ -3,8 +3,8 @@ package com.nocountry.backend.services.whatsapp;
 import com.nocountry.backend.repository.ConversationRepository;
 import com.nocountry.backend.repository.CrmLeadRepository;
 import com.nocountry.backend.services.MessageService;
+import com.nocountry.backend.services.whatsapp.WhatsAppConfigService.WhatsAppCredentials;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -15,44 +15,46 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-@Slf4j // Para usar logger.info/error
+@Slf4j
 public class WhatsAppApiService {
 
-    // URL base configurada en .env
-    // (https://graph.facebook.com/v19.0/<PHONE_NUMBER_ID>)
-    @Value("${WHATSAPP_API_BASE_URL}")
-    private String WHATSAPP_API_BASE_URL;
-
-    private final RestClient restClient;
-    private final String WHATSAPP_API_TOKEN;
+    private final WhatsAppConfigService configService;
     private final CrmLeadRepository crmLeadRepository;
     private final ConversationRepository conversationRepository;
     private final MessageService messageService;
     private final SimpMessagingTemplate messagingTemplate;
 
     public WhatsAppApiService(
-            RestClient.Builder restClientBuilder,
-            @Value("${WHATSAPP_API_BASE_URL}") String whatsappApiBaseUrl,
-            @Value("${WHATSAPP_API_TOKEN}") String whatsappApiToken,
+            WhatsAppConfigService configService,
             CrmLeadRepository crmLeadRepository,
             ConversationRepository conversationRepository,
             @Lazy MessageService messageService,
             SimpMessagingTemplate messagingTemplate) {
 
-        // Asignar el token de acceso
-        this.WHATSAPP_API_TOKEN = whatsappApiToken;
-
-        // Asignar repositorios y servicios
+        this.configService = configService;
         this.crmLeadRepository = crmLeadRepository;
         this.conversationRepository = conversationRepository;
         this.messageService = messageService;
         this.messagingTemplate = messagingTemplate;
+    }
 
-        // Inicializar RestClient con la URL base de Meta (Asegurando que el scheme se
-        // use aquí)
-        this.restClient = restClientBuilder
-                .baseUrl(whatsappApiBaseUrl) // El valor COMPLETO (https://...)
+    /**
+     * Crea un RestClient dinámico con la configuración actual de WhatsApp.
+     */
+    private RestClient createRestClient(WhatsAppCredentials credentials) {
+        return RestClient.builder()
+                .baseUrl(credentials.baseUrl())
                 .build();
+    }
+
+    /**
+     * Obtiene las credenciales o lanza excepción si no están configuradas.
+     */
+    private WhatsAppCredentials getCredentialsOrThrow() {
+        return configService.getWhatsAppCredentials()
+                .filter(WhatsAppCredentials::isValid)
+                .orElseThrow(() -> new RuntimeException(
+                        "WhatsApp Cloud API no está configurada. Por favor configure las credenciales en Configuración > Integraciones."));
     }
 
     /**
@@ -65,8 +67,11 @@ public class WhatsAppApiService {
      */
     public Map<String, String> sendTextMessage(String recipientPhoneNumber, String message) {
 
+        // Obtener credenciales dinámicamente
+        WhatsAppCredentials credentials = getCredentialsOrThrow();
+        RestClient restClient = createRestClient(credentials);
+
         // 1. Crear el Body JSON que espera la API de Meta
-        // Nota: El 'type' y 'messaging_product' son fijos para la Cloud API.
         Map<String, Object> requestBody = Map.of(
                 "messaging_product", "whatsapp",
                 "to", recipientPhoneNumber,
@@ -78,9 +83,8 @@ public class WhatsAppApiService {
         try {
             // 2. Realizar la solicitud POST a la API de Meta
             Map<String, Object> response = restClient.post()
-                    // El endpoint real de Meta es siempre el mismo: /messages
                     .uri("/messages")
-                    .header("Authorization", "Bearer " + WHATSAPP_API_TOKEN)
+                    .header("Authorization", "Bearer " + credentials.apiToken())
                     .header("Content-Type", "application/json")
                     .header("Accept", "application/json")
                     .body(requestBody)

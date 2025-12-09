@@ -1,54 +1,123 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { MessageCircle, Mail, Eye, EyeOff } from "lucide-react";
+import { MessageCircle, Mail, Eye, EyeOff, Loader2, ExternalLink } from "lucide-react";
+import { integrationConfigService, IntegrationConfigDTO, WhatsAppCredentials } from "@/services/integration-config.service";
 
 export function IntegrationsTab() {
   // --- WHATSAPP ---
   const [editWhatsApp, setEditWhatsApp] = useState(false);
+  const [loadingWhatsApp, setLoadingWhatsApp] = useState(true);
+  const [savingWhatsApp, setSavingWhatsApp] = useState(false);
+  const [whatsappConfigId, setWhatsappConfigId] = useState<number | null>(null);
+  const [showApiToken, setShowApiToken] = useState(false);
+  const [showVerifyToken, setShowVerifyToken] = useState(false);
 
-  const [whatsappForm, setWhatsappForm] = useState({
-    phone: "+1 (555) 900-0000",
-    accountId: "wa_12345678901234567",
-    autoSync: true,
+  const [whatsappForm, setWhatsappForm] = useState<WhatsAppCredentials>({
+    apiToken: "",
+    baseUrl: "",
+    verifyToken: "",
   });
 
-  const [whatsappBackup, setWhatsappBackup] = useState(whatsappForm);
+  const [whatsappBackup, setWhatsappBackup] = useState<WhatsAppCredentials>(whatsappForm);
+  const [whatsappStatus, setWhatsappStatus] = useState<"connected" | "disconnected">("disconnected");
+
+  // Cargar configuración de WhatsApp
+  useEffect(() => {
+    loadWhatsAppConfig();
+  }, []);
+
+  const loadWhatsAppConfig = async () => {
+    try {
+      setLoadingWhatsApp(true);
+      const config = await integrationConfigService.getByType('WHATSAPP');
+      if (config) {
+        setWhatsappConfigId(config.id);
+        setWhatsappStatus(config.isConnected ? "connected" : "disconnected");
+        const credentials = integrationConfigService.parseWhatsAppCredentials(config.credentials);
+        if (credentials) {
+          setWhatsappForm(credentials);
+          setWhatsappBackup(credentials);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading WhatsApp config:", error);
+    } finally {
+      setLoadingWhatsApp(false);
+    }
+  };
 
   const handleWhatsAppEdit = () => {
-    setWhatsappBackup(whatsappForm); 
+    setWhatsappBackup(whatsappForm);
     setEditWhatsApp(true);
   };
 
   const handleWhatsAppCancel = () => {
-    setWhatsappForm(whatsappBackup); 
+    setWhatsappForm(whatsappBackup);
     setEditWhatsApp(false);
   };
 
-  const handleWhatsAppSave = () => {
-    setEditWhatsApp(false);
+  const handleWhatsAppSave = async () => {
+    try {
+      setSavingWhatsApp(true);
+      const credentials = integrationConfigService.serializeWhatsAppCredentials(whatsappForm);
+
+      if (whatsappConfigId) {
+        // Actualizar existente
+        await integrationConfigService.update(whatsappConfigId, {
+          integrationType: 'WHATSAPP',
+          accountId: 1, // Default account
+          credentials,
+          isConnected: true,
+        });
+      } else {
+        // Crear nuevo
+        const newConfig = await integrationConfigService.create({
+          integrationType: 'WHATSAPP',
+          accountId: 1, // Default account
+          credentials,
+          isConnected: true,
+        });
+        setWhatsappConfigId(newConfig.id);
+      }
+
+      setWhatsappStatus("connected");
+      setEditWhatsApp(false);
+      setWhatsappBackup(whatsappForm);
+    } catch (error) {
+      console.error("Error saving WhatsApp config:", error);
+      alert("Error al guardar la configuración de WhatsApp");
+    } finally {
+      setSavingWhatsApp(false);
+    }
   };
 
-  // Status connect/disconnect
-  const [whatsappStatus, setWhatsappStatus] = useState<"connected" | "disconnected">("connected");
+  const handleDisconnect = async () => {
+    if (!whatsappConfigId) return;
 
-  const handleDisconnect = () => setWhatsappStatus("disconnected");
-  const handleReconnect = () => setWhatsappStatus("connected");
+    try {
+      await integrationConfigService.delete(whatsappConfigId);
+      setWhatsappConfigId(null);
+      setWhatsappStatus("disconnected");
+      setWhatsappForm({ apiToken: "", baseUrl: "", verifyToken: "" });
+    } catch (error) {
+      console.error("Error disconnecting WhatsApp:", error);
+    }
+  };
 
-  // --- EMAIL ---
+  // --- EMAIL (mantener el código existente) ---
   const [editEmail, setEditEmail] = useState(false);
 
   const [emailForm, setEmailForm] = useState({
     smtp: "smtp.brevo.com",
     port: "587",
     email: "hello@startupcrm.com",
-    apiKey: "2x9bAjD7Pw8LkH92YtF0QsDm",
+    apiKey: "",
   });
 
   const [emailBackup, setEmailBackup] = useState(emailForm);
@@ -82,18 +151,35 @@ export function IntegrationsTab() {
               </div>
               <div>
                 <CardTitle className="text-base">WhatsApp Cloud API</CardTitle>
-                <CardDescription>Connect your WhatsApp Business account</CardDescription>
+                <CardDescription className="flex items-center gap-2">
+                  Conecta tu cuenta de WhatsApp Business
+                  <a
+                    href="https://developers.facebook.com/docs/whatsapp/cloud-api"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                  >
+                    Documentación <ExternalLink className="h-3 w-3" />
+                  </a>
+                </CardDescription>
               </div>
             </div>
 
-            {!editWhatsApp ? (
+            {loadingWhatsApp ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : !editWhatsApp ? (
               <Button variant="outline" onClick={handleWhatsAppEdit}>
-                Edit
+                Editar
               </Button>
             ) : (
               <div className="flex gap-2">
-                <Button size="sm" onClick={handleWhatsAppSave}>Save</Button>
-                <Button size="sm" variant="outline" onClick={handleWhatsAppCancel}>Cancel</Button>
+                <Button size="sm" onClick={handleWhatsAppSave} disabled={savingWhatsApp}>
+                  {savingWhatsApp ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Guardar
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleWhatsAppCancel} disabled={savingWhatsApp}>
+                  Cancelar
+                </Button>
               </div>
             )}
           </div>
@@ -101,65 +187,92 @@ export function IntegrationsTab() {
           {/* Status Badge */}
           <div className="pt-3">
             <Badge className={whatsappStatus === "connected" ? "bg-green-500" : "bg-red-500"}>
-              {whatsappStatus === "connected" ? "Connected" : "Disconnected"}
+              {whatsappStatus === "connected" ? "Conectado" : "Desconectado"}
             </Badge>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4">
 
-            {/* Phone */}
+            {/* API Token */}
             <div className="space-y-2">
-              <Label>Business Phone Number</Label>
+              <Label>Token de Acceso Permanente (API Token)</Label>
+              <p className="text-xs text-muted-foreground">
+                Obtenlo desde Meta for Developers → Tu App → WhatsApp → Configuración de la API
+              </p>
+              <div className="relative">
+                <Input
+                  type={showApiToken ? "text" : "password"}
+                  value={whatsappForm.apiToken}
+                  readOnly={!editWhatsApp}
+                  onChange={(e) => setWhatsappForm({ ...whatsappForm, apiToken: e.target.value })}
+                  className={!editWhatsApp ? "bg-gray-50 pr-10" : "pr-10"}
+                  placeholder="EAALy6QaqIX8BO..."
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowApiToken((p) => !p)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600"
+                >
+                  {showApiToken ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Base URL */}
+            <div className="space-y-2">
+              <Label>URL Base de la API (Phone Number ID)</Label>
+              <p className="text-xs text-muted-foreground">
+                Formato: https://graph.facebook.com/v22.0/TU_PHONE_NUMBER_ID
+              </p>
               <Input
-                value={whatsappForm.phone}
+                value={whatsappForm.baseUrl}
                 readOnly={!editWhatsApp}
-                onChange={(e) => setWhatsappForm({ ...whatsappForm, phone: e.target.value })}
+                onChange={(e) => setWhatsappForm({ ...whatsappForm, baseUrl: e.target.value })}
                 className={!editWhatsApp ? "bg-gray-50" : ""}
+                placeholder="https://graph.facebook.com/v22.0/899056756628357"
               />
             </div>
 
-            {/* Account ID */}
+            {/* Verify Token */}
             <div className="space-y-2">
-              <Label>Account ID</Label>
-              <Input
-                value={whatsappForm.accountId}
-                readOnly={!editWhatsApp}
-                onChange={(e) => setWhatsappForm({ ...whatsappForm, accountId: e.target.value })}
-                className={!editWhatsApp ? "bg-gray-50" : ""}
-              />
+              <Label>Token de Verificación de Webhook</Label>
+              <p className="text-xs text-muted-foreground">
+                Token personalizado para verificar las solicitudes de webhook de Meta
+              </p>
+              <div className="relative">
+                <Input
+                  type={showVerifyToken ? "text" : "password"}
+                  value={whatsappForm.verifyToken}
+                  readOnly={!editWhatsApp}
+                  onChange={(e) => setWhatsappForm({ ...whatsappForm, verifyToken: e.target.value })}
+                  className={!editWhatsApp ? "bg-gray-50 pr-10" : "pr-10"}
+                  placeholder="MI_TOKEN_SECRETO_2025"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowVerifyToken((p) => !p)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600"
+                >
+                  {showVerifyToken ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Switch */}
-          <div className="flex items-center justify-between pt-2">
-            <div>
-              <Label>Enable automatic message sync</Label>
-              <p className="text-xs text-muted-foreground">Sync messages every minute</p>
+          {/* Disconnect Button */}
+          {whatsappStatus === "connected" && !editWhatsApp && (
+            <div className="flex flex-col gap-2 pt-2 md:flex-row">
+              <Button
+                variant="outline"
+                onClick={handleDisconnect}
+                className="w-full md:w-auto text-red-500 hover:text-red-600 hover:border-red-300"
+              >
+                Desconectar
+              </Button>
             </div>
-
-            <Switch
-              checked={whatsappForm.autoSync}
-              disabled={!editWhatsApp}
-              onCheckedChange={(v) => setWhatsappForm({ ...whatsappForm, autoSync: v })}
-            />
-          </div>
-
-          {/* Connect / Disconnect */}
-          <div className="flex flex-col gap-2 pt-2 md:flex-row">
-            <Button variant="outline" onClick={handleReconnect} className="w-full md:w-auto">
-              Reconnect
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={handleDisconnect}
-              className="w-full md:w-auto text-red-500"
-            >
-              Disconnect
-            </Button>
-          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -173,18 +286,18 @@ export function IntegrationsTab() {
               </div>
               <div>
                 <CardTitle className="text-base">Email (SMTP / Brevo)</CardTitle>
-                <CardDescription>Configure your email integration</CardDescription>
+                <CardDescription>Configura tu integración de email</CardDescription>
               </div>
             </div>
 
             {!editEmail ? (
               <Button variant="outline" onClick={handleEmailEdit}>
-                Edit
+                Editar
               </Button>
             ) : (
               <div className="flex gap-2">
-                <Button size="sm" onClick={handleEmailSave}>Save</Button>
-                <Button size="sm" variant="outline" onClick={handleEmailCancel}>Cancel</Button>
+                <Button size="sm" onClick={handleEmailSave}>Guardar</Button>
+                <Button size="sm" variant="outline" onClick={handleEmailCancel}>Cancelar</Button>
               </div>
             )}
           </div>
@@ -196,7 +309,7 @@ export function IntegrationsTab() {
 
             {/* SMTP */}
             <div className="space-y-2">
-              <Label>SMTP Server</Label>
+              <Label>Servidor SMTP</Label>
               <Input
                 value={emailForm.smtp}
                 readOnly={!editEmail}
@@ -207,7 +320,7 @@ export function IntegrationsTab() {
 
             {/* Port */}
             <div className="space-y-2">
-              <Label>Port</Label>
+              <Label>Puerto</Label>
               <Input
                 value={emailForm.port}
                 readOnly={!editEmail}
@@ -218,7 +331,7 @@ export function IntegrationsTab() {
 
             {/* Email */}
             <div className="space-y-2">
-              <Label>Email Address</Label>
+              <Label>Dirección de Email</Label>
               <Input
                 value={emailForm.email}
                 readOnly={!editEmail}
