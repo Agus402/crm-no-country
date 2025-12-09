@@ -85,7 +85,13 @@ public class EmailInboundService {
 
         String content = cleanReply(cleanedContent);
 
-        CrmLead lead = leadRepository.findByEmailIgnoreCase(from)
+        // Extraer el Message-ID para threading
+        String[] messageIdHeaders = mail.getHeader("Message-ID");
+        String messageId = (messageIdHeaders != null && messageIdHeaders.length > 0)
+                ? messageIdHeaders[0]
+                : null;
+
+        CrmLead lead = leadRepository.findFirstByEmailIgnoreCase(from)
                 .orElse(null);
 
         if (lead == null) {
@@ -110,6 +116,7 @@ public class EmailInboundService {
                 .messageDirection(Direction.INBOUND)
                 .messageType(MessageType.EMAIL)
                 .content(content)
+                .externalMessageId(messageId) // Guardar Message-ID para threading
                 .sentAt(LocalDateTime.now())
                 .build();
 

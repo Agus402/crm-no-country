@@ -18,6 +18,8 @@ import {
     Image as ImageIcon,
     Send,
     Loader2,
+    PenSquare,
+    X,
 } from "lucide-react";
 import { useState, useCallback } from "react";
 
@@ -40,6 +42,7 @@ export function EmailComposer({
 }: EmailComposerProps) {
     const [subject, setSubject] = useState(initialSubject);
     const [hasContent, setHasContent] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     const editor = useEditor({
         extensions: [
@@ -114,11 +117,37 @@ export function EmailComposer({
     // - Subject is required but empty
     const isDisabled = sending || !hasContent || (showSubject && !subject.trim());
 
+    // Collapsed mode - just show a button to compose
+    if (!isExpanded) {
+        return (
+            <Button
+                onClick={() => setIsExpanded(true)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            >
+                <PenSquare className="h-4 w-4 mr-2" />
+                Redactar Email
+            </Button>
+        );
+    }
+
     return (
         <div className="border rounded-lg bg-white shadow-sm">
+            {/* Header with close button */}
+            <div className="flex items-center justify-between px-4 py-2 border-b bg-slate-50">
+                <span className="text-sm font-medium text-slate-700">Nuevo Email</span>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => setIsExpanded(false)}
+                >
+                    <X className="h-4 w-4" />
+                </Button>
+            </div>
+
             {/* Recipient Info */}
             {(recipientEmail || recipientName) && (
-                <div className="px-4 py-2 border-b bg-slate-50">
+                <div className="px-4 py-2 border-b">
                     <p className="text-sm text-slate-600">
                         <span className="font-medium">Para:</span>{" "}
                         {recipientName && <span>{recipientName} </span>}

@@ -23,7 +23,8 @@ public interface CrmLeadRepository extends JpaRepository<CrmLead, Long> {
     List<CrmLead> findByDeletedTrue();
 
     boolean existsByEmailIgnoreCase(String email);
-    Optional<CrmLead> findByEmailIgnoreCase(String email);
+
+    Optional<CrmLead> findFirstByEmailIgnoreCase(String email);
 
     /**
      * Busca un Lead por número de teléfono.

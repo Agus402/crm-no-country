@@ -5,6 +5,7 @@ import com.nocountry.backend.dto.CreateMessageDTO;
 import com.nocountry.backend.entity.Conversation;
 import com.nocountry.backend.entity.Message;
 import com.nocountry.backend.enums.Channel;
+import com.nocountry.backend.enums.Direction;
 import com.nocountry.backend.mappers.MessageMapper;
 import com.nocountry.backend.repository.ConversationRepository;
 import com.nocountry.backend.repository.MessageRepository;
@@ -89,8 +90,35 @@ public class MessageService {
                 String subject = dto.subject() != null ? dto.subject() : "Mensaje del CRM";
                 String htmlBody = dto.content();
 
+                // Buscar el último mensaje INBOUND para obtener el Message-ID para threading
+                String inReplyTo = null;
+                String references = null;
+
+                java.util.List<Message> conversationMessages = messageRepository
+                        .findByConversationIdOrderBySentAtAsc(dto.conversationId());
+
+                // Buscar el último mensaje entrante (del lead)
+                for (int i = conversationMessages.size() - 1; i >= 0; i--) {
+                    Message msg = conversationMessages.get(i);
+                    if (msg.getMessageDirection() == Direction.INBOUND
+                            && msg.getExternalMessageId() != null) {
+                        inReplyTo = msg.getExternalMessageId();
+                        // Construir References (todos los Message-IDs del thread)
+                        StringBuilder refs = new StringBuilder();
+                        for (Message m : conversationMessages) {
+                            if (m.getExternalMessageId() != null && !m.getExternalMessageId().isBlank()) {
+                                if (refs.length() > 0)
+                                    refs.append(" ");
+                                refs.append(m.getExternalMessageId());
+                            }
+                        }
+                        references = refs.toString();
+                        break;
+                    }
+                }
+
                 try {
-                    emailService.sendHtmlEmail(recipientEmail, subject, htmlBody);
+                    emailService.sendHtmlEmail(recipientEmail, subject, htmlBody, inReplyTo, references);
                 } catch (Exception e) {
                     throw new RuntimeException("Error al enviar email: " + e.getMessage(), e);
                 }

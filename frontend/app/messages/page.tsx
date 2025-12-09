@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { NewConversationModal } from "@/components/messages/new-conversation-modal";
 import { MessageMedia } from "@/components/messages/message-media";
 import { EmailComposer } from "@/components/messages/email-composer";
+import { EmailThread } from "@/components/messages/email-thread";
 import { useAuth } from "@/context/AuthContext";
 
 export default function Message() {
@@ -573,56 +574,66 @@ export default function Message() {
               </CardHeader>
 
               {/* Messages */}
-              <ScrollArea className="flex-1 min-h-0 p-4 md:p-6 overflow-x-hidden">
-                <div className="space-y-4 w-full overflow-hidden">
-                  {loadingMessages && messages.length === 0 ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
-                    </div>
-                  ) : messages.length === 0 ? (
-                    <div className="text-center py-8 text-slate-500">
-                      No hay mensajes todavía
-                    </div>
-                  ) : (
-                    messages.map((message) => {
-                      const isOwn = message.messageDirection === 'OUTBOUND';
-                      return (
-                        <div
-                          key={message.id}
-                          className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div className={`max-w-[85%] md:max-w-[70%] ${isOwn ? 'order-2' : 'order-1'}`}>
-                            {!isOwn && message.senderLead && (
-                              <p className="text-xs text-slate-600 mb-1 ml-1">{message.senderLead.name}</p>
-                            )}
-                            <div
-                              className={`p-3 rounded-2xl text-sm break-words ${isOwn
-                                ? 'bg-purple-600 text-white rounded-tr-none'
-                                : 'bg-slate-100 text-slate-900 rounded-tl-none'
-                                }`}
-                            >
-                              {message.mediaUrl ? (
-                                <MessageMedia
-                                  type={message.mediaType || message.messageType}
-                                  url={message.mediaUrl}
-                                  caption={message.mediaCaption}
-                                  fileName={message.mediaFileName}
-                                  isOwn={isOwn}
-                                />
-                              ) : (
-                                <p className="whitespace-pre-wrap break-words">{message.content}</p>
+              <ScrollArea className="flex-1 min-h-0 p-2 md:p-4 overflow-x-hidden">
+                {loadingMessages && messages.length === 0 ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                  </div>
+                ) : selectedConversation.channel === 'EMAIL' ? (
+                  /* EMAIL: Gmail-style thread view */
+                  <EmailThread
+                    messages={messages}
+                    leadName={selectedConversation.lead?.name || 'Lead'}
+                    userName={user?.name || 'Tú'}
+                  />
+                ) : (
+                  /* WHATSAPP: Chat bubbles */
+                  <div className="space-y-4 w-full overflow-hidden">
+                    {messages.length === 0 ? (
+                      <div className="text-center py-8 text-slate-500">
+                        No hay mensajes todavía
+                      </div>
+                    ) : (
+                      messages.map((message) => {
+                        const isOwn = message.messageDirection === 'OUTBOUND';
+                        return (
+                          <div
+                            key={message.id}
+                            className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div className={`max-w-[85%] md:max-w-[70%] ${isOwn ? 'order-2' : 'order-1'}`}>
+                              {!isOwn && message.senderLead && (
+                                <p className="text-xs text-slate-600 mb-1 ml-1">{message.senderLead.name}</p>
                               )}
+                              <div
+                                className={`p-3 rounded-2xl text-sm break-words ${isOwn
+                                  ? 'bg-purple-600 text-white rounded-tr-none'
+                                  : 'bg-slate-100 text-slate-900 rounded-tl-none'
+                                  }`}
+                              >
+                                {message.mediaUrl ? (
+                                  <MessageMedia
+                                    type={message.mediaType || message.messageType}
+                                    url={message.mediaUrl}
+                                    caption={message.mediaCaption}
+                                    fileName={message.mediaFileName}
+                                    isOwn={isOwn}
+                                  />
+                                ) : (
+                                  <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                                )}
+                              </div>
+                              <p className={`text-[10px] text-slate-400 mt-1 ${isOwn ? 'text-right mr-1' : 'text-left ml-1'}`}>
+                                {formatMessageTime(message.sentAt)}
+                              </p>
                             </div>
-                            <p className={`text-[10px] text-slate-400 mt-1 ${isOwn ? 'text-right mr-1' : 'text-left ml-1'}`}>
-                              {formatMessageTime(message.sentAt)}
-                            </p>
                           </div>
-                        </div>
-                      );
-                    })
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
+                        );
+                      })
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+                )}
               </ScrollArea>
 
               {/* Message Input */}

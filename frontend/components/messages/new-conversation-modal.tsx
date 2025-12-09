@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Plus, MessageCircle, Loader2, UserPlus } from "lucide-react";
+import { Search, Plus, MessageCircle, Loader2, UserPlus, Mail } from "lucide-react";
 import { leadService, LeadData } from "@/services/lead.service";
 import { conversationService, ConversationDTO } from "@/services/conversation.service";
 import { toast } from "sonner";
@@ -40,6 +40,7 @@ export function NewConversationModal({
     const [loadingLeads, setLoadingLeads] = useState(true);
     const [creatingConversation, setCreatingConversation] = useState(false);
     const [creatingLead, setCreatingLead] = useState(false);
+    const [selectedChannel, setSelectedChannel] = useState<"WHATSAPP" | "EMAIL">("WHATSAPP");
 
     // Form para crear nuevo contacto
     const [newLeadForm, setNewLeadForm] = useState({
@@ -87,18 +88,33 @@ export function NewConversationModal({
     };
 
     const handleSelectLead = async (lead: LeadData) => {
+        // Validar que el lead tenga el dato de contacto necesario para el canal
+        if (selectedChannel === "WHATSAPP" && !lead.phone) {
+            toast.error("Este contacto no tiene teléfono", {
+                description: "Para WhatsApp necesitas un número de teléfono",
+            });
+            return;
+        }
+        if (selectedChannel === "EMAIL" && !lead.email) {
+            toast.error("Este contacto no tiene email", {
+                description: "Para Email necesitas una dirección de correo",
+            });
+            return;
+        }
+
         try {
             setCreatingConversation(true);
 
-            // Verificar si ya existe una conversación con este lead usando las conversaciones pasadas
-            const existingConversation = existingConversations.find(c => c.lead?.id === lead.id);
+            // Verificar si ya existe una conversación con este lead Y CANAL
+            const existingConversation = existingConversations.find(
+                c => c.lead?.id === lead.id && c.channel === selectedChannel
+            );
 
             if (existingConversation) {
-                // Si ya existe, usar esa conversación
                 onConversationCreated(existingConversation);
                 onOpenChange(false);
                 toast.info("Conversación existente", {
-                    description: `Ya tienes una conversación activa con ${lead.name}`,
+                    description: `Ya tienes una conversación por ${selectedChannel === "WHATSAPP" ? "WhatsApp" : "Email"} con ${lead.name}`,
                 });
                 return;
             }
@@ -106,13 +122,13 @@ export function NewConversationModal({
             // Si no existe, crear una nueva
             const conversation = await conversationService.create({
                 leadId: lead.id,
-                channel: "WHATSAPP",
+                channel: selectedChannel,
                 assignedUserId: user?.id,
             });
             onConversationCreated(conversation);
             onOpenChange(false);
             toast.success("Conversación iniciada", {
-                description: `Ahora puedes chatear con ${lead.name}`,
+                description: `Ahora puedes ${selectedChannel === "WHATSAPP" ? "chatear" : "enviar emails"} a ${lead.name}`,
             });
         } catch (error) {
             toast.error("Error al crear conversación", {
@@ -130,9 +146,17 @@ export function NewConversationModal({
             toast.error("Nombre requerido");
             return;
         }
-        if (!newLeadForm.phone.trim()) {
+
+        // Validar según el canal seleccionado
+        if (selectedChannel === "WHATSAPP" && !newLeadForm.phone.trim()) {
             toast.error("Teléfono requerido", {
                 description: "El número de teléfono es necesario para WhatsApp",
+            });
+            return;
+        }
+        if (selectedChannel === "EMAIL" && !newLeadForm.email.trim()) {
+            toast.error("Email requerido", {
+                description: "El email es necesario para esta conversación",
             });
             return;
         }
@@ -143,15 +167,15 @@ export function NewConversationModal({
             // 1. Crear el lead
             const newLead = await leadService.create({
                 name: newLeadForm.name.trim(),
-                phone: newLeadForm.phone.trim(),
+                phone: newLeadForm.phone.trim() || undefined,
                 email: newLeadForm.email.trim() || undefined,
-                channel: "WHATSAPP",
+                channel: selectedChannel,
             });
 
             // 2. Crear la conversación
             const conversation = await conversationService.create({
                 leadId: newLead.id,
-                channel: "WHATSAPP",
+                channel: selectedChannel,
                 assignedUserId: user?.id,
             });
 
@@ -162,7 +186,7 @@ export function NewConversationModal({
             setNewLeadForm({ name: "", phone: "", email: "" });
 
             toast.success("Contacto y conversación creados", {
-                description: `Ahora puedes chatear con ${newLead.name}`,
+                description: `Ahora puedes ${selectedChannel === "WHATSAPP" ? "chatear" : "enviar emails"} a ${newLead.name}`,
             });
         } catch (error) {
             toast.error("Error al crear contacto", {
@@ -177,6 +201,7 @@ export function NewConversationModal({
         setSearch("");
         setActiveTab("select");
         setNewLeadForm({ name: "", phone: "", email: "" });
+        setSelectedChannel("WHATSAPP");
         onOpenChange(false);
     };
 
@@ -185,13 +210,41 @@ export function NewConversationModal({
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <MessageCircle className="h-5 w-5 text-green-600" />
+                        {selectedChannel === "WHATSAPP" ? (
+                            <MessageCircle className="h-5 w-5 text-green-600" />
+                        ) : (
+                            <Mail className="h-5 w-5 text-blue-600" />
+                        )}
                         Nueva Conversación
                     </DialogTitle>
                     <DialogDescription>
-                        Selecciona un contacto existente o crea uno nuevo
+                        Selecciona un contacto y el canal de comunicación
                     </DialogDescription>
                 </DialogHeader>
+
+                {/* Channel Selector */}
+                <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
+                    <button
+                        onClick={() => setSelectedChannel("WHATSAPP")}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${selectedChannel === "WHATSAPP"
+                                ? "bg-white text-green-700 shadow-sm"
+                                : "text-slate-600 hover:text-slate-900"
+                            }`}
+                    >
+                        <MessageCircle className="h-4 w-4" />
+                        WhatsApp
+                    </button>
+                    <button
+                        onClick={() => setSelectedChannel("EMAIL")}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${selectedChannel === "EMAIL"
+                                ? "bg-white text-blue-700 shadow-sm"
+                                : "text-slate-600 hover:text-slate-900"
+                            }`}
+                    >
+                        <Mail className="h-4 w-4" />
+                        Email
+                    </button>
+                </div>
 
                 <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "select" | "create")}>
                     <TabsList className="w-full">

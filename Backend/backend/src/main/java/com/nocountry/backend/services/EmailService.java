@@ -102,8 +102,30 @@ public class EmailService {
      * Método público para uso desde otros servicios como MessageService.
      */
     public void sendHtmlEmail(String to, String subject, String htmlBody) {
+        sendHtmlEmail(to, subject, htmlBody, null, null);
+    }
+
+    /**
+     * Envía un email HTML con soporte para threading (In-Reply-To y References).
+     * 
+     * @param to         Dirección de destino
+     * @param subject    Asunto del email
+     * @param htmlBody   Contenido HTML
+     * @param inReplyTo  Message-ID del email al que se responde (puede ser null)
+     * @param references Lista de Message-IDs del thread (puede ser null)
+     */
+    public void sendHtmlEmail(String to, String subject, String htmlBody, String inReplyTo, String references) {
         try {
             MimeMessage mime = javaMailSender.createMimeMessage();
+
+            // Agregar headers de threading si existen
+            if (inReplyTo != null && !inReplyTo.isEmpty()) {
+                mime.setHeader("In-Reply-To", inReplyTo);
+            }
+            if (references != null && !references.isEmpty()) {
+                mime.setHeader("References", references);
+            }
+
             MimeMessageHelper helper = new MimeMessageHelper(mime, true, "UTF-8");
             helper.setTo(to);
             helper.setSubject(subject == null ? "" : subject);

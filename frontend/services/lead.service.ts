@@ -16,7 +16,7 @@ export interface LeadData {
 export interface CreateLeadRequest {
   name: string;
   email?: string;
-  phone: string;
+  phone?: string;
   stage?: string;
   channel?: 'WHATSAPP' | 'EMAIL';
   tagIds?: number[];
