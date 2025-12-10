@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus, MoreVertical, Pause, Play, Trash2 } from "lucide-react";
+import { Plus, MoreVertical, Pause, Play, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import CreateAutomationRuleModal, { AutomationRule } from "@/components/tasks/CreateAutomationRuleModal";
+import AssignContactsToWorkflowModal from "@/components/tasks/AssignContactsToWorkflowModal";
 
 export interface Workflow {
   id: string;
@@ -23,6 +24,8 @@ interface AutomatedWorkflowsProps {
   onCreateRule?: (rule: AutomationRule) => void;
   onToggleRule?: (id: string) => void;
   onDeleteRule?: (id: string) => void;
+  onAssignContacts?: (workflowId: string, contactIds: number[]) => Promise<void>;
+  assignedContactCounts?: Record<string, number>;
 }
 
 export default function AutomatedWorkflows({
@@ -30,12 +33,21 @@ export default function AutomatedWorkflows({
   onCreateRule,
   onToggleRule,
   onDeleteRule,
+  onAssignContacts,
+  assignedContactCounts = {},
 }: AutomatedWorkflowsProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [assigningWorkflowId, setAssigningWorkflowId] = useState<string | null>(null);
 
   const handleCreateRule = (rule: AutomationRule) => {
     if (onCreateRule) {
       onCreateRule(rule);
+    }
+  };
+
+  const handleAssignContacts = async (workflowId: string, contactIds: number[]) => {
+    if (onAssignContacts) {
+      await onAssignContacts(workflowId, contactIds);
     }
   };
 
@@ -82,6 +94,16 @@ export default function AutomatedWorkflows({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    {onAssignContacts && (
+                      <DropdownMenuItem
+                        onClick={() => setAssigningWorkflowId(workflow.id)}
+                        className="cursor-pointer"
+                        data-testid={`workflow-assign-contacts-${workflow.id}`}
+                      >
+                        <Users className="h-4 w-4 mr-2" />
+                        Asignar contactos
+                      </DropdownMenuItem>
+                    )}
                     {onToggleRule && (
                       <DropdownMenuItem
                         onClick={() => onToggleRule(workflow.id)}
@@ -115,7 +137,11 @@ export default function AutomatedWorkflows({
                 </DropdownMenu>
               )}
             </div>
-            <p className="text-xs text-blue-600">{workflow.contactCount}</p>
+            <p className="text-xs text-blue-600">
+              {assignedContactCounts[workflow.id] !== undefined
+                ? `${assignedContactCounts[workflow.id]} contacto${assignedContactCounts[workflow.id] !== 1 ? "s" : ""} en secuencia`
+                : workflow.contactCount}
+            </p>
           </Card>
         ))}
       </div>
@@ -125,6 +151,16 @@ export default function AutomatedWorkflows({
         onOpenChange={setShowCreateModal}
         onCreateRule={handleCreateRule}
       />
+
+      {assigningWorkflowId && (
+        <AssignContactsToWorkflowModal
+          open={!!assigningWorkflowId}
+          onOpenChange={(open) => !open && setAssigningWorkflowId(null)}
+          workflowId={assigningWorkflowId}
+          workflowName={workflows.find((w) => w.id === assigningWorkflowId)?.name || ""}
+          onAssign={handleAssignContacts}
+        />
+      )}
     </div>
   );
 }

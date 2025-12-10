@@ -109,6 +109,7 @@ export default function TasksPage() {
   }, []);
 
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [assignedContactCounts, setAssignedContactCounts] = useState<Record<string, number>>({});
 
   // Load automation rules from backend
   useEffect(() => {
@@ -116,10 +117,24 @@ export default function TasksPage() {
       try {
         const rules = await automationRuleService.getAll();
         setAutomationRules(rules);
+        
+        // Load contact counts for each rule
+        const counts: Record<string, number> = {};
+        for (const rule of rules) {
+          try {
+            const contactIds = await automationRuleService.getAssignedContacts(rule.id);
+            counts[rule.id.toString()] = contactIds.length;
+          } catch (err) {
+            console.error(`Error loading contacts for rule ${rule.id}:`, err);
+            counts[rule.id.toString()] = 0;
+          }
+        }
+        setAssignedContactCounts(counts);
+        
         const mappedWorkflows: Workflow[] = rules.map(rule => ({
           id: rule.id.toString(),
           name: rule.name,
-          contactCount: "0 contacts in sequence", // This could be calculated from backend
+          contactCount: `${counts[rule.id.toString()] || 0} contacts in sequence`,
           status: rule.isActive ? "Active" : "Paused",
         }));
         setWorkflows(mappedWorkflows);
@@ -356,16 +371,46 @@ export default function TasksPage() {
       await automationRuleService.delete(ruleId);
       const remaining = automationRules.filter((r) => r.id !== ruleId);
       setAutomationRules(remaining);
+      
+      // Update contact counts
+      const counts: Record<string, number> = { ...assignedContactCounts };
+      delete counts[id];
+      setAssignedContactCounts(counts);
+      
       const mappedWorkflows: Workflow[] = remaining.map(rule => ({
         id: rule.id.toString(),
         name: rule.name,
-        contactCount: "0 contacts in sequence",
+        contactCount: `${counts[rule.id.toString()] || 0} contacts in sequence`,
         status: rule.isActive ? "Active" : "Paused",
       }));
       setWorkflows(mappedWorkflows);
     } catch (err) {
       console.error("Error deleting automation rule:", err);
       setError(err instanceof Error ? err.message : "Error al eliminar la regla");
+    }
+  };
+
+  const handleAssignContacts = async (workflowId: string, contactIds: number[]) => {
+    try {
+      await automationRuleService.assignContacts(parseInt(workflowId), contactIds);
+      // Update contact count for this workflow
+      const newCounts = {
+        ...assignedContactCounts,
+        [workflowId]: contactIds.length,
+      };
+      setAssignedContactCounts(newCounts);
+      
+      // Update the workflow display
+      setWorkflows((prev) =>
+        prev.map((w) =>
+          w.id === workflowId
+            ? { ...w, contactCount: `${contactIds.length} contacts in sequence` }
+            : w
+        )
+      );
+    } catch (err) {
+      console.error("Error assigning contacts:", err);
+      throw err; // Re-throw to let the modal handle the error
     }
   };
 
@@ -443,6 +488,8 @@ export default function TasksPage() {
             onCreateRule={handleCreateRule}
             onToggleRule={handleToggleRule}
             onDeleteRule={handleDeleteRule}
+            onAssignContacts={handleAssignContacts}
+            assignedContactCounts={assignedContactCounts}
           />
         </div>
       </div>
