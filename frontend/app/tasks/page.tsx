@@ -11,7 +11,7 @@ import SmartReminders from "./components/SmartReminders";
 import AutomatedWorkflows, { Workflow } from "./components/AutomatedWorkflows";
 import { AutomationRule } from "@/components/tasks/CreateAutomationRuleModal";
 import { taskService, TaskDTO, Priority } from "@/services/task.service";
-import { automationRuleService, CreateUpdateAutomationRuleDTO, TriggerEvent } from "@/services/automation-rule.service";
+import { automationRuleService, AutomationRuleDTO, CreateUpdateAutomationRuleDTO, TriggerEvent } from "@/services/automation-rule.service";
 import { smartReminderService, Reminder } from "@/services/smart-reminder.service";
 
 // Helper function to convert TaskDTO to Task
@@ -37,7 +37,7 @@ function mapTaskDTOToTask(dto: TaskDTO): Task {
   });
 
   // Handle null/undefined crmLeadDTO
-  const contactName = dto.crmLeadDTO?.name || "Unknown Contact";
+  const contactName = dto.crmLeadDTO?.name || dto.assignedTo?.name || "Unknown Contact";
   const initials = contactName
     .split(" ")
     .map((n) => n[0])
@@ -56,6 +56,8 @@ function mapTaskDTOToTask(dto: TaskDTO): Task {
     type: "other" as const,
     completed: dto.completed,
     description: dto.description || undefined,
+    isAuto: (dto as any).isAutomated ?? (dto as any).isAuto ?? false,
+    isAutomated: (dto as any).isAutomated ?? false,
   };
 }
 
@@ -68,6 +70,7 @@ export default function TasksPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [automationRules, setAutomationRules] = useState<AutomationRuleDTO[]>([]);
 
   // Load tasks from backend
   useEffect(() => {
@@ -112,6 +115,7 @@ export default function TasksPage() {
     const loadAutomationRules = async () => {
       try {
         const rules = await automationRuleService.getAll();
+        setAutomationRules(rules);
         const mappedWorkflows: Workflow[] = rules.map(rule => ({
           id: rule.id.toString(),
           name: rule.name,
@@ -309,6 +313,7 @@ export default function TasksPage() {
         status: rule.isActive ? "Active" : "Paused",
       }));
 
+      setAutomationRules(allRules);
       setWorkflows(mappedWorkflows);
     } catch (err) {
       console.error("Error creating automation rule:", err);
@@ -317,10 +322,59 @@ export default function TasksPage() {
     }
   };
 
+  const handleToggleRule = async (id: string) => {
+    try {
+      const ruleId = parseInt(id);
+      const current = automationRules.find((r) => r.id === ruleId);
+      if (!current) return;
+      const payload: CreateUpdateAutomationRuleDTO = {
+        name: current.name,
+        triggerEvent: current.triggerEvent,
+        triggerValue: current.triggerValue ?? null,
+        actions: current.actions,
+        isActive: !current.isActive,
+      };
+      const updated = await automationRuleService.update(ruleId, payload);
+      const updatedRules = automationRules.map((r) => (r.id === ruleId ? updated : r));
+      setAutomationRules(updatedRules);
+      const mappedWorkflows: Workflow[] = updatedRules.map(rule => ({
+        id: rule.id.toString(),
+        name: rule.name,
+        contactCount: "0 contacts in sequence",
+        status: rule.isActive ? "Active" : "Paused",
+      }));
+      setWorkflows(mappedWorkflows);
+    } catch (err) {
+      console.error("Error toggling automation rule:", err);
+      setError(err instanceof Error ? err.message : "Error al actualizar la regla");
+    }
+  };
+
+  const handleDeleteRule = async (id: string) => {
+    try {
+      const ruleId = parseInt(id);
+      await automationRuleService.delete(ruleId);
+      const remaining = automationRules.filter((r) => r.id !== ruleId);
+      setAutomationRules(remaining);
+      const mappedWorkflows: Workflow[] = remaining.map(rule => ({
+        id: rule.id.toString(),
+        name: rule.name,
+        contactCount: "0 contacts in sequence",
+        status: rule.isActive ? "Active" : "Paused",
+      }));
+      setWorkflows(mappedWorkflows);
+    } catch (err) {
+      console.error("Error deleting automation rule:", err);
+      setError(err instanceof Error ? err.message : "Error al eliminar la regla");
+    }
+  };
+
   const pendingTasks = tasks.filter((t) => !t.completed);
   const completedTasks = tasks.filter((t) => t.completed);
-  const automatedTasks = tasks.filter((t) => t.isAuto);
-  const dueTodayTasks = tasks.filter((t) => t.dueDate === "Today" && !t.completed);
+  // Si el backend no marca las tareas automatizadas, usamos fallback al número de workflows
+  const automatedTasks = tasks.filter((t) => t.isAuto || t.isAutomated);
+  const automatedCount = automatedTasks.length > 0 ? automatedTasks.length : workflows.length;
+  const dueTodayTasks = tasks.filter((t) => t.dueDate === "Hoy" && !t.completed);
 
   if (isLoading) {
     return (
@@ -365,7 +419,7 @@ export default function TasksPage() {
       <StatsCards
         pendingCount={pendingTasks.length}
         completedCount={completedTasks.length}
-        automatedCount={automatedTasks.length}
+        automatedCount={automatedCount}
         dueTodayCount={dueTodayTasks.length}
       />
 
@@ -384,7 +438,12 @@ export default function TasksPage() {
         {/* Right Column - Smart Reminders & Automated Workflows */}
         <div className="space-y-6">
           <SmartReminders reminders={reminders} />
-          <AutomatedWorkflows workflows={workflows} onCreateRule={handleCreateRule} />
+          <AutomatedWorkflows
+            workflows={workflows}
+            onCreateRule={handleCreateRule}
+            onToggleRule={handleToggleRule}
+            onDeleteRule={handleDeleteRule}
+          />
         </div>
       </div>
 

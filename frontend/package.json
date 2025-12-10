@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",
@@ -42,6 +44,7 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
+    "cypress": "^13.15.2",
     "@tailwindcss/postcss": "^4",
     "@types/classnames": "^2.3.0",
     "@types/node": "^20",
