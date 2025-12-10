@@ -106,7 +106,7 @@ export function MessageMedia({ type, url, caption, fileName, isOwn }: MessageMed
                     {extension}
                 </p>
             </div>
-            <Download className={`h-5 w-5 flex-shrink-0 ${isOwn ? 'text-purple-200' : 'text-slate-500'}`} />
+            <Download className={`h-5 w-5 shrink-0 ${isOwn ? 'text-purple-200' : 'text-slate-500'}`} />
         </a>
     );
 }
