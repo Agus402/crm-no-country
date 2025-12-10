@@ -4,6 +4,7 @@ import com.nocountry.backend.dto.SendEmailRequest;
 import com.nocountry.backend.entity.*;
 import com.nocountry.backend.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,7 +24,11 @@ public class EmailService {
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
-    private final JavaMailSender javaMailSender;
+    
+    // JavaMailSender es opcional - solo estará disponible si hay credenciales configuradas
+    // Esto permite que la aplicación arranque sin credenciales de email
+    @Autowired(required = false)
+    private JavaMailSender javaMailSender;
 
     /**
      * Enviar email; si viene templateId usa esa plantilla (sino usa subject/body).
@@ -115,6 +120,14 @@ public class EmailService {
      * @param references Lista de Message-IDs del thread (puede ser null)
      */
     public void sendHtmlEmail(String to, String subject, String htmlBody, String inReplyTo, String references) {
+        if (javaMailSender == null) {
+            throw new RuntimeException(
+                "Email service is not configured. " +
+                "Please configure email credentials in Settings > Integrations > Email, " +
+                "or set spring.mail.username and spring.mail.password in application.properties"
+            );
+        }
+        
         try {
             MimeMessage mime = javaMailSender.createMimeMessage();
 
