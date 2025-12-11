@@ -22,6 +22,21 @@ import { EmailComposer } from "@/components/messages/email-composer";
 import { EmailThread } from "@/components/messages/email-thread";
 import { useAuth } from "@/context/AuthContext";
 
+// Función para eliminar etiquetas HTML del texto de vista previa
+const stripHtmlTags = (html: string | null): string => {
+  if (!html) return '';
+  // Elimina todas las etiquetas HTML y decodifica entidades básicas
+  return html
+    .replace(/<[^>]*>/g, '') // Elimina etiquetas HTML
+    .replace(/&nbsp;/g, ' ') // Reemplaza &nbsp; por espacio
+    .replace(/&amp;/g, '&')  // Decodifica &amp;
+    .replace(/&lt;/g, '<')   // Decodifica &lt;
+    .replace(/&gt;/g, '>')   // Decodifica &gt;
+    .replace(/&quot;/g, '"') // Decodifica &quot;
+    .replace(/&#39;/g, "'")  // Decodifica &#39;
+    .trim();
+};
+
 export default function Message() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
@@ -480,7 +495,7 @@ export default function Message() {
                           }}
                         >
                           {conv.lastMessageDirection === 'OUTBOUND' && <span className="font-medium">Tú: </span>}
-                          {conv.lastMessageText || 'Sin mensajes'}
+                          {stripHtmlTags(conv.lastMessageText) || 'Sin mensajes'}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
                           {conv.channel === 'WHATSAPP' ? (
