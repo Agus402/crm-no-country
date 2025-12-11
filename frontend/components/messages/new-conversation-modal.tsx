@@ -259,7 +259,7 @@ export function NewConversationModal({
 
     return (
         <Dialog open={open} onOpenChange={resetAndClose}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="w-[95vw] sm:max-w-md gap-4">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         {selectedChannel === "WHATSAPP" ? (
@@ -321,7 +321,7 @@ export function NewConversationModal({
                             />
                         </div>
 
-                        <ScrollArea className="h-64">
+                        <ScrollArea className="h-[50vh] sm:h-64">
                             {loadingLeads ? (
                                 <div className="flex items-center justify-center py-8">
                                     <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
