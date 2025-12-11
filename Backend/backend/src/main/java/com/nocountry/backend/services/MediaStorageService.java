@@ -47,6 +47,8 @@ public class MediaStorageService {
 
     /**
      * Stores a file uploaded through the frontend.
+     * If the file is a WebM audio, it will be converted to OGG/Opus for WhatsApp
+     * compatibility.
      * 
      * @param file The uploaded file
      * @return Map with url (public URL) and filename (original name)
@@ -54,20 +56,96 @@ public class MediaStorageService {
     public Map<String, String> storeFile(MultipartFile file) throws IOException {
         String originalFilename = file.getOriginalFilename();
         String extension = getFileExtension(originalFilename);
+        String contentType = file.getContentType();
         String storedFilename = UUID.randomUUID().toString() + extension;
 
         Path targetPath = mediaStoragePath.resolve(storedFilename);
         Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
 
-        String publicUrl = baseUrl + "/api/media/" + storedFilename;
+        log.info("📤 File stored: {} -> {} (type: {})", originalFilename, storedFilename, contentType);
 
-        log.info("📤 File stored: {} -> {}", originalFilename, storedFilename);
+        // Convert WebM audio to OGG for WhatsApp compatibility
+        if (isWebmAudio(contentType, extension)) {
+            log.info("🔄 Converting WebM audio to OGG for WhatsApp compatibility...");
+            try {
+                Map<String, String> converted = convertWebmToOgg(targetPath, storedFilename);
+                // Delete the original WebM file
+                Files.deleteIfExists(targetPath);
+                return converted;
+            } catch (Exception e) {
+                log.error("❌ Failed to convert audio, using original WebM: {}", e.getMessage());
+                // Fall through to return original file
+            }
+        }
+
+        String publicUrl = baseUrl + "/api/media/" + storedFilename;
 
         return Map.of(
                 "url", publicUrl,
                 "filename", originalFilename != null ? originalFilename : storedFilename,
                 "storedFilename", storedFilename,
-                "mimeType", file.getContentType() != null ? file.getContentType() : "application/octet-stream");
+                "mimeType", contentType != null ? contentType : "application/octet-stream");
+    }
+
+    /**
+     * Checks if the file is a WebM audio file that needs conversion.
+     */
+    private boolean isWebmAudio(String contentType, String extension) {
+        if (contentType != null && contentType.contains("audio") && contentType.contains("webm")) {
+            return true;
+        }
+        if (extension != null && extension.equalsIgnoreCase(".webm")) {
+            // Check if it's audio by content type or assume it might be
+            return contentType != null && contentType.startsWith("audio/");
+        }
+        return false;
+    }
+
+    /**
+     * Converts a WebM audio file to OGG/Opus format using FFmpeg.
+     * This is required for WhatsApp voice message compatibility.
+     */
+    private Map<String, String> convertWebmToOgg(Path webmPath, String originalFilename)
+            throws IOException, InterruptedException {
+
+        String baseName = originalFilename.replaceFirst("\\.[^.]+$", "");
+        String oggFilename = baseName + ".ogg";
+        Path oggPath = mediaStoragePath.resolve(oggFilename);
+
+        // FFmpeg command to convert WebM/Opus to OGG/Opus
+        // -y: overwrite output, -i: input, -c:a copy: copy audio codec (no re-encoding)
+        // -f ogg: force OGG output format
+        ProcessBuilder pb = new ProcessBuilder(
+                "ffmpeg", "-y",
+                "-i", webmPath.toString(),
+                "-c:a", "libopus", // Use Opus codec
+                "-b:a", "64k", // Bitrate for voice
+                "-ar", "48000", // Sample rate
+                "-ac", "1", // Mono (required for WhatsApp voice messages)
+                "-f", "ogg",
+                oggPath.toString());
+
+        pb.redirectErrorStream(true);
+        Process process = pb.start();
+
+        // Read output for debugging
+        String output = new String(process.getInputStream().readAllBytes());
+        int exitCode = process.waitFor();
+
+        if (exitCode != 0) {
+            log.error("FFmpeg conversion failed (exit code {}): {}", exitCode, output);
+            throw new IOException("FFmpeg conversion failed with exit code: " + exitCode);
+        }
+
+        log.info("✅ Audio converted successfully: {} -> {}", originalFilename, oggFilename);
+
+        String publicUrl = baseUrl + "/api/media/" + oggFilename;
+
+        return Map.of(
+                "url", publicUrl,
+                "filename", oggFilename,
+                "storedFilename", oggFilename,
+                "mimeType", "audio/ogg");
     }
 
     /**

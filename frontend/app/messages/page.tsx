@@ -19,6 +19,7 @@ import { NewConversationModal } from "@/components/messages/new-conversation-mod
 import { MessageMedia } from "@/components/messages/message-media";
 import { EmailComposer } from "@/components/messages/email-composer";
 import { EmailThread } from "@/components/messages/email-thread";
+import { AudioRecorder } from "@/components/messages/audio-recorder";
 import { useAuth } from "@/context/AuthContext";
 
 // Función para eliminar etiquetas HTML del texto de vista previa
@@ -58,6 +59,7 @@ export default function Message() {
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Ref para scroll automático
@@ -727,38 +729,95 @@ export default function Message() {
                           }
                         }}
                       />
+                      {/* Attach file button */}
                       <Button
                         variant="outline"
                         size="icon"
                         className="shrink-0"
                         onClick={() => fileInputRef.current?.click()}
-                        disabled={uploadingFile}
+                        disabled={uploadingFile || isRecordingAudio}
                       >
                         <Paperclip className="h-4 w-4" />
                       </Button>
-                      <Input
-                        placeholder={selectedFile ? "Añade un mensaje (opcional)..." : "Escribe tu mensaje..."}
-                        value={messageInput}
-                        onChange={(e) => setMessageInput(e.target.value)}
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter' && (messageInput.trim() || selectedFile)) {
-                            handleSendMessage();
+
+                      {/* Audio recorder - expands when recording */}
+                      <AudioRecorder
+                        disabled={sendingMessage || uploadingFile}
+                        onRecordingComplete={async (audioBlob) => {
+                          try {
+                            setSendingMessage(true);
+                            setIsRecordingAudio(false);
+
+                            // Create file from blob with correct extension based on mime type
+                            const mimeType = audioBlob.type || 'audio/ogg';
+                            const extension = mimeType.includes('ogg') ? 'ogg' : 'webm';
+                            const audioFile = new File(
+                              [audioBlob],
+                              `audio_${Date.now()}.${extension}`,
+                              { type: mimeType }
+                            );
+                            console.log('📤 Uploading audio:', audioFile.name, 'type:', mimeType);
+
+                            // Upload the audio file
+                            const uploadResult = await messageService.uploadMedia(audioFile);
+
+                            // Send the audio message
+                            await messageService.sendMessage({
+                              conversationId: selectedConversation!.id,
+                              content: '[Audio]',
+                              messageType: 'AUDIO',
+                              mediaUrl: uploadResult.url,
+                              mediaFileName: uploadResult.filename,
+                            });
+
+                            // Reload messages and conversations
+                            await loadMessages(selectedConversation!.id);
+                            await loadConversations();
+
+                            toast.success("Audio enviado correctamente");
+                          } catch (error: unknown) {
+                            const errorMessage = error instanceof Error
+                              ? error.message
+                              : "No se pudo enviar el audio. Intenta nuevamente.";
+                            toast.error("Error al enviar audio", {
+                              description: errorMessage,
+                              duration: 6000,
+                            });
+                          } finally {
+                            setSendingMessage(false);
                           }
                         }}
-                        className="flex-1"
-                        disabled={sendingMessage || uploadingFile}
+                        onCancel={() => setIsRecordingAudio(false)}
                       />
-                      <Button
-                        className="bg-purple-600 hover:bg-purple-700 shrink-0"
-                        onClick={handleSendMessage}
-                        disabled={(sendingMessage || uploadingFile) || (!messageInput.trim() && !selectedFile)}
-                      >
-                        {(sendingMessage || uploadingFile) ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Send className="h-4 w-4" />
-                        )}
-                      </Button>
+
+                      {/* Text input - hidden when recording */}
+                      {!isRecordingAudio && (
+                        <>
+                          <Input
+                            placeholder={selectedFile ? "Añade un mensaje (opcional)..." : "Escribe tu mensaje..."}
+                            value={messageInput}
+                            onChange={(e) => setMessageInput(e.target.value)}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter' && (messageInput.trim() || selectedFile)) {
+                                handleSendMessage();
+                              }
+                            }}
+                            className="flex-1"
+                            disabled={sendingMessage || uploadingFile}
+                          />
+                          <Button
+                            className="bg-purple-600 hover:bg-purple-700 shrink-0"
+                            onClick={handleSendMessage}
+                            disabled={(sendingMessage || uploadingFile) || (!messageInput.trim() && !selectedFile)}
+                          >
+                            {(sendingMessage || uploadingFile) ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Send className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </>
                 )}

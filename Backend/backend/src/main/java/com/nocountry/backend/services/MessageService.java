@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class MessageService {
 
     private final MessageRepository messageRepository;
@@ -32,6 +33,8 @@ public class MessageService {
     // --- CREATE OUTBOUND MESSAGE (POST) ---
     @Transactional
     public MessageDTO createOutboundMessage(CreateMessageDTO dto) {
+        log.info("📨 Creating outbound message: type={}, mediaUrl={}, content={}",
+                dto.messageType(), dto.mediaUrl(), dto.content());
 
         Conversation conversation = conversationRepository.findById(dto.conversationId())
                 .orElseThrow(() -> new RuntimeException("Conversación no encontrada"));
@@ -67,6 +70,7 @@ public class MessageService {
                         dto.content());
             } else if (dto.mediaUrl() != null) {
                 // Send media message (IMAGE, VIDEO, AUDIO, DOCUMENT)
+                log.info("📎 Sending media to WhatsApp: type={}, url={}", dto.messageType(), dto.mediaUrl());
                 metaResponse = whatsAppApiService.sendMediaMessage(
                         recipientPhoneNumber,
                         dto.mediaUrl(),
