@@ -151,5 +151,57 @@ export const automationRuleService = {
       throw new Error(errorMessage);
     }
   },
+
+  async assignContacts(ruleId: number, contactIds: number[]): Promise<void> {
+    const response = await fetch(`${API_URL}/automation-rules/${ruleId}/contacts`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ contactIds }),
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      let errorMessage = "Error al asignar contactos al flujo de trabajo";
+      try {
+        const errorJson = JSON.parse(errorBody);
+        if (errorJson.message) {
+          errorMessage = errorJson.message;
+        }
+      } catch {
+        if (errorBody) errorMessage = errorBody;
+      }
+      throw new Error(errorMessage);
+    }
+  },
+
+  async getAssignedContacts(ruleId: number): Promise<number[]> {
+    const response = await fetch(`${API_URL}/automation-rules/${ruleId}/contacts`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      let errorMessage = "Error al obtener los contactos asignados";
+      try {
+        const errorJson = JSON.parse(errorBody);
+        if (errorJson.message) {
+          errorMessage = errorJson.message;
+        }
+      } catch {
+        if (errorBody) errorMessage = errorBody;
+      }
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data.contactIds || [];
+  },
 };
 
