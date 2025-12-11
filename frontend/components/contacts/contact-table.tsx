@@ -2,6 +2,7 @@ import { MessageCircle, Mail, MoreVertical, Pencil, Trash, FileDown } from "luci
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { generateContactPDF } from "@/utils/pdf-generator";
 
 const stageColors: Record<string, string> = {
   "Active Lead": "bg-blue-100 text-blue-700",
@@ -64,7 +65,9 @@ export function ContactTable({ contacts, onEdit, onDelete }: ContactTableProps) 
                           <Pencil className="mr-2 h-4 w-4" /> Editar contacto
                         </DropdownMenuItem>
 
-                        <DropdownMenuItem><FileDown className="mr-2 h-4 w-4" /> Exportar a PDF</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => generateContactPDF(contact)}>
+                          <FileDown className="mr-2 h-4 w-4" /> Exportar a PDF
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-red-600 focus:text-red-600 focus:bg-red-50"
