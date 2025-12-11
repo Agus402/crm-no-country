@@ -13,6 +13,7 @@ import { tagService, TagData } from "@/services/tag.service";
 import { conversationService } from "@/services/conversation.service";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import { generateContactsListPDF } from "@/utils/pdf-generator";
 
 const STAGES = ["All Stages", "Active Lead", "Follow-up", "Client"];
 
@@ -260,6 +261,15 @@ export default function ContactPage() {
       return matchesSearch && matchesStage;
     });
 
+  const handleExportAll = () => {
+    if (filteredContacts.length === 0) {
+      toast.error("No hay contactos para exportar");
+      return;
+    }
+    generateContactsListPDF(filteredContacts);
+    toast.success("Lista de contactos exportada");
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       <div className="border-b border-gray-200 p-4 md:px-8 md:py-6">
@@ -290,7 +300,7 @@ export default function ContactPage() {
               <DropdownMenuContent align="end" className="w-48"><DropdownMenuLabel>Filtrar por etapa</DropdownMenuLabel><DropdownMenuSeparator />{STAGES.map((stage) => (<DropdownMenuItem key={stage} onClick={() => setStageFilter(stage)} className="justify-between">{stage}{stageFilter === stage && <Check className="h-4 w-4 text-purple-600" />}</DropdownMenuItem>))}</DropdownMenuContent>
             </DropdownMenu>
 
-            <Button variant="outline"><Download className="h-4 w-4 mr-2" /> Exportar</Button>
+            <Button variant="outline" onClick={handleExportAll}><Download className="h-4 w-4 mr-2" /> Exportar</Button>
           </div>
         </div>
       </div>

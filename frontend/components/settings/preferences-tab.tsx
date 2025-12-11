@@ -7,9 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DATE_FORMATS, TIME_ZONES } from "@/components/settings/data";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, } from "@/components/ui/select";
+import { generateContactsListPDF } from "@/utils/pdf-generator";
+import { contactService } from "@/services/contact.service";
+import { toast } from "sonner";
 
 export function PreferencesTab() {
   const [isEditing, setIsEditing] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const [formData, setFormData] = useState({
     companyName: "Startup CRM Inc.",
@@ -33,6 +37,24 @@ export function PreferencesTab() {
   const handleSave = () => {
     setIsEditing(false);
   };
+
+  const handleExportContacts = async () => {
+    try {
+      setIsExporting(true);
+      const contacts = await contactService.getAll();
+      if (contacts.length === 0) {
+        toast.error("No hay contactos para exportar.");
+        return;
+      }
+      generateContactsListPDF(contacts);
+      toast.success("Se ha exportado la lista de contactos.");
+    } catch (error) {
+      console.error("Error exporting contacts:", error);
+      toast.error("Error al exportar contactos.");
+    } finally {
+      setIsExporting(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -142,8 +164,9 @@ export function PreferencesTab() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4">
-            <Button variant="outline">Exportar contactos (CSV)</Button>
-            <Button variant="outline">Exportar mensajes (PDF)</Button>
+            <Button variant="outline" onClick={handleExportContacts} disabled={isExporting}>
+              {isExporting ? "Exportando..." : "Exportar contactos (PDF)"}
+            </Button>            <Button variant="outline">Exportar mensajes (PDF)</Button>
             <Button variant="outline">Exportar todos los datos</Button>
           </div>
         </CardContent>
