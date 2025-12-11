@@ -8,11 +8,18 @@ import { Label } from "@/components/ui/label";
 import { DATE_FORMATS, TIME_ZONES } from "@/components/settings/data";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, } from "@/components/ui/select";
 import { generateContactsListPDF } from "@/utils/pdf-generator";
+import { generateContactsCSV, generateMessagesCSV, generateAllDataCSV, MessageExportData } from "@/utils/csv-generator";
 import { contactService } from "@/services/contact.service";
 import { conversationService } from "@/services/conversation.service";
 import { messageService } from "@/services/message.service";
-import { Loader2 } from "lucide-react";
+import { Loader2, Download, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function PreferencesTab() {
   const [isEditing, setIsEditing] = useState(false);
@@ -41,7 +48,7 @@ export function PreferencesTab() {
     setIsEditing(false);
   };
 
-  const handleExportContacts = async () => {
+  const handleExportContacts = async (format: 'pdf' | 'csv') => {
     try {
       setIsExporting(true);
       const contacts = await contactService.getAll();
@@ -49,8 +56,15 @@ export function PreferencesTab() {
         toast.error("No hay contactos para exportar.");
         return;
       }
-      generateContactsListPDF(contacts);
-      toast.success("Se ha exportado la lista de contactos.");
+
+      if (format === 'pdf') {
+        generateContactsListPDF(contacts);
+        toast.success("Se ha exportado la lista de contactos en PDF.");
+      } else {
+        generateContactsCSV(contacts);
+        toast.success("Se ha exportado la lista de contactos en CSV.");
+      }
+
     } catch (error) {
       console.error("Error exporting contacts:", error);
       toast.error("Error al exportar contactos.");
@@ -60,63 +74,90 @@ export function PreferencesTab() {
   }
 
   /* Export Messages CSV */
+  const fetchAllMessages = async () => {
+    const allConversations = await conversationService.getAll();
+    if (allConversations.length === 0) return { messages: [], processedCount: 0 };
+
+    let allMessages: MessageExportData[] = [];
+    let processedCount = 0;
+
+    for (const conv of allConversations) {
+      try {
+        const messages = await messageService.getByConversation(conv.id);
+
+        const mappedMessages: MessageExportData[] = messages.map((m) => {
+          const author = m.messageDirection === 'OUTBOUND'
+            ? (conv.assignedUser?.name || 'Usuario')
+            : (conv.lead?.name || 'Lead');
+
+          const direction = m.messageDirection === 'OUTBOUND' ? 'Enviado' : 'Recibido';
+          const content = m.content?.replace(/\n/g, " ") || '';
+          const date = new Date(m.sentAt).toLocaleString();
+
+          return {
+            conversationId: conv.id,
+            channel: conv.channel,
+            leadName: conv.lead?.name || 'Desconocido',
+            sentAt: date,
+            author: author,
+            direction: direction as 'Enviado' | 'Recibido',
+            content: content
+          };
+        });
+
+        allMessages = [...allMessages, ...mappedMessages];
+      } catch (err) {
+        console.warn(`Could not fetch messages for conversation ${conv.id}`, err);
+      }
+      processedCount++;
+    }
+    return { messages: allMessages, processedCount };
+  };
+
   const handleExportMessagesCSV = async () => {
     try {
       setIsExporting(true);
       toast.info("Iniciando exportación de mensajes...");
 
-      const allConversations = await conversationService.getAll();
+      const { messages, processedCount } = await fetchAllMessages();
 
-      if (allConversations.length === 0) {
-        toast.error("No hay conversaciones para exportar.");
+      if (messages.length === 0) {
+        toast.error("No hay mensajes para exportar.");
         return;
       }
 
-      // CSV Header
-      let csvContent = "Conversación ID,Canal,Lead,Fecha Mensaje,Autor,Dirección,Contenido\n";
-
-      // Fetch messages for each conversation
-      // We process them in chunks to avoid overwhelming the server/browser
-      let processedCount = 0;
-
-      for (const conv of allConversations) {
-        try {
-          const messages = await messageService.getByConversation(conv.id);
-
-          const convRows = messages.map((m) => {
-            const author = m.messageDirection === 'OUTBOUND'
-              ? (conv.assignedUser?.name || 'Usuario')
-              : (conv.lead?.name || 'Lead');
-
-            const direction = m.messageDirection === 'OUTBOUND' ? 'Enviado' : 'Recibido';
-            const content = m.content?.replace(/"/g, '""').replace(/\n/g, " ") || ''; // Escape quotes and newlines
-            const date = new Date(m.sentAt).toLocaleString().replace(/"/g, "");
-
-            return `"${conv.id}","${conv.channel}","${conv.lead?.name || 'Desconocido'}","${date}","${author}","${direction}","${content}"`;
-          }).join("\n");
-
-          if (convRows) {
-            csvContent += convRows + "\n";
-          }
-        } catch (err) {
-          console.warn(`Could not fetch messages for conversation ${conv.id}`, err);
-        }
-
-        processedCount++;
-      }
-
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `mensajes_crm_${new Date().toISOString().split('T')[0]}.csv`;
-      link.click();
-      URL.revokeObjectURL(url);
-
+      generateMessagesCSV(messages);
       toast.success(`Se han exportado los mensajes de ${processedCount} conversaciones.`);
     } catch (error) {
       console.error("Error exporting messages:", error);
       toast.error("Error al exportar mensajes.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportAllData = async () => {
+    try {
+      setIsExporting(true);
+      toast.info("Obteniendo todos los datos...");
+
+      // 1. Fetch Contacts
+      const contacts = await contactService.getAll();
+
+      // 2. Fetch Messages
+      const { messages } = await fetchAllMessages();
+
+      if (contacts.length === 0 && messages.length === 0) {
+        toast.error("No hay datos para exportar");
+        return;
+      }
+
+      generateAllDataCSV(contacts, messages);
+      toast.success("Se han exportado todos los datos exitosamente.");
+
+    } catch (error) {
+      console.error("Error exporting all data:", error);
+      toast.error("Error al exportar todos los datos.");
     } finally {
       setIsExporting(false);
     }
@@ -230,14 +271,29 @@ export function PreferencesTab() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4">
-            <Button variant="outline" onClick={handleExportContacts} disabled={isExporting}>
-              {isExporting ? "Exportando..." : "Exportar contactos (PDF)"}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" disabled={isExporting}>
+                  Exportar contactos
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onClick={() => handleExportContacts('pdf')}>
+                  Exportar como PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExportContacts('csv')}>
+                  Exportar como CSV
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="outline" onClick={handleExportMessagesCSV} disabled={isExporting}>
               {isExporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Exportar mensajes (CSV)
             </Button>
-            <Button variant="outline">Exportar todos los datos</Button>
+            <Button variant="outline" onClick={handleExportAllData} disabled={isExporting}>
+              Exportar todos los datos (CSV)
+            </Button>
           </div>
         </CardContent>
       </Card>
