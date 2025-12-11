@@ -270,6 +270,41 @@ export default function ContactPage() {
     toast.success("Lista de contactos exportada");
   };
 
+  const handleExportCSV = () => {
+    if (filteredContacts.length === 0) {
+      toast.error("No hay contactos para exportar");
+      return;
+    }
+
+    const headers = ["ID", "Nombre", "Teléfono", "Email", "Canal", "Etapa", "Etiquetas", "Fecha Creación"];
+    let csvContent = headers.join(",") + "\n";
+
+    filteredContacts.forEach(contact => {
+      const tags = contact.tags?.map(t => t.name).join(";") || "";
+      const row = [
+        contact.id,
+        `"${contact.name || ''}"`,
+        `"${contact.phone || ''}"`,
+        `"${contact.email || ''}"`,
+        contact.channel,
+        contact.stage,
+        `"${tags}"`,
+        contact.createdAt ? new Date(contact.createdAt).toLocaleDateString() : ''
+      ];
+      csvContent += row.join(",") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `contactos_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    toast.success("Lista de contactos exportada a CSV");
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       <div className="border-b border-gray-200 p-4 md:px-8 md:py-6">
@@ -300,7 +335,23 @@ export default function ContactPage() {
               <DropdownMenuContent align="end" className="w-48"><DropdownMenuLabel>Filtrar por etapa</DropdownMenuLabel><DropdownMenuSeparator />{STAGES.map((stage) => (<DropdownMenuItem key={stage} onClick={() => setStageFilter(stage)} className="justify-between">{stage}{stageFilter === stage && <Check className="h-4 w-4 text-purple-600" />}</DropdownMenuItem>))}</DropdownMenuContent>
             </DropdownMenu>
 
-            <Button variant="outline" onClick={handleExportAll}><Download className="h-4 w-4 mr-2" /> Exportar</Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="h-4 w-4 mr-2" /> Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Opciones de exportación</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleExportAll}>
+                  Exportar a PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportCSV}>
+                  Exportar a CSV
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
