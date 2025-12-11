@@ -143,6 +143,7 @@ export default function TaskList({ tasks, onToggleTask, onEditTask, onDeleteTask
           filteredTasks.map((task) => (
             <Card
               key={task.id}
+              data-testid={`task-card-${task.id}`}
               className={`p-4 transition-all ${task.completed ? "opacity-60 bg-gray-50" : ""
                 }`}
             >
@@ -150,6 +151,7 @@ export default function TaskList({ tasks, onToggleTask, onEditTask, onDeleteTask
                 <input
                   type="checkbox"
                   checked={task.completed}
+                  data-testid={`task-checkbox-${task.id}`}
                   onChange={() => onToggleTask(task.id)}
                   className="h-4 w-4 mt-1 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                 />

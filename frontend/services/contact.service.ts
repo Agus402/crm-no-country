@@ -114,25 +114,39 @@ export const contactService = {
 
     const url = `${API_URL}/crmleads${params.toString() ? `?${params.toString()}` : ""}`;
     
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-    });
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
 
-    if (!response.ok) {
-      await handleError(response, "Error al obtener los contactos");
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error response from /crmleads:", response.status, errorText);
+        await handleError(response, "Error al obtener los contactos");
+      }
+
+      const data = await response.json();
+      
+      // Ensure data is an array
+      if (!Array.isArray(data)) {
+        console.error("Expected array but got:", typeof data, data);
+        return [];
+      }
+
+      // Map stage and channel values to frontend format
+      return data.map((contact: CrmLeadDTO) => ({
+        ...contact,
+        stage: mapStageToFrontend(contact.stage),
+        channel: mapChannelToFrontend(contact.channel),
+      }));
+    } catch (error: any) {
+      console.error("Network error fetching contacts:", error);
+      throw new Error(error?.message || "Error de conexión al obtener los contactos");
     }
-
-    const data = await response.json();
-    // Map stage and channel values to frontend format
-    return data.map((contact: CrmLeadDTO) => ({
-      ...contact,
-      stage: mapStageToFrontend(contact.stage),
-      channel: mapChannelToFrontend(contact.channel),
-    }));
   },
 
   async getById(id: number): Promise<CrmLeadDTO> {
