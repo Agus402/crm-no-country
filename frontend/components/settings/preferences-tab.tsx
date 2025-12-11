@@ -9,6 +9,9 @@ import { DATE_FORMATS, TIME_ZONES } from "@/components/settings/data";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, } from "@/components/ui/select";
 import { generateContactsListPDF } from "@/utils/pdf-generator";
 import { contactService } from "@/services/contact.service";
+import { conversationService } from "@/services/conversation.service";
+import { messageService } from "@/services/message.service";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export function PreferencesTab() {
@@ -55,6 +58,69 @@ export function PreferencesTab() {
       setIsExporting(false);
     }
   }
+
+  /* Export Messages CSV */
+  const handleExportMessagesCSV = async () => {
+    try {
+      setIsExporting(true);
+      toast.info("Iniciando exportación de mensajes...");
+
+      const allConversations = await conversationService.getAll();
+
+      if (allConversations.length === 0) {
+        toast.error("No hay conversaciones para exportar.");
+        return;
+      }
+
+      // CSV Header
+      let csvContent = "Conversación ID,Canal,Lead,Fecha Mensaje,Autor,Dirección,Contenido\n";
+
+      // Fetch messages for each conversation
+      // We process them in chunks to avoid overwhelming the server/browser
+      let processedCount = 0;
+
+      for (const conv of allConversations) {
+        try {
+          const messages = await messageService.getByConversation(conv.id);
+
+          const convRows = messages.map((m) => {
+            const author = m.messageDirection === 'OUTBOUND'
+              ? (conv.assignedUser?.name || 'Usuario')
+              : (conv.lead?.name || 'Lead');
+
+            const direction = m.messageDirection === 'OUTBOUND' ? 'Enviado' : 'Recibido';
+            const content = m.content?.replace(/"/g, '""').replace(/\n/g, " ") || ''; // Escape quotes and newlines
+            const date = new Date(m.sentAt).toLocaleString().replace(/"/g, "");
+
+            return `"${conv.id}","${conv.channel}","${conv.lead?.name || 'Desconocido'}","${date}","${author}","${direction}","${content}"`;
+          }).join("\n");
+
+          if (convRows) {
+            csvContent += convRows + "\n";
+          }
+        } catch (err) {
+          console.warn(`Could not fetch messages for conversation ${conv.id}`, err);
+        }
+
+        processedCount++;
+      }
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `mensajes_crm_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      toast.success(`Se han exportado los mensajes de ${processedCount} conversaciones.`);
+    } catch (error) {
+      console.error("Error exporting messages:", error);
+      toast.error("Error al exportar mensajes.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -166,7 +232,11 @@ export function PreferencesTab() {
           <div className="flex flex-wrap gap-4">
             <Button variant="outline" onClick={handleExportContacts} disabled={isExporting}>
               {isExporting ? "Exportando..." : "Exportar contactos (PDF)"}
-            </Button>            <Button variant="outline">Exportar mensajes (PDF)</Button>
+            </Button>
+            <Button variant="outline" onClick={handleExportMessagesCSV} disabled={isExporting}>
+              {isExporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Exportar mensajes (CSV)
+            </Button>
             <Button variant="outline">Exportar todos los datos</Button>
           </div>
         </CardContent>

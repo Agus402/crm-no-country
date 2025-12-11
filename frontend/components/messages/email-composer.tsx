@@ -45,6 +45,7 @@ export function EmailComposer({
     const [isExpanded, setIsExpanded] = useState(false);
 
     const editor = useEditor({
+        immediatelyRender: false,
         extensions: [
             StarterKit.configure({
                 heading: {
