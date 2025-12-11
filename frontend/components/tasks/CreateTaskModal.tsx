@@ -26,6 +26,7 @@ import {
   FileText,
   UserPlus,
   MoreHorizontal,
+  Search,
 } from "lucide-react";
 import { contactService, CrmLeadDTO } from "@/services/contact.service";
 
@@ -58,6 +59,7 @@ export default function CreateTaskModal({
 }: CreateTaskModalProps) {
   const [contacts, setContacts] = useState<CrmLeadDTO[]>([]);
   const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+  const [contactSearchQuery, setContactSearchQuery] = useState("");
   const [formData, setFormData] = useState<NewTask>({
     title: "",
     contactName: "",
@@ -79,16 +81,35 @@ export default function CreateTaskModal({
         try {
           setIsLoadingContacts(true);
           const contactsData = await contactService.getAll();
+          console.log("Contactos cargados:", contactsData.length);
           setContacts(contactsData);
+          if (contactsData.length === 0) {
+            console.warn("No se encontraron contactos. Asegúrate de tener contactos creados en la sección de Contactos.");
+          }
         } catch (error) {
           console.error("Error loading contacts:", error);
+          setContacts([]);
         } finally {
           setIsLoadingContacts(false);
         }
       };
       loadContacts();
+    } else {
+      // Reset contacts and search when modal closes
+      setContacts([]);
+      setContactSearchQuery("");
     }
   }, [open]);
+
+  // Filter contacts based on search query
+  const filteredContacts = contacts.filter((contact) => {
+    if (!contactSearchQuery) return true;
+    const query = contactSearchQuery.toLowerCase();
+    return (
+      contact.name.toLowerCase().includes(query) ||
+      contact.email.toLowerCase().includes(query)
+    );
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,22 +240,57 @@ export default function CreateTaskModal({
                   contactId,
                   contactName: selectedContact?.name || ""
                 });
+                setContactSearchQuery(""); // Reset search when contact is selected
               }}
               disabled={isLoadingContacts}
             >
               <SelectTrigger id="contact" className="text-sm">
                 <SelectValue placeholder={isLoadingContacts ? "Cargando contactos..." : "Select a contact"} />
               </SelectTrigger>
-              <SelectContent>
-                {contacts.length === 0 && !isLoadingContacts ? (
-                  <SelectItem value="0" disabled>No hay contactos disponibles</SelectItem>
-                ) : (
-                  contacts.map((contact) => (
-                    <SelectItem key={contact.id} value={contact.id.toString()}>
-                      {contact.name} {contact.email ? `(${contact.email})` : ""}
-                    </SelectItem>
-                  ))
-                )}
+              <SelectContent 
+                position="popper" 
+                className="max-h-[200px] z-[9999] p-0"
+                sideOffset={4}
+                align="start"
+              >
+                {/* Search input */}
+                <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-2">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Buscar contacto..."
+                      value={contactSearchQuery}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setContactSearchQuery(e.target.value);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      className="pl-8 h-8 text-sm"
+                    />
+                  </div>
+                </div>
+                
+                {/* Contact list */}
+                <div className="max-h-[150px] overflow-y-auto">
+                  {isLoadingContacts ? (
+                    <div className="px-2 py-1.5 text-sm text-gray-500">Cargando contactos...</div>
+                  ) : contacts.length === 0 ? (
+                    <div className="px-2 py-1.5 text-sm text-gray-500">No hay contactos disponibles</div>
+                  ) : filteredContacts.length === 0 ? (
+                    <div className="px-2 py-1.5 text-sm text-gray-500">No se encontraron contactos</div>
+                  ) : (
+                    filteredContacts.map((contact) => (
+                      <SelectItem 
+                        key={contact.id} 
+                        value={contact.id.toString()}
+                        onSelect={() => setContactSearchQuery("")}
+                      >
+                        {contact.name} {contact.email ? `(${contact.email})` : ""}
+                      </SelectItem>
+                    ))
+                  )}
+                </div>
               </SelectContent>
             </Select>
           </div>
