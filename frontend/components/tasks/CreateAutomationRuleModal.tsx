@@ -124,7 +124,10 @@ export default function CreateAutomationRuleModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-[90vw] md:max-w-[680px]">
+      <DialogContent
+        className="max-w-[calc(100vw-2rem)] sm:max-w-[90vw] md:max-w-[680px]"
+        data-testid="create-rule-modal"
+      >
         <DialogHeader>
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
@@ -147,6 +150,7 @@ export default function CreateAutomationRuleModal({
               value={ruleName}
               onChange={(e) => setRuleName(e.target.value)}
               required
+              data-testid="rule-name-input"
               className="text-sm"
             />
           </div>
@@ -163,7 +167,7 @@ export default function CreateAutomationRuleModal({
                   Trigger Event
                 </Label>
                 <Select value={trigger} onValueChange={(value) => setTrigger(value as TriggerType)}>
-                  <SelectTrigger id="trigger" className="bg-white text-sm">
+                  <SelectTrigger id="trigger" className="bg-white text-sm" data-testid="trigger-select">
                     <SelectValue placeholder="Select a trigger" />
                   </SelectTrigger>
                   <SelectContent>
@@ -205,6 +209,7 @@ export default function CreateAutomationRuleModal({
                     min="0"
                     value={waitDays}
                     onChange={(e) => setWaitDays(e.target.value)}
+                    data-testid="wait-days-input"
                     className="bg-white text-sm"
                   />
                 </div>
@@ -219,6 +224,7 @@ export default function CreateAutomationRuleModal({
                     max="23"
                     value={waitHours}
                     onChange={(e) => setWaitHours(e.target.value)}
+                    data-testid="wait-hours-input"
                     className="bg-white text-sm"
                   />
                 </div>
@@ -239,6 +245,7 @@ export default function CreateAutomationRuleModal({
                   size="sm"
                   variant="outline"
                   onClick={addAction}
+                  data-testid="add-action"
                   className="text-[10px] sm:text-xs h-6 sm:h-7 px-2 bg-white hover:bg-green-100 border-green-300"
                 >
                   <Plus className="h-3 w-3 mr-0.5 sm:mr-1" />
@@ -273,7 +280,7 @@ export default function CreateAutomationRuleModal({
                         updateAction(action.id, "type", value)
                       }
                     >
-                      <SelectTrigger className="bg-white text-sm">
+                      <SelectTrigger className="bg-white text-sm" data-testid={`action-type-${action.id}`}>
                         <SelectValue placeholder="Select action" />
                       </SelectTrigger>
                       <SelectContent>
@@ -301,7 +308,7 @@ export default function CreateAutomationRuleModal({
                           updateAction(action.id, "template", value)
                         }
                       >
-                        <SelectTrigger className="bg-white text-sm">
+                        <SelectTrigger className="bg-white text-sm" data-testid={`action-template-${action.id}`}>
                           <SelectValue placeholder="Select template" />
                         </SelectTrigger>
                         <SelectContent>
@@ -374,6 +381,7 @@ export default function CreateAutomationRuleModal({
             </Button>
             <Button
               type="submit"
+              data-testid="submit-rule"
               className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto"
             >
               <Zap className="h-4 w-4 mr-2" />

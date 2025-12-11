@@ -2,6 +2,7 @@ import { MessageCircle, Mail, MoreVertical, Pencil, Trash, FileDown } from "luci
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { generateContactPDF } from "@/utils/pdf-generator";
 
 const stageColors: Record<string, string> = {
   "Active Lead": "bg-blue-100 text-blue-700",
@@ -64,7 +65,34 @@ export function ContactTable({ contacts, onEdit, onDelete }: ContactTableProps) 
                           <Pencil className="mr-2 h-4 w-4" /> Editar contacto
                         </DropdownMenuItem>
 
-                        <DropdownMenuItem><FileDown className="mr-2 h-4 w-4" /> Exportar a PDF</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => generateContactPDF(contact)}>
+                          <FileDown className="mr-2 h-4 w-4" /> Exportar a PDF
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          const headers = ["ID", "Nombre", "Teléfono", "Email", "Canal", "Etapa", "Etiquetas", "Fecha Creación"];
+                          const tags = contact.tags?.map((t: any) => t.name).join(";") || "";
+                          const row = [
+                            contact.id,
+                            `"${contact.name || ''}"`,
+                            `"${contact.phone || ''}"`,
+                            `"${contact.email || ''}"`,
+                            contact.channel,
+                            contact.stage,
+                            `"${tags}"`,
+                            contact.createdAt ? new Date(contact.createdAt).toLocaleDateString() : ''
+                          ].join(",");
+
+                          const csvContent = headers.join(",") + "\n" + row;
+                          const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+                          const url = URL.createObjectURL(blob);
+                          const link = document.createElement("a");
+                          link.href = url;
+                          link.download = `contacto_${contact.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+                          link.click();
+                          URL.revokeObjectURL(url);
+                        }}>
+                          <FileDown className="mr-2 h-4 w-4" /> Exportar a CSV
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-red-600 focus:text-red-600 focus:bg-red-50"

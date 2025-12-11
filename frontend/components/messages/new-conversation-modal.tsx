@@ -227,8 +227,8 @@ export function NewConversationModal({
                     <button
                         onClick={() => setSelectedChannel("WHATSAPP")}
                         className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${selectedChannel === "WHATSAPP"
-                                ? "bg-white text-green-700 shadow-sm"
-                                : "text-slate-600 hover:text-slate-900"
+                            ? "bg-white text-green-700 shadow-sm"
+                            : "text-slate-600 hover:text-slate-900"
                             }`}
                     >
                         <MessageCircle className="h-4 w-4" />
@@ -237,8 +237,8 @@ export function NewConversationModal({
                     <button
                         onClick={() => setSelectedChannel("EMAIL")}
                         className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${selectedChannel === "EMAIL"
-                                ? "bg-white text-blue-700 shadow-sm"
-                                : "text-slate-600 hover:text-slate-900"
+                            ? "bg-white text-blue-700 shadow-sm"
+                            : "text-slate-600 hover:text-slate-900"
                             }`}
                     >
                         <Mail className="h-4 w-4" />

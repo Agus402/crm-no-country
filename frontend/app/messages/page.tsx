@@ -21,6 +21,21 @@ import { EmailComposer } from "@/components/messages/email-composer";
 import { EmailThread } from "@/components/messages/email-thread";
 import { useAuth } from "@/context/AuthContext";
 
+// Función para eliminar etiquetas HTML del texto de vista previa
+const stripHtmlTags = (html: string | null): string => {
+  if (!html) return '';
+  // Elimina todas las etiquetas HTML y decodifica entidades básicas
+  return html
+    .replace(/<[^>]*>/g, '') // Elimina etiquetas HTML
+    .replace(/&nbsp;/g, ' ') // Reemplaza &nbsp; por espacio
+    .replace(/&amp;/g, '&')  // Decodifica &amp;
+    .replace(/&lt;/g, '<')   // Decodifica &lt;
+    .replace(/&gt;/g, '>')   // Decodifica &gt;
+    .replace(/&quot;/g, '"') // Decodifica &quot;
+    .replace(/&#39;/g, "'")  // Decodifica &#39;
+    .trim();
+};
+
 export default function Message() {
   const { user } = useAuth();
 
@@ -346,7 +361,7 @@ export default function Message() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
         <Card className={cn(
-          "lg:col-span-1 flex-col h-full",
+          "lg:col-span-1 flex-col h-full overflow-hidden",
           showMobileChat ? "hidden lg:flex" : "flex"
         )}>
           <CardHeader className="pb-4 px-4 pt-4">
@@ -381,7 +396,7 @@ export default function Message() {
               </TabsTrigger>
             </TabsList>
           </Tabs>
-          <ScrollArea className="flex-1 mt-2">
+          <ScrollArea className="flex-1 mt-2 min-h-0">
             <div className="px-4 pb-4 space-y-1">
               {loadingConversations ? (
                 <div className="flex items-center justify-center py-8">
@@ -465,7 +480,7 @@ export default function Message() {
                           }}
                         >
                           {conv.lastMessageDirection === 'OUTBOUND' && <span className="font-medium">Tú: </span>}
-                          {conv.lastMessageText || 'Sin mensajes'}
+                          {stripHtmlTags(conv.lastMessageText) || 'Sin mensajes'}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
                           {conv.channel === 'WHATSAPP' ? (
