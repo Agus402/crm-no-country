@@ -42,7 +42,10 @@ const stripHtmlTags = (html: string | null): string => {
 const formatMessagePreview = (text: string | null): string => {
   if (!text) return 'Sin mensajes';
 
-  const cleanText = stripHtmlTags(text);
+  const cleanText = stripHtmlTags(text).trim();
+
+  // If empty after cleaning, return a default
+  if (!cleanText) return 'Sin mensajes';
 
   // Detectar tipos de media por patrones comunes
   if (cleanText === '[Audio]' || cleanText.toLowerCase().startsWith('audio_')) {
@@ -61,7 +64,7 @@ const formatMessagePreview = (text: string | null): string => {
     return '📎 Documento';
   }
 
-  return cleanText || 'Sin mensajes';
+  return cleanText;
 };
 
 export default function Message() {
@@ -113,6 +116,10 @@ export default function Message() {
       // Recargar mensajes si la conversación activa recibió el mensaje
       if (selectedConversationRef.current?.id === notification.conversationId) {
         loadMessages(notification.conversationId);
+        // Mark as read immediately since user is viewing this conversation
+        conversationService.markAsRead(notification.conversationId).catch(err =>
+          console.error('Error marking as read:', err)
+        );
       }
       // Siempre recargar lista de conversaciones para actualizar último mensaje
       loadConversations(false);
@@ -370,9 +377,22 @@ export default function Message() {
     return matchTab && matchSearch;
   });
 
-  const handleConversationClick = (conv: ConversationDTO) => {
+  const handleConversationClick = async (conv: ConversationDTO) => {
     setSelectedConversation(conv);
     setShowMobileChat(true);
+
+    // Mark messages as read and update the unread count
+    if (conv.unreadCount > 0) {
+      try {
+        await conversationService.markAsRead(conv.id);
+        // Update the conversation in the list to reflect 0 unread
+        setConversations(prev => prev.map(c =>
+          c.id === conv.id ? { ...c, unreadCount: 0 } : c
+        ));
+      } catch (error) {
+        console.error('Error marking conversation as read:', error);
+      }
+    }
   };
 
   const getLeadStage = (conv: ConversationDTO) => {

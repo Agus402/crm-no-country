@@ -460,7 +460,8 @@ public class WhatsAppApiService {
             conversation.setLastMessageText(messageContent);
             conversation.setLastMessageAt(messageSentAt);
             conversation.setLastMessageDirection(Direction.INBOUND);
-            conversation.setUnreadCount(conversation.getUnreadCount() + 1);
+            int currentUnread = conversation.getUnreadCount() != null ? conversation.getUnreadCount() : 0;
+            conversation.setUnreadCount(currentUnread + 1);
             conversationRepository.save(conversation);
 
             // 11. Send WebSocket notification
