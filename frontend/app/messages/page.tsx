@@ -38,6 +38,32 @@ const stripHtmlTags = (html: string | null): string => {
     .trim();
 };
 
+// Función para formatear la vista previa de mensajes multimedia
+const formatMessagePreview = (text: string | null): string => {
+  if (!text) return 'Sin mensajes';
+
+  const cleanText = stripHtmlTags(text);
+
+  // Detectar tipos de media por patrones comunes
+  if (cleanText === '[Audio]' || cleanText.toLowerCase().startsWith('audio_')) {
+    return '🎵 Audio';
+  }
+  if (cleanText.toLowerCase().includes('.gif') || cleanText.toLowerCase() === 'gif') {
+    return '🎬 GIF';
+  }
+  if (cleanText.match(/\.(jpg|jpeg|png|webp)$/i) || cleanText.toLowerCase() === 'image' || cleanText.toLowerCase() === 'imagen') {
+    return '📷 Foto';
+  }
+  if (cleanText.match(/\.(mp4|mov|avi|webm)$/i) || cleanText.toLowerCase() === 'video') {
+    return '🎥 Video';
+  }
+  if (cleanText.match(/\.(pdf|doc|docx|xls|xlsx)$/i)) {
+    return '📎 Documento';
+  }
+
+  return cleanText || 'Sin mensajes';
+};
+
 export default function Message() {
   const { user } = useAuth();
 
@@ -499,7 +525,7 @@ export default function Message() {
                           }}
                         >
                           {conv.lastMessageDirection === 'OUTBOUND' && <span className="font-medium">Tú: </span>}
-                          {stripHtmlTags(conv.lastMessageText) || 'Sin mensajes'}
+                          {formatMessagePreview(conv.lastMessageText)}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
                           {conv.channel === 'WHATSAPP' ? (
