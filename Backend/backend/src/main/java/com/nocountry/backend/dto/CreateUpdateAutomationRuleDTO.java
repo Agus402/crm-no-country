@@ -7,19 +7,19 @@ import org.springframework.lang.Nullable;
 
 public record CreateUpdateAutomationRuleDTO(
 
-        @NotBlank(message = "Rule name is required.")
-        String name,
+                @NotBlank(message = "Rule name is required.") String name,
 
-        @NotNull(message = "Trigger event is required.")
-        TriggerEvent triggerEvent,
+                @NotNull(message = "Trigger event is required.") TriggerEvent triggerEvent,
 
-        @Nullable
-        String triggerValue,
+                @Nullable String triggerValue,
 
-        @NotBlank(message = "Action definition (JSON) is required.")
-        String actions,
+                @Nullable Integer waitDays,
 
-        @NotNull(message = "Active status is required.")
-        Boolean isActive
+                @Nullable Integer waitHours,
 
-) {}
+                @NotBlank(message = "Action definition (JSON) is required.") String actions,
+
+                @NotNull(message = "Active status is required.") Boolean isActive
+
+) {
+}

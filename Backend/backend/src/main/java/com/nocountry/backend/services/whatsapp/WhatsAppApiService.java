@@ -4,12 +4,14 @@ import com.nocountry.backend.dto.whatsapp.*;
 import com.nocountry.backend.entity.Conversation;
 import com.nocountry.backend.entity.CrmLead;
 import com.nocountry.backend.enums.*;
+import com.nocountry.backend.events.LeadCreatedEvent;
 import com.nocountry.backend.repository.ConversationRepository;
 import com.nocountry.backend.repository.CrmLeadRepository;
 import com.nocountry.backend.services.MediaStorageService;
 import com.nocountry.backend.services.MessageService;
 import com.nocountry.backend.services.whatsapp.WhatsAppConfigService.WhatsAppCredentials;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,7 @@ public class WhatsAppApiService {
     private final MessageService messageService;
     private final SimpMessagingTemplate messagingTemplate;
     private final MediaStorageService mediaStorageService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public WhatsAppApiService(
             WhatsAppConfigService configService,
@@ -38,7 +41,8 @@ public class WhatsAppApiService {
             ConversationRepository conversationRepository,
             @Lazy MessageService messageService,
             SimpMessagingTemplate messagingTemplate,
-            MediaStorageService mediaStorageService) {
+            MediaStorageService mediaStorageService,
+            ApplicationEventPublisher eventPublisher) {
 
         this.configService = configService;
         this.crmLeadRepository = crmLeadRepository;
@@ -46,6 +50,7 @@ public class WhatsAppApiService {
         this.messageService = messageService;
         this.messagingTemplate = messagingTemplate;
         this.mediaStorageService = mediaStorageService;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -392,23 +397,35 @@ public class WhatsAppApiService {
             }
 
             // 7. Find or create Lead
-            CrmLead lead = crmLeadRepository.findByPhone(normalizedPhone)
-                    .orElseGet(() -> {
-                        log.info("Lead no encontrado. Creando nuevo Lead para: {}", normalizedPhone);
-                        String placeholderEmail = normalizedPhone + "@whatsapp.generated";
-                        CrmLead newLead = CrmLead.builder()
-                                .phone(normalizedPhone)
-                                .name(contactName)
-                                .email(placeholderEmail)
-                                .channel(Channel.WHATSAPP)
-                                .stage(Stage.ACTIVE_LEAD)
-                                .status("active")
-                                .createdAt(LocalDateTime.now())
-                                .updatedAt(LocalDateTime.now())
-                                .deleted(false)
-                                .build();
-                        return crmLeadRepository.save(newLead);
-                    });
+            boolean isNewLead = false;
+            CrmLead leadTemp = crmLeadRepository.findByPhone(normalizedPhone).orElse(null);
+
+            if (leadTemp == null) {
+                log.info("Lead no encontrado. Creando nuevo Lead para: {}", normalizedPhone);
+                String placeholderEmail = normalizedPhone + "@whatsapp.generated";
+                leadTemp = CrmLead.builder()
+                        .phone(normalizedPhone)
+                        .name(contactName)
+                        .email(placeholderEmail)
+                        .channel(Channel.WHATSAPP)
+                        .stage(Stage.ACTIVE_LEAD)
+                        .status("active")
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
+                        .deleted(false)
+                        .build();
+                leadTemp = crmLeadRepository.save(leadTemp);
+                isNewLead = true;
+            }
+
+            // Make effectively final for use in lambda
+            final CrmLead lead = leadTemp;
+
+            // Publish event for automation engine if this is a new lead
+            if (isNewLead) {
+                log.info("🚀 Publishing LeadCreatedEvent for new lead: {} ({})", lead.getId(), lead.getName());
+                eventPublisher.publishEvent(new LeadCreatedEvent(this, lead));
+            }
 
             // 8. Find or create Conversation
             Conversation conversation = conversationRepository
