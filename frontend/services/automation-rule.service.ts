@@ -1,12 +1,21 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
-export type TriggerEvent = "LEAD_CREATED" | "STAGE_CHANGED" | "DEMO_COMPLETED" | "NO_RESPONSE_7_DAYS";
+export type TriggerEvent =
+  | "LEAD_CREATED"
+  | "DEMO_COMPLETED"
+  | "INVOICE_SENT"
+  | "NO_RESPONSE_7_DAYS"
+  | "CONTRACT_SIGNED"
+  | "PAYMENT_RECEIVED"
+  | "STAGE_CHANGED";
 
 export interface AutomationRuleDTO {
   id: number;
   name: string;
   triggerEvent: TriggerEvent;
   triggerValue: string | null;
+  waitDays: number | null;
+  waitHours: number | null;
   actions: string; // JSON string
   isActive: boolean;
   createdById: number | null;
@@ -17,6 +26,8 @@ export interface CreateUpdateAutomationRuleDTO {
   name: string;
   triggerEvent: TriggerEvent;
   triggerValue?: string | null;
+  waitDays?: number;
+  waitHours?: number;
   actions: string; // JSON string
   isActive: boolean;
 }

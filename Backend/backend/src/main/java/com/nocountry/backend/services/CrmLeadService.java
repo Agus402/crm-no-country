@@ -5,9 +5,12 @@ import com.nocountry.backend.entity.*;
 import com.nocountry.backend.enums.LeadHistoryAction;
 import com.nocountry.backend.enums.NotificationType;
 import com.nocountry.backend.enums.Stage;
+import com.nocountry.backend.events.LeadCreatedEvent;
 import com.nocountry.backend.repository.*;
 import com.nocountry.backend.mappers.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +21,7 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CrmLeadService {
 
     private final CrmLeadRepository crmLeadRepository;
@@ -26,6 +30,7 @@ public class CrmLeadService {
     private final LeadHistoryService leadHistoryService;
     private final NotificationService notificationService;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public CrmLeadDTO create(CreateCrmLeadDTO dto) {
 
@@ -46,7 +51,13 @@ public class CrmLeadService {
 
         crmLead.setOwner(owner);
 
-        return crmLeadMapper.toDTO(crmLeadRepository.save(crmLead));
+        CrmLead savedLead = crmLeadRepository.save(crmLead);
+
+        // Publish event for automation engine
+        log.info("Publishing LeadCreatedEvent for lead: {} ({})", savedLead.getId(), savedLead.getName());
+        eventPublisher.publishEvent(new LeadCreatedEvent(this, savedLead));
+
+        return crmLeadMapper.toDTO(savedLead);
     }
 
     public CrmLeadDTO getById(Long id) {
@@ -90,13 +101,12 @@ public class CrmLeadService {
 
         crmLead.setUpdatedAt(LocalDateTime.now());
 
-            CrmLead saved = crmLeadRepository.save(crmLead);
+        CrmLead saved = crmLeadRepository.save(crmLead);
 
-            detectChangesAndLog(before, saved);
+        detectChangesAndLog(before, saved);
 
-            return crmLeadMapper.toDTO(saved);
+        return crmLeadMapper.toDTO(saved);
     }
-
 
     public void delete(Long id) {
         CrmLead crmLead = crmLeadRepository.findById(id)
@@ -111,8 +121,7 @@ public class CrmLeadService {
                 crmLead,
                 LeadHistoryAction.STATUS_CHANGE,
                 "deleted",
-                "Lead moved to deleted (soft delete)"
-        );
+                "Lead moved to deleted (soft delete)");
     }
 
     public List<CrmLeadDTO> getAll(String name, String email, Stage stage) {
@@ -168,14 +177,12 @@ public class CrmLeadService {
             }
         }
 
-
         if (!before.getName().equals(after.getName())) {
             leadHistoryService.log(
                     after,
                     LeadHistoryAction.UPDATED,
                     "name",
-                    before.getName() + " → " + after.getName()
-            );
+                    before.getName() + " → " + after.getName());
         }
 
         if (!before.getEmail().equals(after.getEmail())) {
@@ -183,8 +190,7 @@ public class CrmLeadService {
                     after,
                     LeadHistoryAction.UPDATED,
                     "email",
-                    before.getEmail() + " → " + after.getEmail()
-            );
+                    before.getEmail() + " → " + after.getEmail());
         }
 
         if (before.getPhone() != null && !before.getPhone().equals(after.getPhone())) {
@@ -192,10 +198,8 @@ public class CrmLeadService {
                     after,
                     LeadHistoryAction.UPDATED,
                     "phone",
-                    before.getPhone() + " → " + after.getPhone()
-            );
+                    before.getPhone() + " → " + after.getPhone());
         }
-
 
         if (before.getStage() != after.getStage()) {
 
@@ -203,8 +207,7 @@ public class CrmLeadService {
                     after,
                     LeadHistoryAction.STATUS_CHANGE,
                     "stage",
-                    before.getStage().name() + " → " + after.getStage().name()
-            );
+                    before.getStage().name() + " → " + after.getStage().name());
 
             if (owner != null
                     && owner.getPreferences() != null
@@ -214,8 +217,7 @@ public class CrmLeadService {
                         owner,
                         after,
                         NotificationType.STAGE_CHANGE,
-                        "Lead stage changed from " + before.getStage() + " to " + after.getStage()
-                );
+                        "Lead stage changed from " + before.getStage() + " to " + after.getStage());
 
                 System.out.println(">>> STAGE NOTIFICATION SENT");
             } else {
@@ -228,8 +230,7 @@ public class CrmLeadService {
                     after,
                     LeadHistoryAction.UPDATED,
                     "tags",
-                    before.getTag().toString() + " → " + after.getTag().toString()
-            );
+                    before.getTag().toString() + " → " + after.getTag().toString());
         }
     }
 }

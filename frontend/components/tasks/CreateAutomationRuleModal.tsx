@@ -22,7 +22,7 @@ import { Zap, Filter, Clock, Plus, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 type TriggerType = "new-lead" | "demo-completed" | "invoice-sent" | "no-response" | "contract-signed" | "payment-received";
-type ActionType = "send-email" | "send-whatsapp" | "create-task" | "move-segment" | "send-sms";
+type ActionType = "send-email" | "send-whatsapp" | "create-task" | "move-segment";
 type TemplateType = "welcome" | "follow-up" | "reminder" | "thank-you";
 
 interface Action {
@@ -60,18 +60,18 @@ export default function CreateAutomationRuleModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Manual validation
     if (!trigger) {
       alert("Please select a trigger event");
       return;
     }
-    
+
     if (actions.some(action => !action.type)) {
       alert("Please select an action type for all actions");
       return;
     }
-    
+
     onCreateRule({
       name: ruleName,
       trigger,
@@ -111,12 +111,12 @@ export default function CreateAutomationRuleModal({
 
   const getTriggerDisplay = (): string => {
     const triggers: Record<TriggerType, string> = {
-      "new-lead": "New Lead Created",
-      "demo-completed": "Demo Completed",
-      "invoice-sent": "Invoice Sent",
-      "no-response": "No Response for 7 Days",
-      "contract-signed": "Contract Signed",
-      "payment-received": "Payment Received",
+      "new-lead": "Nuevo Lead Creado",
+      "demo-completed": "Demo Completada",
+      "invoice-sent": "Factura Enviada",
+      "no-response": "Sin Respuesta (7 días)",
+      "contract-signed": "Contrato Firmado",
+      "payment-received": "Pago Recibido",
     };
     return trigger ? triggers[trigger as TriggerType] || trigger : "a trigger occurs";
   };
@@ -284,50 +284,48 @@ export default function CreateAutomationRuleModal({
                         <SelectValue placeholder="Select action" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="send-email">Send Email</SelectItem>
+                        <SelectItem value="send-email">Enviar Email</SelectItem>
                         <SelectItem value="send-whatsapp">
-                          Send WhatsApp
+                          Enviar WhatsApp
                         </SelectItem>
-                        <SelectItem value="create-task">Create Task</SelectItem>
+                        <SelectItem value="create-task">Crear Tarea</SelectItem>
                         <SelectItem value="move-segment">
-                          Move to Segment
+                          Mover a Segmento
                         </SelectItem>
-                        <SelectItem value="send-sms">Send SMS</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   {(action.type === "send-email" ||
-                    action.type === "send-whatsapp" ||
-                    action.type === "send-sms") && (
-                    <div className="space-y-1">
-                      <Label className="text-xs sm:text-sm">Message Template</Label>
-                      <Select
-                        value={action.template}
-                        onValueChange={(value) =>
-                          updateAction(action.id, "template", value)
-                        }
-                      >
-                        <SelectTrigger className="bg-white text-sm" data-testid={`action-template-${action.id}`}>
-                          <SelectValue placeholder="Select template" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="welcome">
-                            Welcome Message
-                          </SelectItem>
-                          <SelectItem value="follow-up">
-                            Follow-up Message
-                          </SelectItem>
-                          <SelectItem value="reminder">
-                            Reminder Message
-                          </SelectItem>
-                          <SelectItem value="thank-you">
-                            Thank You Message
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
+                    action.type === "send-whatsapp") && (
+                      <div className="space-y-1">
+                        <Label className="text-xs sm:text-sm">Message Template</Label>
+                        <Select
+                          value={action.template}
+                          onValueChange={(value) =>
+                            updateAction(action.id, "template", value)
+                          }
+                        >
+                          <SelectTrigger className="bg-white text-sm" data-testid={`action-template-${action.id}`}>
+                            <SelectValue placeholder="Select template" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="welcome">
+                              Welcome Message
+                            </SelectItem>
+                            <SelectItem value="follow-up">
+                              Follow-up Message
+                            </SelectItem>
+                            <SelectItem value="reminder">
+                              Reminder Message
+                            </SelectItem>
+                            <SelectItem value="thank-you">
+                              Thank You Message
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                 </div>
               ))}
             </div>

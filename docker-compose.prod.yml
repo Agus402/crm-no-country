@@ -37,6 +37,11 @@ services:
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
 
+      # Disable Flyway - let Hibernate manage schema
+      SPRING_FLYWAY_ENABLED: "false"
+      # Use ddl-auto=update to create/update tables automatically
+      SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
+
       # Configuraciones restantes:
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       APP_COOKIE_SECURE: ${APP_COOKIE_SECURE}

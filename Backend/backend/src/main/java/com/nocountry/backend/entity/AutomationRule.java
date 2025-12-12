@@ -39,6 +39,14 @@ public class AutomationRule {
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
 
+    @Column(name = "wait_days")
+    @Builder.Default
+    private Integer waitDays = 0;
+
+    @Column(name = "wait_hours")
+    @Builder.Default
+    private Integer waitHours = 0;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
