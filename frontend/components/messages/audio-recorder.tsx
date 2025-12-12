@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Mic, Square, Send, Trash2, Pause, Play, X } from "lucide-react";
+import { Send, Trash2, Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -9,36 +9,41 @@ interface AudioRecorderProps {
     onRecordingComplete: (audioBlob: Blob) => void;
     onCancel?: () => void;
     disabled?: boolean;
+    autoStart?: boolean;
+    onRecordingStateChange?: (isRecording: boolean) => void;
 }
 
-type RecordingState = "idle" | "recording" | "paused" | "preview";
+type RecordingState = "idle" | "recording" | "paused";
 
 export function AudioRecorder({
     onRecordingComplete,
     onCancel,
     disabled = false,
+    autoStart = true,
+    onRecordingStateChange,
 }: AudioRecorderProps) {
     const [recordingState, setRecordingState] = useState<RecordingState>("idle");
     const [duration, setDuration] = useState(0);
-    const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const hasStartedRef = useRef(false);
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
-    const audioBlobRef = useRef<Blob | null>(null);
+
+    // Notify parent of recording state changes
+    useEffect(() => {
+        onRecordingStateChange?.(recordingState !== "idle");
+    }, [recordingState, onRecordingStateChange]);
 
     // Cleanup on unmount
     useEffect(() => {
         return () => {
             stopTimer();
             cleanupStream();
-            if (audioUrl) {
-                URL.revokeObjectURL(audioUrl);
-            }
         };
-    }, [audioUrl]);
+    }, []);
 
     const stopTimer = () => {
         if (timerRef.current) {
@@ -94,15 +99,6 @@ export function AudioRecorder({
                 }
             };
 
-            mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(chunksRef.current, { type: mimeType });
-                audioBlobRef.current = audioBlob;
-                const url = URL.createObjectURL(audioBlob);
-                setAudioUrl(url);
-                setRecordingState("preview");
-                cleanupStream();
-            };
-
             mediaRecorder.start(100); // Collect data every 100ms
             setRecordingState("recording");
             setDuration(0);
@@ -113,6 +109,14 @@ export function AudioRecorder({
             setRecordingState("idle");
         }
     }, []);
+
+    // Auto-start recording when component mounts
+    useEffect(() => {
+        if (autoStart && !hasStartedRef.current && recordingState === "idle") {
+            hasStartedRef.current = true;
+            startRecording();
+        }
+    }, [autoStart, startRecording, recordingState]);
 
     const pauseRecording = useCallback(() => {
         if (mediaRecorderRef.current && recordingState === "recording") {
@@ -130,173 +134,124 @@ export function AudioRecorder({
         }
     }, [recordingState]);
 
-    const stopRecording = useCallback(() => {
+    const stopAndSend = useCallback(() => {
         if (mediaRecorderRef.current && (recordingState === "recording" || recordingState === "paused")) {
             stopTimer();
+
+            // Set up the onstop handler to send the audio
+            mediaRecorderRef.current.onstop = () => {
+                const mimeType = mediaRecorderRef.current?.mimeType || "audio/webm";
+                const audioBlob = new Blob(chunksRef.current, { type: mimeType });
+                cleanupStream();
+                chunksRef.current = [];
+                setDuration(0);
+                setRecordingState("idle");
+
+                // Send the audio
+                onRecordingComplete(audioBlob);
+            };
+
             mediaRecorderRef.current.stop();
         }
-    }, [recordingState]);
+    }, [recordingState, onRecordingComplete]);
 
     const cancelRecording = useCallback(() => {
         stopTimer();
-        if (mediaRecorderRef.current) {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+            mediaRecorderRef.current.onstop = null; // Don't trigger send
             mediaRecorderRef.current.stop();
         }
         cleanupStream();
         chunksRef.current = [];
-        audioBlobRef.current = null;
-        if (audioUrl) {
-            URL.revokeObjectURL(audioUrl);
-            setAudioUrl(null);
-        }
         setDuration(0);
         setRecordingState("idle");
         setError(null);
         onCancel?.();
-    }, [audioUrl, onCancel]);
+    }, [onCancel]);
 
-    const sendRecording = useCallback(() => {
-        if (audioBlobRef.current) {
-            onRecordingComplete(audioBlobRef.current);
-            // Reset state
-            if (audioUrl) {
-                URL.revokeObjectURL(audioUrl);
-                setAudioUrl(null);
-            }
-            audioBlobRef.current = null;
-            setDuration(0);
-            setRecordingState("idle");
-        }
-    }, [audioUrl, onRecordingComplete]);
-
-    // Idle state - show mic button
+    // Idle state - show loading (auto-starting) or error
     if (recordingState === "idle") {
         return (
-            <div className="flex items-center">
-                {error && (
-                    <span className="text-xs text-red-500 mr-2">{error}</span>
+            <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 rounded-lg flex-1">
+                {error ? (
+                    <>
+                        <span className="text-xs text-red-500 flex-1">{error}</span>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onCancel?.()}
+                        >
+                            Cancelar
+                        </Button>
+                    </>
+                ) : (
+                    <span className="text-sm text-slate-500">Iniciando grabación...</span>
                 )}
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="shrink-0"
-                    onClick={startRecording}
-                    disabled={disabled}
-                    title="Grabar audio"
-                >
-                    <Mic className="h-4 w-4" />
-                </Button>
             </div>
         );
     }
 
     // Recording or Paused state - show recording controls
-    if (recordingState === "recording" || recordingState === "paused") {
-        return (
-            <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 rounded-lg flex-1">
-                {/* Cancel button */}
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-slate-500 hover:text-red-500"
-                    onClick={cancelRecording}
-                    title="Cancelar grabación"
-                >
-                    <Trash2 className="h-4 w-4" />
-                </Button>
+    return (
+        <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 rounded-lg flex-1">
+            {/* Cancel button */}
+            <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-slate-500 hover:text-red-500"
+                onClick={cancelRecording}
+                title="Cancelar grabación"
+            >
+                <Trash2 className="h-4 w-4" />
+            </Button>
 
-                {/* Recording indicator */}
-                <div className="flex items-center gap-2 flex-1">
-                    <div
-                        className={cn(
-                            "h-3 w-3 rounded-full",
-                            recordingState === "recording"
-                                ? "bg-red-500 animate-pulse"
-                                : "bg-yellow-500"
-                        )}
-                    />
-                    <span className="text-sm font-mono text-slate-700">
-                        {formatDuration(duration)}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                        {recordingState === "paused" ? "Pausado" : "Grabando..."}
-                    </span>
-                </div>
-
-                {/* Pause/Resume button */}
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={recordingState === "recording" ? pauseRecording : resumeRecording}
-                    title={recordingState === "recording" ? "Pausar" : "Reanudar"}
-                >
-                    {recordingState === "recording" ? (
-                        <Pause className="h-4 w-4" />
-                    ) : (
-                        <Play className="h-4 w-4" />
+            {/* Recording indicator */}
+            <div className="flex items-center gap-2 flex-1">
+                <div
+                    className={cn(
+                        "h-3 w-3 rounded-full",
+                        recordingState === "recording"
+                            ? "bg-red-500 animate-pulse"
+                            : "bg-yellow-500"
                     )}
-                </Button>
-
-                {/* Stop and go to preview */}
-                <Button
-                    type="button"
-                    size="icon"
-                    className="h-8 w-8 bg-purple-600 hover:bg-purple-700"
-                    onClick={stopRecording}
-                    title="Detener y previsualizar"
-                >
-                    <Square className="h-3 w-3" />
-                </Button>
-            </div>
-        );
-    }
-
-    // Preview state - show audio player and send button
-    if (recordingState === "preview" && audioUrl) {
-        return (
-            <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 rounded-lg flex-1">
-                {/* Cancel button */}
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-slate-500 hover:text-red-500"
-                    onClick={cancelRecording}
-                    title="Descartar audio"
-                >
-                    <X className="h-4 w-4" />
-                </Button>
-
-                {/* Audio preview */}
-                <audio
-                    src={audioUrl}
-                    controls
-                    className="h-8 flex-1 max-w-[200px]"
                 />
-
-                {/* Duration */}
-                <span className="text-xs text-slate-500 font-mono">
+                <span className="text-sm font-mono text-slate-700">
                     {formatDuration(duration)}
                 </span>
-
-                {/* Send button */}
-                <Button
-                    type="button"
-                    size="icon"
-                    className="h-8 w-8 bg-purple-600 hover:bg-purple-700"
-                    onClick={sendRecording}
-                    disabled={disabled}
-                    title="Enviar audio"
-                >
-                    <Send className="h-4 w-4" />
-                </Button>
+                <span className="text-xs text-slate-500">
+                    {recordingState === "paused" ? "Pausado" : "Grabando..."}
+                </span>
             </div>
-        );
-    }
 
-    return null;
+            {/* Pause/Resume button */}
+            <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={recordingState === "recording" ? pauseRecording : resumeRecording}
+                title={recordingState === "recording" ? "Pausar" : "Reanudar"}
+            >
+                {recordingState === "recording" ? (
+                    <Pause className="h-4 w-4" />
+                ) : (
+                    <Play className="h-4 w-4" />
+                )}
+            </Button>
+
+            {/* Send button (stops and sends directly) */}
+            <Button
+                type="button"
+                size="icon"
+                className="h-8 w-8 bg-purple-600 hover:bg-purple-700"
+                onClick={stopAndSend}
+                disabled={disabled}
+                title="Enviar audio"
+            >
+                <Send className="h-4 w-4" />
+            </Button>
+        </div>
+    );
 }
