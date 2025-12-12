@@ -98,4 +98,12 @@ public class ConversationService {
         }
         conversationRepository.deleteById(id);
     }
+
+    // --- MARK AS READ (POST) ---
+    public void markAsRead(Long conversationId) {
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversación no encontrada: " + conversationId));
+        conversation.setUnreadCount(0);
+        conversationRepository.save(conversation);
+    }
 }

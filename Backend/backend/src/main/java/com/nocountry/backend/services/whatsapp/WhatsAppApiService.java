@@ -71,15 +71,29 @@ public class WhatsAppApiService {
      * Envía un mensaje de texto simple a través de la API de WhatsApp Cloud.
      */
     public Map<String, String> sendTextMessage(String recipientPhoneNumber, String message) {
+        return sendTextMessage(recipientPhoneNumber, message, null);
+    }
+
+    /**
+     * Envía un mensaje de texto como respuesta a otro mensaje (quoted reply).
+     */
+    public Map<String, String> sendTextMessage(String recipientPhoneNumber, String message, String replyToExternalId) {
 
         WhatsAppCredentials credentials = getCredentialsOrThrow();
         RestClient restClient = createRestClient(credentials);
 
-        Map<String, Object> requestBody = Map.of(
-                "messaging_product", "whatsapp",
-                "to", recipientPhoneNumber,
-                "type", "text",
-                "text", Map.of("body", message));
+        // Build request body
+        java.util.Map<String, Object> requestBody = new java.util.HashMap<>();
+        requestBody.put("messaging_product", "whatsapp");
+        requestBody.put("to", recipientPhoneNumber);
+        requestBody.put("type", "text");
+        requestBody.put("text", Map.of("body", message));
+
+        // Add context for reply-to (quoted message)
+        if (replyToExternalId != null && !replyToExternalId.isEmpty()) {
+            requestBody.put("context", Map.of("message_id", replyToExternalId));
+            log.info("📝 Enviando respuesta citando mensaje: {}", replyToExternalId);
+        }
 
         log.info("Enviando mensaje de WhatsApp a: {}", recipientPhoneNumber);
 
@@ -124,6 +138,19 @@ public class WhatsAppApiService {
             MessageType messageType,
             String caption,
             String filename) {
+        return sendMediaMessage(recipientPhoneNumber, mediaUrl, messageType, caption, filename, null);
+    }
+
+    /**
+     * Envía un mensaje con multimedia como respuesta a otro mensaje (quoted reply).
+     */
+    public Map<String, String> sendMediaMessage(
+            String recipientPhoneNumber,
+            String mediaUrl,
+            MessageType messageType,
+            String caption,
+            String filename,
+            String replyToExternalId) {
 
         WhatsAppCredentials credentials = getCredentialsOrThrow();
         RestClient restClient = createRestClient(credentials);
@@ -151,11 +178,18 @@ public class WhatsAppApiService {
             mediaObject.put("filename", filename);
         }
 
-        Map<String, Object> requestBody = Map.of(
-                "messaging_product", "whatsapp",
-                "to", recipientPhoneNumber,
-                "type", waMediaType,
-                waMediaType, mediaObject);
+        // Build request body (mutable map for adding context)
+        java.util.Map<String, Object> requestBody = new java.util.HashMap<>();
+        requestBody.put("messaging_product", "whatsapp");
+        requestBody.put("to", recipientPhoneNumber);
+        requestBody.put("type", waMediaType);
+        requestBody.put(waMediaType, mediaObject);
+
+        // Add context for reply-to (quoted message)
+        if (replyToExternalId != null && !replyToExternalId.isEmpty()) {
+            requestBody.put("context", Map.of("message_id", replyToExternalId));
+            log.info("📝 Enviando respuesta con media citando mensaje: {}", replyToExternalId);
+        }
 
         log.info("📤 Enviando {} a WhatsApp: {} -> {}", waMediaType, recipientPhoneNumber, mediaUrl);
 
@@ -393,7 +427,20 @@ public class WhatsAppApiService {
                         return conversationRepository.save(newConversation);
                     });
 
-            // 9. Save inbound message with media
+            // 9. Extract context (quoted message) if present
+            com.nocountry.backend.entity.Message replyToMessage = null;
+            if (inboundMessage.context() != null && inboundMessage.context().id() != null) {
+                String quotedMessageId = inboundMessage.context().id();
+                log.info("📝 Mensaje cita a: {}", quotedMessageId);
+                replyToMessage = messageService.findByExternalMessageId(quotedMessageId);
+                if (replyToMessage != null) {
+                    log.info("✅ Mensaje citado encontrado: ID {}", replyToMessage.getId());
+                } else {
+                    log.warn("⚠️ Mensaje citado no encontrado en DB: {}", quotedMessageId);
+                }
+            }
+
+            // 10. Save inbound message with media and reply context
             LocalDateTime messageSentAt = LocalDateTime.ofEpochSecond(
                     Long.parseLong(timestamp), 0, ZoneOffset.UTC);
 
@@ -406,13 +453,15 @@ public class WhatsAppApiService {
                     mediaUrl,
                     mediaFileName,
                     mimeType,
-                    mediaCaption);
+                    mediaCaption,
+                    replyToMessage);
 
             // 10. Update conversation
             conversation.setLastMessageText(messageContent);
             conversation.setLastMessageAt(messageSentAt);
             conversation.setLastMessageDirection(Direction.INBOUND);
-            conversation.setUnreadCount(conversation.getUnreadCount() + 1);
+            int currentUnread = conversation.getUnreadCount() != null ? conversation.getUnreadCount() : 0;
+            conversation.setUnreadCount(currentUnread + 1);
             conversationRepository.save(conversation);
 
             // 11. Send WebSocket notification

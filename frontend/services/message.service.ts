@@ -1,5 +1,15 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
+// Simplified DTO for quoted/reply messages (to avoid circular references)
+export interface ReplyMessageDTO {
+    id: number;
+    senderType: 'USER' | 'LEAD' | 'SYSTEM';
+    messageType: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO' | 'DOCUMENT' | 'STICKER' | 'EMAIL';
+    content: string;
+    mediaUrl?: string;
+    mediaType?: string;
+}
+
 export interface MessageDTO {
     id: number;
     conversationId: number;
@@ -21,6 +31,9 @@ export interface MessageDTO {
         id: number;
         name: string;
     };
+    // Reply-to message support
+    replyToMessageId?: number;
+    replyToMessage?: ReplyMessageDTO;
 }
 
 export interface SendMessageRequest {
@@ -33,6 +46,7 @@ export interface SendMessageRequest {
     mediaUrl?: string;
     mediaFileName?: string;
     mediaCaption?: string;
+    replyToMessageId?: number; // ID del mensaje al que se responde
 }
 
 export interface MediaUploadResponse {

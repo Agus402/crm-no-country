@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Search, Send, Paperclip, MessageCircle, Mail, MoreVertical, ArrowLeft, Loader2, Wifi, WifiOff, Plus, Download, Trash2, X } from "lucide-react";
+import { Search, Send, Paperclip, MessageCircle, Mail, MoreVertical, ArrowLeft, Loader2, Wifi, WifiOff, Plus, Download, Trash2, X, Mic, Reply } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -17,8 +17,10 @@ import { websocketService, WebSocketMessage } from "@/services/websocket.service
 import { toast } from "sonner";
 import { NewConversationModal } from "@/components/messages/new-conversation-modal";
 import { MessageMedia } from "@/components/messages/message-media";
+import { QuotedMessage } from "@/components/messages/quoted-message";
 import { EmailComposer } from "@/components/messages/email-composer";
 import { EmailThread } from "@/components/messages/email-thread";
+import { AudioRecorder } from "@/components/messages/audio-recorder";
 import { useAuth } from "@/context/AuthContext";
 
 // Función para eliminar etiquetas HTML del texto de vista previa
@@ -34,6 +36,35 @@ const stripHtmlTags = (html: string | null): string => {
     .replace(/&quot;/g, '"') // Decodifica &quot;
     .replace(/&#39;/g, "'")  // Decodifica &#39;
     .trim();
+};
+
+// Función para formatear la vista previa de mensajes multimedia
+const formatMessagePreview = (text: string | null): string => {
+  if (!text) return 'Sin mensajes';
+
+  const cleanText = stripHtmlTags(text).trim();
+
+  // If empty after cleaning, return a default
+  if (!cleanText) return 'Sin mensajes';
+
+  // Detectar tipos de media por patrones comunes
+  if (cleanText === '[Audio]' || cleanText.toLowerCase().startsWith('audio_')) {
+    return '🎵 Audio';
+  }
+  if (cleanText.toLowerCase().includes('.gif') || cleanText.toLowerCase() === 'gif') {
+    return '🎬 GIF';
+  }
+  if (cleanText.match(/\.(jpg|jpeg|png|webp)$/i) || cleanText.toLowerCase() === 'image' || cleanText.toLowerCase() === 'imagen') {
+    return '📷 Foto';
+  }
+  if (cleanText.match(/\.(mp4|mov|avi|webm)$/i) || cleanText.toLowerCase() === 'video') {
+    return '🎥 Video';
+  }
+  if (cleanText.match(/\.(pdf|doc|docx|xls|xlsx)$/i)) {
+    return '📎 Documento';
+  }
+
+  return cleanText;
 };
 
 export default function Message() {
@@ -58,7 +89,10 @@ export default function Message() {
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<MessageDTO | null>(null); // Message being replied to
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messageRefs = useRef<Map<number, HTMLDivElement>>(new Map()); // Refs for scroll-to-message
 
   // Ref para scroll automático
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -82,6 +116,10 @@ export default function Message() {
       // Recargar mensajes si la conversación activa recibió el mensaje
       if (selectedConversationRef.current?.id === notification.conversationId) {
         loadMessages(notification.conversationId);
+        // Mark as read immediately since user is viewing this conversation
+        conversationService.markAsRead(notification.conversationId).catch(err =>
+          console.error('Error marking as read:', err)
+        );
       }
       // Siempre recargar lista de conversaciones para actualizar último mensaje
       loadConversations(false);
@@ -163,6 +201,17 @@ export default function Message() {
     }
   };
 
+  // Scroll to a specific message (for clicking on quoted messages)
+  const scrollToMessage = (messageId: number) => {
+    const element = messageRefs.current.get(messageId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Flash highlight effect
+      element.classList.add('bg-yellow-100');
+      setTimeout(() => element.classList.remove('bg-yellow-100'), 1500);
+    }
+  };
+
   const handleSendMessage = async () => {
     if ((!messageInput.trim() && !selectedFile) || !selectedConversation || sendingMessage || uploadingFile) return;
 
@@ -183,6 +232,7 @@ export default function Message() {
             mediaUrl: uploadResult.url,
             mediaFileName: uploadResult.filename,
             mediaCaption: messageInput.trim() || undefined,
+            replyToMessageId: replyingTo?.id, // Include reply reference
           });
 
           setSelectedFile(null);
@@ -198,10 +248,12 @@ export default function Message() {
         await messageService.sendMessage({
           conversationId: selectedConversation.id,
           content: messageInput.trim(),
+          replyToMessageId: replyingTo?.id, // Include reply reference
         });
       }
 
       setMessageInput('');
+      setReplyingTo(null); // Clear reply state after sending
       // Recargar mensajes después de enviar
       await loadMessages(selectedConversation.id);
       // Actualizar lista de conversaciones para reflejar último mensaje
@@ -325,9 +377,22 @@ export default function Message() {
     return matchTab && matchSearch;
   });
 
-  const handleConversationClick = (conv: ConversationDTO) => {
+  const handleConversationClick = async (conv: ConversationDTO) => {
     setSelectedConversation(conv);
     setShowMobileChat(true);
+
+    // Mark messages as read and update the unread count
+    if (conv.unreadCount > 0) {
+      try {
+        await conversationService.markAsRead(conv.id);
+        // Update the conversation in the list to reflect 0 unread
+        setConversations(prev => prev.map(c =>
+          c.id === conv.id ? { ...c, unreadCount: 0 } : c
+        ));
+      } catch (error) {
+        console.error('Error marking conversation as read:', error);
+      }
+    }
   };
 
   const getLeadStage = (conv: ConversationDTO) => {
@@ -480,7 +545,7 @@ export default function Message() {
                           }}
                         >
                           {conv.lastMessageDirection === 'OUTBOUND' && <span className="font-medium">Tú: </span>}
-                          {stripHtmlTags(conv.lastMessageText) || 'Sin mensajes'}
+                          {formatMessagePreview(conv.lastMessageText)}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
                           {conv.channel === 'WHATSAPP' ? (
@@ -614,9 +679,23 @@ export default function Message() {
                         return (
                           <div
                             key={message.id}
-                            className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                            ref={(el) => {
+                              if (el) messageRefs.current.set(message.id, el);
+                              else messageRefs.current.delete(message.id);
+                            }}
+                            className={`flex group transition-colors duration-300 rounded-lg ${isOwn ? 'justify-end' : 'justify-start'}`}
                           >
-                            <div className={`max-w-[85%] md:max-w-[70%] ${isOwn ? 'order-2' : 'order-1'}`}>
+                            {/* Reply button (appears on hover) - positioned based on message direction */}
+                            {isOwn && (
+                              <button
+                                onClick={() => setReplyingTo(message)}
+                                className="opacity-0 group-hover:opacity-100 self-center mr-2 p-1 rounded-full hover:bg-slate-200 transition-opacity"
+                                title="Responder"
+                              >
+                                <Reply className="h-4 w-4 text-slate-500" />
+                              </button>
+                            )}
+                            <div className={`max-w-[85%] md:max-w-[70%]`}>
                               {!isOwn && message.senderLead && (
                                 <p className="text-xs text-slate-600 mb-1 ml-1">{message.senderLead.name}</p>
                               )}
@@ -626,6 +705,15 @@ export default function Message() {
                                   : 'bg-slate-100 text-slate-900 rounded-tl-none'
                                   }`}
                               >
+                                {/* Show quoted message if replying to another message */}
+                                {message.replyToMessage && (
+                                  <QuotedMessage
+                                    message={message.replyToMessage}
+                                    isOwn={isOwn}
+                                    onClick={() => message.replyToMessageId && scrollToMessage(message.replyToMessageId)}
+                                    leadName={selectedConversation.lead?.name}
+                                  />
+                                )}
                                 {message.mediaUrl ? (
                                   <MessageMedia
                                     type={message.mediaType || message.messageType}
@@ -642,6 +730,16 @@ export default function Message() {
                                 {formatMessageTime(message.sentAt)}
                               </p>
                             </div>
+                            {/* Reply button for incoming messages (on the right) */}
+                            {!isOwn && (
+                              <button
+                                onClick={() => setReplyingTo(message)}
+                                className="opacity-0 group-hover:opacity-100 self-center ml-2 p-1 rounded-full hover:bg-slate-200 transition-opacity"
+                                title="Responder"
+                              >
+                                <Reply className="h-4 w-4 text-slate-500" />
+                              </button>
+                            )}
                           </div>
                         );
                       })
@@ -650,6 +748,35 @@ export default function Message() {
                   </div>
                 )}
               </ScrollArea>
+
+              {/* Reply Bar - shows when replying to a message */}
+              {replyingTo && selectedConversation.channel !== 'EMAIL' && (
+                <div className="border-t bg-slate-50 px-4 py-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <Reply className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-xs text-purple-600 font-medium">
+                        Respondiendo a {replyingTo.messageDirection === 'INBOUND' ? (selectedConversation.lead?.name || 'Cliente') : 'ti'}
+                      </span>
+                      <span className="text-xs text-slate-500 truncate">
+                        {replyingTo.mediaUrl
+                          ? (replyingTo.messageType === 'IMAGE' ? '📷 Imagen'
+                            : replyingTo.messageType === 'VIDEO' ? '🎥 Video'
+                              : replyingTo.messageType === 'AUDIO' ? '🎵 Audio'
+                                : '📎 Archivo')
+                          : replyingTo.content}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setReplyingTo(null)}
+                    className="p-1 rounded-full hover:bg-slate-200 flex-shrink-0"
+                    title="Cancelar respuesta"
+                  >
+                    <X className="h-4 w-4 text-slate-500" />
+                  </button>
+                </div>
+              )}
 
               {/* Message Input */}
               <CardContent className="border-t p-3 md:p-4">
@@ -727,38 +854,119 @@ export default function Message() {
                           }
                         }}
                       />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="shrink-0"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploadingFile}
-                      >
-                        <Paperclip className="h-4 w-4" />
-                      </Button>
-                      <Input
-                        placeholder={selectedFile ? "Añade un mensaje (opcional)..." : "Escribe tu mensaje..."}
-                        value={messageInput}
-                        onChange={(e) => setMessageInput(e.target.value)}
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter' && (messageInput.trim() || selectedFile)) {
-                            handleSendMessage();
-                          }
-                        }}
-                        className="flex-1"
-                        disabled={sendingMessage || uploadingFile}
-                      />
-                      <Button
-                        className="bg-purple-600 hover:bg-purple-700 shrink-0"
-                        onClick={handleSendMessage}
-                        disabled={(sendingMessage || uploadingFile) || (!messageInput.trim() && !selectedFile)}
-                      >
-                        {(sendingMessage || uploadingFile) ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+
+                      {/* Attach file button - hidden when recording */}
+                      {!isRecordingAudio && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="shrink-0"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploadingFile}
+                        >
+                          <Paperclip className="h-4 w-4" />
+                        </Button>
+                      )}
+
+                      {/* Text input - hidden when recording */}
+                      {!isRecordingAudio && (
+                        <Input
+                          placeholder={selectedFile ? "Añade un mensaje (opcional)..." : "Escribe tu mensaje..."}
+                          value={messageInput}
+                          onChange={(e) => setMessageInput(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter' && (messageInput.trim() || selectedFile)) {
+                              handleSendMessage();
+                            }
+                          }}
+                          className="flex-1"
+                          disabled={sendingMessage || uploadingFile}
+                        />
+                      )}
+
+                      {/* Audio recorder - shows when recording, otherwise hidden */}
+                      {isRecordingAudio ? (
+                        <AudioRecorder
+                          disabled={sendingMessage || uploadingFile}
+                          onRecordingComplete={async (audioBlob) => {
+                            try {
+                              setSendingMessage(true);
+
+                              // Create file from blob with correct extension based on mime type
+                              const mimeType = audioBlob.type || 'audio/ogg';
+                              const extension = mimeType.includes('ogg') ? 'ogg' : 'webm';
+                              const audioFile = new File(
+                                [audioBlob],
+                                `audio_${Date.now()}.${extension}`,
+                                { type: mimeType }
+                              );
+                              console.log('📤 Uploading audio:', audioFile.name, 'type:', mimeType);
+
+                              // Upload the audio file
+                              const uploadResult = await messageService.uploadMedia(audioFile);
+
+                              // Send the audio message (include reply reference if replying)
+                              await messageService.sendMessage({
+                                conversationId: selectedConversation!.id,
+                                content: '[Audio]',
+                                messageType: 'AUDIO',
+                                mediaUrl: uploadResult.url,
+                                mediaFileName: uploadResult.filename,
+                                replyToMessageId: replyingTo?.id, // Include reply reference
+                              });
+
+                              // Clear reply state after sending
+                              setReplyingTo(null);
+
+                              // Reload messages and conversations
+                              await loadMessages(selectedConversation!.id);
+                              await loadConversations();
+
+                              toast.success("Audio enviado correctamente");
+                            } catch (error: unknown) {
+                              const errorMessage = error instanceof Error
+                                ? error.message
+                                : "No se pudo enviar el audio. Intenta nuevamente.";
+                              toast.error("Error al enviar audio", {
+                                description: errorMessage,
+                                duration: 6000,
+                              });
+                            } finally {
+                              setSendingMessage(false);
+                              setIsRecordingAudio(false);
+                            }
+                          }}
+                          onCancel={() => setIsRecordingAudio(false)}
+                        />
+                      ) : (
+                        /* Show Mic or Send button based on input state */
+                        (messageInput.trim() || selectedFile) ? (
+                          /* Has text or file - show Send button */
+                          <Button
+                            className="bg-purple-600 hover:bg-purple-700 shrink-0"
+                            onClick={handleSendMessage}
+                            disabled={sendingMessage || uploadingFile}
+                          >
+                            {(sendingMessage || uploadingFile) ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Send className="h-4 w-4" />
+                            )}
+                          </Button>
                         ) : (
-                          <Send className="h-4 w-4" />
-                        )}
-                      </Button>
+                          /* Empty input - show Mic button to start recording */
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="shrink-0"
+                            onClick={() => setIsRecordingAudio(true)}
+                            disabled={sendingMessage || uploadingFile}
+                            title="Grabar audio"
+                          >
+                            <Mic className="h-4 w-4" />
+                          </Button>
+                        )
+                      )}
                     </div>
                   </>
                 )}
