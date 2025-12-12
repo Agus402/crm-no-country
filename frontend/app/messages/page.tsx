@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Search, Send, Paperclip, MessageCircle, Mail, MoreVertical, ArrowLeft, Loader2, Wifi, WifiOff, Plus, Download, Trash2, X, Mic } from "lucide-react";
+import { Search, Send, Paperclip, MessageCircle, Mail, MoreVertical, ArrowLeft, Loader2, Wifi, WifiOff, Plus, Download, Trash2, X, Mic, Reply } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -61,7 +61,9 @@ export default function Message() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<MessageDTO | null>(null); // Message being replied to
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messageRefs = useRef<Map<number, HTMLDivElement>>(new Map()); // Refs for scroll-to-message
 
   // Ref para scroll automático
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -166,6 +168,17 @@ export default function Message() {
     }
   };
 
+  // Scroll to a specific message (for clicking on quoted messages)
+  const scrollToMessage = (messageId: number) => {
+    const element = messageRefs.current.get(messageId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Flash highlight effect
+      element.classList.add('bg-yellow-100');
+      setTimeout(() => element.classList.remove('bg-yellow-100'), 1500);
+    }
+  };
+
   const handleSendMessage = async () => {
     if ((!messageInput.trim() && !selectedFile) || !selectedConversation || sendingMessage || uploadingFile) return;
 
@@ -186,6 +199,7 @@ export default function Message() {
             mediaUrl: uploadResult.url,
             mediaFileName: uploadResult.filename,
             mediaCaption: messageInput.trim() || undefined,
+            replyToMessageId: replyingTo?.id, // Include reply reference
           });
 
           setSelectedFile(null);
@@ -201,10 +215,12 @@ export default function Message() {
         await messageService.sendMessage({
           conversationId: selectedConversation.id,
           content: messageInput.trim(),
+          replyToMessageId: replyingTo?.id, // Include reply reference
         });
       }
 
       setMessageInput('');
+      setReplyingTo(null); // Clear reply state after sending
       // Recargar mensajes después de enviar
       await loadMessages(selectedConversation.id);
       // Actualizar lista de conversaciones para reflejar último mensaje
@@ -617,9 +633,23 @@ export default function Message() {
                         return (
                           <div
                             key={message.id}
-                            className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                            ref={(el) => {
+                              if (el) messageRefs.current.set(message.id, el);
+                              else messageRefs.current.delete(message.id);
+                            }}
+                            className={`flex group transition-colors duration-300 rounded-lg ${isOwn ? 'justify-end' : 'justify-start'}`}
                           >
-                            <div className={`max-w-[85%] md:max-w-[70%] ${isOwn ? 'order-2' : 'order-1'}`}>
+                            {/* Reply button (appears on hover) - positioned based on message direction */}
+                            {isOwn && (
+                              <button
+                                onClick={() => setReplyingTo(message)}
+                                className="opacity-0 group-hover:opacity-100 self-center mr-2 p-1 rounded-full hover:bg-slate-200 transition-opacity"
+                                title="Responder"
+                              >
+                                <Reply className="h-4 w-4 text-slate-500" />
+                              </button>
+                            )}
+                            <div className={`max-w-[85%] md:max-w-[70%]`}>
                               {!isOwn && message.senderLead && (
                                 <p className="text-xs text-slate-600 mb-1 ml-1">{message.senderLead.name}</p>
                               )}
@@ -631,7 +661,11 @@ export default function Message() {
                               >
                                 {/* Show quoted message if replying to another message */}
                                 {message.replyToMessage && (
-                                  <QuotedMessage message={message.replyToMessage} isOwn={isOwn} />
+                                  <QuotedMessage
+                                    message={message.replyToMessage}
+                                    isOwn={isOwn}
+                                    onClick={() => message.replyToMessageId && scrollToMessage(message.replyToMessageId)}
+                                  />
                                 )}
                                 {message.mediaUrl ? (
                                   <MessageMedia
@@ -649,6 +683,16 @@ export default function Message() {
                                 {formatMessageTime(message.sentAt)}
                               </p>
                             </div>
+                            {/* Reply button for incoming messages (on the right) */}
+                            {!isOwn && (
+                              <button
+                                onClick={() => setReplyingTo(message)}
+                                className="opacity-0 group-hover:opacity-100 self-center ml-2 p-1 rounded-full hover:bg-slate-200 transition-opacity"
+                                title="Responder"
+                              >
+                                <Reply className="h-4 w-4 text-slate-500" />
+                              </button>
+                            )}
                           </div>
                         );
                       })
@@ -657,6 +701,35 @@ export default function Message() {
                   </div>
                 )}
               </ScrollArea>
+
+              {/* Reply Bar - shows when replying to a message */}
+              {replyingTo && selectedConversation.channel !== 'EMAIL' && (
+                <div className="border-t bg-slate-50 px-4 py-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <Reply className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-xs text-purple-600 font-medium">
+                        Respondiendo a {replyingTo.messageDirection === 'INBOUND' ? 'Cliente' : 'ti'}
+                      </span>
+                      <span className="text-xs text-slate-500 truncate">
+                        {replyingTo.mediaUrl
+                          ? (replyingTo.messageType === 'IMAGE' ? '📷 Imagen'
+                            : replyingTo.messageType === 'VIDEO' ? '🎥 Video'
+                              : replyingTo.messageType === 'AUDIO' ? '🎵 Audio'
+                                : '📎 Archivo')
+                          : replyingTo.content}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setReplyingTo(null)}
+                    className="p-1 rounded-full hover:bg-slate-200 flex-shrink-0"
+                    title="Cancelar respuesta"
+                  >
+                    <X className="h-4 w-4 text-slate-500" />
+                  </button>
+                </div>
+              )}
 
               {/* Message Input */}
               <CardContent className="border-t p-3 md:p-4">
