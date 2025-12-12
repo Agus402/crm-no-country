@@ -20,7 +20,7 @@ export interface CreateLeadRequest {
   stage?: string;
   channel?: 'WHATSAPP' | 'EMAIL';
   tagIds?: number[];
-  account?: { id: number };
+  account?: { companyName?: string };
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
