@@ -176,12 +176,35 @@ public class AutomationExecutionService {
 
         if (action.getTemplateId() != null) {
             EmailTemplate template = templateRepository.findById(action.getTemplateId())
-                    .orElseThrow(() -> new RuntimeException("Template not found: " + action.getTemplateId()));
-            subject = renderTemplate(template.getSubject(), lead);
-            body = renderTemplate(template.getBody(), lead);
-        } else {
+                    .orElse(null);
+
+            if (template != null) {
+                subject = renderTemplate(template.getSubject(), lead);
+                body = renderTemplate(template.getBody(), lead);
+            } else {
+                log.warn("Template {} not found, using default welcome email", action.getTemplateId());
+                String[] defaultEmail = getDefaultWelcomeEmail(lead);
+                subject = defaultEmail[0];
+                body = defaultEmail[1];
+            }
+        } else if (action.getCustomMessage() != null && !action.getCustomMessage().isEmpty()) {
             subject = renderTemplate(action.getCustomSubject(), lead);
             body = renderTemplate(action.getCustomMessage(), lead);
+        } else {
+            // No template or custom message - use default welcome email
+            log.info("No template or custom message configured, using default welcome email");
+            String[] defaultEmail = getDefaultWelcomeEmail(lead);
+            subject = defaultEmail[0];
+            body = defaultEmail[1];
+        }
+
+        // Ensure we have content
+        if (subject == null || subject.trim().isEmpty()) {
+            subject = "¡Bienvenido/a!";
+        }
+        if (body == null || body.trim().isEmpty()) {
+            String[] defaultEmail = getDefaultWelcomeEmail(lead);
+            body = defaultEmail[1];
         }
 
         try {
@@ -191,6 +214,31 @@ public class AutomationExecutionService {
             log.error("Failed to send email to {}: {}", lead.getEmail(), e.getMessage());
             throw e;
         }
+    }
+
+    /**
+     * Get default welcome email [subject, body]
+     */
+    private String[] getDefaultWelcomeEmail(CrmLead lead) {
+        String name = lead.getName() != null && !lead.getName().isEmpty()
+                ? lead.getName()
+                : "estimado/a cliente";
+
+        String subject = "¡Bienvenido/a! Gracias por contactarnos";
+
+        String body = String.format(
+                "<html><body style='font-family: Arial, sans-serif;'>" +
+                        "<h2 style='color: #7c3aed;'>¡Bienvenido/a!</h2>" +
+                        "<p>Hola <strong>%s</strong>,</p>" +
+                        "<p>Gracias por ponerte en contacto con nosotros.</p>" +
+                        "<p>Hemos recibido tu información y nos pondremos en contacto contigo pronto.</p>" +
+                        "<p>Si tienes alguna pregunta, no dudes en responder a este correo.</p>" +
+                        "<br>" +
+                        "<p>¡Saludos cordiales!</p>" +
+                        "</body></html>",
+                name);
+
+        return new String[] { subject, body };
     }
 
     private void sendWhatsAppAction(ActionDTO action, CrmLead lead) {
