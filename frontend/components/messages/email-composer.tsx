@@ -66,7 +66,6 @@ export function EmailComposer({
             Underline,
         ],
         content: "",
-        immediatelyRender: false,
         editorProps: {
             attributes: {
                 class:
