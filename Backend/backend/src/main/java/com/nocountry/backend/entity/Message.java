@@ -60,4 +60,9 @@ public class Message {
 
     private LocalDateTime sentAt;
 
+    // Reply-to message support (WhatsApp quoted messages)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reply_to_message_id")
+    private Message replyToMessage;
+
 }

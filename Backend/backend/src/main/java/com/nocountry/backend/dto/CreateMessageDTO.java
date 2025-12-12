@@ -9,25 +9,27 @@ import org.springframework.lang.Nullable;
 
 public record CreateMessageDTO(
 
-        @NotNull(message = "Conversation ID is required.") Long conversationId,
+                @NotNull(message = "Conversation ID is required.") Long conversationId,
 
-        @NotNull(message = "Sender type is required (USER or LEAD).") SenderType senderType,
+                @NotNull(message = "Sender type is required (USER or LEAD).") SenderType senderType,
 
-        @Nullable Long senderLeadId,
+                @Nullable Long senderLeadId,
 
-        @NotNull(message = "Message direction is required.") Direction messageDirection,
+                @NotNull(message = "Message direction is required.") Direction messageDirection,
 
-        @NotNull(message = "Message type is required.") MessageType messageType,
+                @NotNull(message = "Message type is required.") MessageType messageType,
 
-        @NotBlank(message = "Message content is required.") String content,
+                @NotBlank(message = "Message content is required.") String content,
 
-        @Nullable String subject, // Para emails
+                @Nullable String subject, // Para emails
 
-        @Nullable String mediaUrl,
+                @Nullable String mediaUrl,
 
-        @Nullable String mediaFileName,
+                @Nullable String mediaFileName,
 
-        @Nullable String mediaCaption,
+                @Nullable String mediaCaption,
 
-        @Nullable Long emailTemplateId) {
+                @Nullable Long emailTemplateId,
+
+                @Nullable Long replyToMessageId) {
 }

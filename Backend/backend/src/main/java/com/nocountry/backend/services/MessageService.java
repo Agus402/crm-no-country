@@ -33,8 +33,8 @@ public class MessageService {
     // --- CREATE OUTBOUND MESSAGE (POST) ---
     @Transactional
     public MessageDTO createOutboundMessage(CreateMessageDTO dto) {
-        log.info("📨 Creating outbound message: type={}, mediaUrl={}, content={}",
-                dto.messageType(), dto.mediaUrl(), dto.content());
+        log.info("📨 Creating outbound message: type={}, mediaUrl={}, content={}, replyToMessageId={}",
+                dto.messageType(), dto.mediaUrl(), dto.content(), dto.replyToMessageId());
 
         Conversation conversation = conversationRepository.findById(dto.conversationId())
                 .orElseThrow(() -> new RuntimeException("Conversación no encontrada"));
@@ -55,6 +55,18 @@ public class MessageService {
             message.setMediaCaption(dto.mediaCaption());
         }
 
+        // Handle reply-to message
+        String replyToExternalId = null;
+        if (dto.replyToMessageId() != null) {
+            Message replyToMessage = messageRepository.findById(dto.replyToMessageId())
+                    .orElse(null);
+            if (replyToMessage != null) {
+                message.setReplyToMessage(replyToMessage);
+                replyToExternalId = replyToMessage.getExternalMessageId();
+                log.info("📝 Replying to message ID: {} (external: {})", dto.replyToMessageId(), replyToExternalId);
+            }
+        }
+
         Message savedMessage = messageRepository.save(message);
 
         // 2. Si el canal es WhatsApp, llamar a la API externa
@@ -67,7 +79,8 @@ public class MessageService {
             if (dto.messageType() == com.nocountry.backend.enums.MessageType.TEXT) {
                 metaResponse = whatsAppApiService.sendTextMessage(
                         recipientPhoneNumber,
-                        dto.content());
+                        dto.content(),
+                        replyToExternalId);
             } else if (dto.mediaUrl() != null) {
                 // Send media message (IMAGE, VIDEO, AUDIO, DOCUMENT)
                 log.info("📎 Sending media to WhatsApp: type={}, url={}", dto.messageType(), dto.mediaUrl());
@@ -76,7 +89,8 @@ public class MessageService {
                         dto.mediaUrl(),
                         dto.messageType(),
                         dto.mediaCaption(),
-                        dto.mediaFileName());
+                        dto.mediaFileName(),
+                        replyToExternalId);
             } else {
                 metaResponse = java.util.Collections.emptyMap();
             }
@@ -185,7 +199,8 @@ public class MessageService {
             String mediaUrl,
             String mediaFileName,
             String mimeType,
-            String mediaCaption) {
+            String mediaCaption,
+            Message replyToMessage) {
 
         Message message = Message.builder()
                 .conversation(conversation)
@@ -200,10 +215,36 @@ public class MessageService {
                 .mediaCaption(mediaCaption)
                 .externalMessageId(externalMessageId)
                 .sentAt(timestamp)
+                .replyToMessage(replyToMessage)
                 .build();
 
         Message savedMessage = messageRepository.save(message);
 
         return messageMapper.toDTO(savedMessage);
+    }
+
+    // --- SAVE INBOUND MEDIA MESSAGE (FROM WEBHOOK - WITHOUT REPLY - BACKWARDS
+    // COMPAT) ---
+    @Transactional
+    public MessageDTO saveInboundMediaMessage(
+            Conversation conversation,
+            String content,
+            String externalMessageId,
+            LocalDateTime timestamp,
+            com.nocountry.backend.enums.MessageType messageType,
+            String mediaUrl,
+            String mediaFileName,
+            String mimeType,
+            String mediaCaption) {
+        return saveInboundMediaMessage(conversation, content, externalMessageId, timestamp,
+                messageType, mediaUrl, mediaFileName, mimeType, mediaCaption, null);
+    }
+
+    // --- FIND MESSAGE BY EXTERNAL MESSAGE ID (FOR QUOTED MESSAGES) ---
+    public Message findByExternalMessageId(String externalMessageId) {
+        if (externalMessageId == null || externalMessageId.isEmpty()) {
+            return null;
+        }
+        return messageRepository.findByExternalMessageId(externalMessageId).orElse(null);
     }
 }

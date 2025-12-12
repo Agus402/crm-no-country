@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface MessageRepository extends JpaRepository<Message, Long> {
@@ -21,4 +22,10 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
      * con la entidad Message que tiene la relación 'conversation'.
      */
     List<Message> findByConversationId(Long conversationId);
+
+    /**
+     * Busca un mensaje por su ID externo (WhatsApp message_id).
+     * Usado para encontrar mensajes citados en respuestas.
+     */
+    Optional<Message> findByExternalMessageId(String externalMessageId);
 }

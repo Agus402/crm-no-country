@@ -17,6 +17,7 @@ import { websocketService, WebSocketMessage } from "@/services/websocket.service
 import { toast } from "sonner";
 import { NewConversationModal } from "@/components/messages/new-conversation-modal";
 import { MessageMedia } from "@/components/messages/message-media";
+import { QuotedMessage } from "@/components/messages/quoted-message";
 import { EmailComposer } from "@/components/messages/email-composer";
 import { EmailThread } from "@/components/messages/email-thread";
 import { AudioRecorder } from "@/components/messages/audio-recorder";
@@ -628,6 +629,10 @@ export default function Message() {
                                   : 'bg-slate-100 text-slate-900 rounded-tl-none'
                                   }`}
                               >
+                                {/* Show quoted message if replying to another message */}
+                                {message.replyToMessage && (
+                                  <QuotedMessage message={message.replyToMessage} isOwn={isOwn} />
+                                )}
                                 {message.mediaUrl ? (
                                   <MessageMedia
                                     type={message.mediaType || message.messageType}
