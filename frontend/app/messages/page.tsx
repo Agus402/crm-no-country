@@ -665,6 +665,7 @@ export default function Message() {
                                     message={message.replyToMessage}
                                     isOwn={isOwn}
                                     onClick={() => message.replyToMessageId && scrollToMessage(message.replyToMessageId)}
+                                    leadName={selectedConversation.lead?.name}
                                   />
                                 )}
                                 {message.mediaUrl ? (
@@ -709,7 +710,7 @@ export default function Message() {
                     <Reply className="h-4 w-4 text-purple-600 flex-shrink-0" />
                     <div className="flex flex-col min-w-0">
                       <span className="text-xs text-purple-600 font-medium">
-                        Respondiendo a {replyingTo.messageDirection === 'INBOUND' ? 'Cliente' : 'ti'}
+                        Respondiendo a {replyingTo.messageDirection === 'INBOUND' ? (selectedConversation.lead?.name || 'Cliente') : 'ti'}
                       </span>
                       <span className="text-xs text-slate-500 truncate">
                         {replyingTo.mediaUrl
@@ -858,14 +859,18 @@ export default function Message() {
                               // Upload the audio file
                               const uploadResult = await messageService.uploadMedia(audioFile);
 
-                              // Send the audio message
+                              // Send the audio message (include reply reference if replying)
                               await messageService.sendMessage({
                                 conversationId: selectedConversation!.id,
                                 content: '[Audio]',
                                 messageType: 'AUDIO',
                                 mediaUrl: uploadResult.url,
                                 mediaFileName: uploadResult.filename,
+                                replyToMessageId: replyingTo?.id, // Include reply reference
                               });
+
+                              // Clear reply state after sending
+                              setReplyingTo(null);
 
                               // Reload messages and conversations
                               await loadMessages(selectedConversation!.id);

@@ -7,12 +7,13 @@ interface QuotedMessageProps {
     message: ReplyMessageDTO;
     isOwn: boolean; // If the current message is from the user (for styling)
     onClick?: () => void; // Optional click handler for scrolling to quoted message
+    leadName?: string; // Name of the lead/client for display
 }
 
 /**
  * Displays a preview of a quoted/replied-to message
  */
-export function QuotedMessage({ message, isOwn, onClick }: QuotedMessageProps) {
+export function QuotedMessage({ message, isOwn, onClick, leadName }: QuotedMessageProps) {
     const getMessagePreview = () => {
         switch (message.messageType) {
             case 'IMAGE':
@@ -59,7 +60,7 @@ export function QuotedMessage({ message, isOwn, onClick }: QuotedMessageProps) {
         }
     };
 
-    const senderLabel = message.senderType === 'LEAD' ? 'Cliente' : 'Tú';
+    const senderLabel = message.senderType === 'LEAD' ? (leadName || 'Cliente') : 'Tú';
 
     return (
         <div
