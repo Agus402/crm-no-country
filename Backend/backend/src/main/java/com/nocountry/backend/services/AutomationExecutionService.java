@@ -3,17 +3,10 @@ package com.nocountry.backend.services;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nocountry.backend.dto.ActionDTO;
-import com.nocountry.backend.entity.AutomationExecutionQueue;
-import com.nocountry.backend.entity.AutomationRule;
-import com.nocountry.backend.entity.CrmLead;
-import com.nocountry.backend.entity.EmailTemplate;
-import com.nocountry.backend.enums.ActionType;
-import com.nocountry.backend.enums.ExecutionStatus;
-import com.nocountry.backend.enums.TriggerEvent;
+import com.nocountry.backend.entity.*;
+import com.nocountry.backend.enums.*;
 import com.nocountry.backend.events.LeadCreatedEvent;
-import com.nocountry.backend.repository.AutomationExecutionQueueRepository;
-import com.nocountry.backend.repository.AutomationRuleRepository;
-import com.nocountry.backend.repository.EmailTemplateRepository;
+import com.nocountry.backend.repository.*;
 import com.nocountry.backend.services.whatsapp.WhatsAppApiService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +25,8 @@ public class AutomationExecutionService {
     private final AutomationRuleRepository ruleRepository;
     private final AutomationExecutionQueueRepository queueRepository;
     private final EmailTemplateRepository templateRepository;
+    private final ConversationRepository conversationRepository;
+    private final MessageRepository messageRepository;
     private final EmailService emailService;
     private final WhatsAppApiService whatsAppService;
     private final ObjectMapper objectMapper;
@@ -207,9 +202,49 @@ public class AutomationExecutionService {
             body = defaultEmail[1];
         }
 
+        final String finalSubject = subject;
+        final String finalBody = body;
+
         try {
             emailService.sendHtmlEmail(lead.getEmail(), subject, body);
             log.info("Email sent to {} via automation", lead.getEmail());
+
+            // Create or update EMAIL conversation (separate from WhatsApp)
+            Conversation conversation = conversationRepository.findByLeadIdAndChannel(lead.getId(), Channel.EMAIL)
+                    .orElseGet(() -> {
+                        Conversation c = Conversation.builder()
+                                .crm_lead(lead)
+                                .channel(Channel.EMAIL)
+                                .assignedUser(lead.getOwner())
+                                .startedAt(LocalDateTime.now())
+                                .lastMessageAt(LocalDateTime.now())
+                                .lastMessageText(truncateText(finalBody, 200))
+                                .lastMessageDirection(Direction.OUTBOUND)
+                                .status(ConversationStatus.OPEN)
+                                .unreadCount(0)
+                                .build();
+                        return conversationRepository.save(c);
+                    });
+
+            // Update conversation
+            conversation.setLastMessageAt(LocalDateTime.now());
+            conversation.setLastMessageText(truncateText(body, 200));
+            conversation.setLastMessageDirection(Direction.OUTBOUND);
+            conversationRepository.save(conversation);
+
+            // Save message
+            Message message = Message.builder()
+                    .conversation(conversation)
+                    .senderType(SenderType.USER)
+                    .senderLeadId(null)
+                    .messageDirection(Direction.OUTBOUND)
+                    .messageType(MessageType.EMAIL)
+                    .content(body)
+                    .sentAt(LocalDateTime.now())
+                    .build();
+            messageRepository.save(message);
+
+            log.info("Conversation {} updated with automation email", conversation.getId());
         } catch (Exception e) {
             log.error("Failed to send email to {}: {}", lead.getEmail(), e.getMessage());
             throw e;
@@ -280,9 +315,48 @@ public class AutomationExecutionService {
             message = getDefaultWelcomeMessage(lead);
         }
 
+        final String finalMessage = message;
+
         try {
             whatsAppService.sendTextMessage(lead.getPhone(), message);
             log.info("WhatsApp sent to {} via automation", lead.getPhone());
+
+            // Create or update WHATSAPP conversation (separate from Email)
+            Conversation conversation = conversationRepository.findByLeadIdAndChannel(lead.getId(), Channel.WHATSAPP)
+                    .orElseGet(() -> {
+                        Conversation c = Conversation.builder()
+                                .crm_lead(lead)
+                                .channel(Channel.WHATSAPP)
+                                .assignedUser(lead.getOwner())
+                                .startedAt(LocalDateTime.now())
+                                .lastMessageAt(LocalDateTime.now())
+                                .lastMessageText(truncateText(finalMessage, 200))
+                                .lastMessageDirection(Direction.OUTBOUND)
+                                .status(ConversationStatus.OPEN)
+                                .unreadCount(0)
+                                .build();
+                        return conversationRepository.save(c);
+                    });
+
+            // Update conversation
+            conversation.setLastMessageAt(LocalDateTime.now());
+            conversation.setLastMessageText(truncateText(message, 200));
+            conversation.setLastMessageDirection(Direction.OUTBOUND);
+            conversationRepository.save(conversation);
+
+            // Save message
+            Message msg = Message.builder()
+                    .conversation(conversation)
+                    .senderType(SenderType.USER)
+                    .senderLeadId(null)
+                    .messageDirection(Direction.OUTBOUND)
+                    .messageType(MessageType.TEXT)
+                    .content(message)
+                    .sentAt(LocalDateTime.now())
+                    .build();
+            messageRepository.save(msg);
+
+            log.info("Conversation {} updated with automation WhatsApp", conversation.getId());
         } catch (Exception e) {
             log.error("Failed to send WhatsApp to {}: {}", lead.getPhone(), e.getMessage());
             throw e;
@@ -313,5 +387,15 @@ public class AutomationExecutionService {
                         "Si tienes alguna pregunta, no dudes en escribirnos.\n\n" +
                         "¡Saludos!",
                 name);
+    }
+
+    private String truncateText(String text, int maxLength) {
+        if (text == null)
+            return "";
+        // Strip HTML tags for preview
+        String plainText = text.replaceAll("<[^>]*>", "").trim();
+        if (plainText.length() <= maxLength)
+            return plainText;
+        return plainText.substring(0, maxLength - 3) + "...";
     }
 }
