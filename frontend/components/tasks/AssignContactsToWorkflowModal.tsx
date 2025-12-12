@@ -43,7 +43,7 @@ export default function AssignContactsToWorkflowModal({
           console.log("Contactos cargados:", contactsData.length);
           setContacts(contactsData);
           if (contactsData.length === 0) {
-            console.warn("No se encontraron contactos. Asegúrate de tener contactos creados en la sección de Contactos.");
+            setError("No se encontraron contactos. Ve a la sección de Contactos para crear algunos contactos primero.");
           }
         } catch (error: any) {
           console.error("Error loading contacts:", error);
@@ -141,7 +141,9 @@ export default function AssignContactsToWorkflowModal({
                         const contactsData = await contactService.getAll();
                         setContacts(contactsData);
                         if (contactsData.length === 0) {
-                          setError("No se encontraron contactos. Asegúrate de tener contactos creados.");
+                          setError("No se encontraron contactos. Ve a la sección de Contactos para crear algunos contactos primero.");
+                        } else {
+                          setError(null);
                         }
                       } catch (error: any) {
                         const errorMessage = error?.message || "Error al cargar los contactos. Por favor, intenta nuevamente.";

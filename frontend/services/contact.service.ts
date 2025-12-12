@@ -91,17 +91,25 @@ const mapChannelToFrontend = (channel: string): string => {
   return mapping[channel] || channel;
 };
 
-const handleError = async (response: Response, defaultMessage: string): Promise<never> => {
-  const errorBody = await response.text();
+const handleError = async (response: Response | string, defaultMessage: string): Promise<never> => {
   let errorMessage = defaultMessage;
-  try {
-    const errorJson = JSON.parse(errorBody);
-    if (errorJson.message) {
-      errorMessage = errorJson.message;
+  
+  // If response is a string, use it directly
+  if (typeof response === 'string') {
+    errorMessage = response;
+  } else {
+    // If response is a Response object, read it
+    const errorBody = await response.text();
+    try {
+      const errorJson = JSON.parse(errorBody);
+      if (errorJson.message) {
+        errorMessage = errorJson.message;
+      }
+    } catch {
+      if (errorBody) errorMessage = errorBody;
     }
-  } catch {
-    if (errorBody) errorMessage = errorBody;
   }
+  
   throw new Error(errorMessage);
 };
 
@@ -126,7 +134,7 @@ export const contactService = {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Error response from /crmleads:", response.status, errorText);
-        await handleError(response, "Error al obtener los contactos");
+        await handleError(errorText, "Error al obtener los contactos");
       }
 
       const data = await response.json();
@@ -159,7 +167,8 @@ export const contactService = {
     });
 
     if (!response.ok) {
-      await handleError(response, "Error al obtener el contacto");
+      const errorText = await response.text();
+      await handleError(errorText, "Error al obtener el contacto");
     }
 
     const data = await response.json();
@@ -187,7 +196,8 @@ export const contactService = {
     });
 
     if (!response.ok) {
-      await handleError(response, "Error al crear el contacto");
+      const errorText = await response.text();
+      await handleError(errorText, "Error al crear el contacto");
     }
 
     const data = await response.json();
@@ -215,8 +225,9 @@ export const contactService = {
     });
 
     if (!response.ok) {
-      await handleError(response, "Error al actualizar el contacto");
-        }
+      const errorText = await response.text();
+      await handleError(errorText, "Error al actualizar el contacto");
+    }
 
     const data = await response.json();
     return {
@@ -236,7 +247,8 @@ export const contactService = {
     });
 
     if (!response.ok) {
-      await handleError(response, "Error al eliminar el contacto");
+      const errorText = await response.text();
+      await handleError(errorText, "Error al eliminar el contacto");
     }
   },
 
@@ -250,7 +262,8 @@ export const contactService = {
     });
 
     if (!response.ok) {
-      await handleError(response, "Error al obtener los contactos eliminados");
+      const errorText = await response.text();
+      await handleError(errorText, "Error al obtener los contactos eliminados");
     }
 
     const data = await response.json();

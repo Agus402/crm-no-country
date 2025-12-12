@@ -118,6 +118,45 @@ export default function TasksPage() {
         const rules = await automationRuleService.getAll();
         setAutomationRules(rules);
         
+        // Check if WhatsApp welcome flow exists, if not create it
+        const whatsappWelcomeExists = rules.some(rule => {
+          const nameLower = rule.name.toLowerCase();
+          const hasWelcome = nameLower.includes("bienvenida") || nameLower.includes("welcome");
+          const hasWhatsApp = nameLower.includes("whatsapp") || rule.actions.includes("send-whatsapp");
+          const isLeadCreated = rule.triggerEvent === "LEAD_CREATED";
+          return hasWelcome && hasWhatsApp && isLeadCreated;
+        });
+        
+        // Create WhatsApp welcome flow if it doesn't exist (only if no rules exist to avoid duplicates)
+        if (!whatsappWelcomeExists && rules.length === 0) {
+          // Auto-create WhatsApp welcome flow
+          try {
+            const welcomeRule: CreateUpdateAutomationRuleDTO = {
+              name: "Bienvenida WhatsApp - Nuevos Leads",
+              triggerEvent: "LEAD_CREATED",
+              triggerValue: null,
+              actions: JSON.stringify({
+                waitDays: 0,
+                waitHours: 0,
+                actions: [
+                  {
+                    type: "send-whatsapp",
+                    template: "welcome"
+                  }
+                ]
+              }),
+              isActive: true,
+            };
+            
+            const createdRule = await automationRuleService.create(welcomeRule);
+            rules.push(createdRule);
+            console.log("Flujo de bienvenida WhatsApp creado automáticamente");
+          } catch (createErr) {
+            console.error("Error creando flujo de bienvenida automático:", createErr);
+            // Don't fail the whole load if auto-create fails
+          }
+        }
+        
         // Load contact counts for each rule
         const counts: Record<string, number> = {};
         for (const rule of rules) {

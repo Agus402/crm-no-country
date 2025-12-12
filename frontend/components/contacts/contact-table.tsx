@@ -1,4 +1,4 @@
-import { MessageCircle, Mail, MoreVertical, Pencil, Trash, FileDown } from "lucide-react";
+import { MessageCircle, Mail, MoreVertical, Pencil, Trash, FileDown, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -20,9 +20,12 @@ interface ContactTableProps {
   contacts: any[];
   onEdit: (contact: any) => void;
   onDelete?: (id: number) => void;
+  onWhatsApp?: (contact: any) => void;
+  onEmail?: (contact: any) => void;
+  onCreateTask?: (contact: any) => void;
 }
 
-export function ContactTable({ contacts, onEdit, onDelete }: ContactTableProps) {
+export function ContactTable({ contacts, onEdit, onDelete, onWhatsApp, onEmail, onCreateTask }: ContactTableProps) {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       <div className="px-6 py-4  border-gray-200">
@@ -51,8 +54,24 @@ export function ContactTable({ contacts, onEdit, onDelete }: ContactTableProps) 
 
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex items-center justify-end gap-2">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"><MessageCircle className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"><Mail className="h-4 w-4" /></Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                      onClick={() => onWhatsApp && onWhatsApp(contact)}
+                      title="Abrir WhatsApp"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      onClick={() => onEmail && onEmail(contact)}
+                      title="Abrir Email"
+                    >
+                      <Mail className="h-4 w-4" />
+                    </Button>
 
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -64,6 +83,12 @@ export function ContactTable({ contacts, onEdit, onDelete }: ContactTableProps) 
                         <DropdownMenuItem onClick={() => onEdit(contact)}>
                           <Pencil className="mr-2 h-4 w-4" /> Editar contacto
                         </DropdownMenuItem>
+
+                        {onCreateTask && (
+                          <DropdownMenuItem onClick={() => onCreateTask(contact)}>
+                            <CheckSquare className="mr-2 h-4 w-4" /> Crear tarea
+                          </DropdownMenuItem>
+                        )}
 
                         <DropdownMenuItem onClick={() => generateContactPDF(contact)}>
                           <FileDown className="mr-2 h-4 w-4" /> Exportar a PDF

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -69,6 +70,7 @@ const formatMessagePreview = (text: string | null): string => {
 
 export default function Message() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
 
   // Estado de datos
   const [conversations, setConversations] = useState<ConversationDTO[]>([]);
@@ -172,6 +174,19 @@ export default function Message() {
     try {
       const data = await conversationService.getAll();
       setConversations(data);
+
+      // Check if there's a conversationId in URL params
+      const conversationIdParam = searchParams.get('conversationId');
+      if (conversationIdParam) {
+        const conversationId = parseInt(conversationIdParam, 10);
+        const foundConversation = data.find(c => c.id === conversationId);
+        if (foundConversation) {
+          setSelectedConversation(foundConversation);
+          setShowMobileChat(true);
+          hasSelectedInitialRef.current = true;
+          return;
+        }
+      }
 
       // Solo auto-seleccionar en la primera carga si no hay conversación seleccionada
       if (allowAutoSelect && !hasSelectedInitialRef.current && data.length > 0) {
