@@ -15,9 +15,20 @@ interface MessageMediaProps {
 // Custom Audio Player Component
 function AudioPlayer({ url, isOwn }: { url: string; isOwn: boolean }) {
     const audioRef = useRef<HTMLAudioElement>(null);
+    const animationRef = useRef<number>(0);
+    const isPlayingRef = useRef(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
+
+    // Animation loop for smooth progress - uses ref to check playing state
+    const animate = () => {
+        const audio = audioRef.current;
+        if (audio && isPlayingRef.current) {
+            setCurrentTime(audio.currentTime);
+            animationRef.current = requestAnimationFrame(animate);
+        }
+    };
 
     useEffect(() => {
         const audio = audioRef.current;
@@ -27,33 +38,40 @@ function AudioPlayer({ url, isOwn }: { url: string; isOwn: boolean }) {
             setDuration(audio.duration);
         };
 
-        const handleTimeUpdate = () => {
-            setCurrentTime(audio.currentTime);
-        };
-
         const handleEnded = () => {
+            isPlayingRef.current = false;
             setIsPlaying(false);
+            cancelAnimationFrame(animationRef.current);
             // Ensure progress shows 100% when ended
             if (audio.duration) {
                 setCurrentTime(audio.duration);
             }
         };
 
-        const handlePlay = () => setIsPlaying(true);
-        const handlePause = () => setIsPlaying(false);
+        const handlePlay = () => {
+            isPlayingRef.current = true;
+            setIsPlaying(true);
+            animationRef.current = requestAnimationFrame(animate);
+        };
+
+        const handlePause = () => {
+            isPlayingRef.current = false;
+            setIsPlaying(false);
+            cancelAnimationFrame(animationRef.current);
+            setCurrentTime(audio.currentTime);
+        };
 
         audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-        audio.addEventListener('timeupdate', handleTimeUpdate);
         audio.addEventListener('ended', handleEnded);
         audio.addEventListener('play', handlePlay);
         audio.addEventListener('pause', handlePause);
 
         return () => {
             audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-            audio.removeEventListener('timeupdate', handleTimeUpdate);
             audio.removeEventListener('ended', handleEnded);
             audio.removeEventListener('play', handlePlay);
             audio.removeEventListener('pause', handlePause);
+            cancelAnimationFrame(animationRef.current);
         };
     }, []);
 
@@ -120,12 +138,8 @@ function AudioPlayer({ url, isOwn }: { url: string; isOwn: boolean }) {
                     onClick={handleProgressClick}
                 >
                     <div
-                        className={`h-full rounded-full ${isOwn ? 'bg-white' : 'bg-slate-600'
-                            }`}
-                        style={{
-                            width: `${progress}%`,
-                            transition: 'width 0.1s linear'
-                        }}
+                        className={`h-full rounded-full ${isOwn ? 'bg-white' : 'bg-slate-600'}`}
+                        style={{ width: `${progress}%` }}
                     />
                 </div>
 
