@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Plus, MessageCircle, Loader2, UserPlus, Mail } from "lucide-react";
 import { leadService, LeadData } from "@/services/lead.service";
 import { conversationService, ConversationDTO } from "@/services/conversation.service";
+import { contactService } from "@/services/contact.service";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 
@@ -47,6 +48,7 @@ export function NewConversationModal({
         name: "",
         phone: "",
         email: "",
+        companyName: "",
     });
 
     // Cargar leads al abrir el modal
@@ -102,6 +104,10 @@ export function NewConversationModal({
             return;
         }
 
+        startConversationWithLead(lead);
+    };
+
+    const startConversationWithLead = async (lead: LeadData) => {
         try {
             setCreatingConversation(true);
 
@@ -126,7 +132,20 @@ export function NewConversationModal({
                 assignedUserId: user?.id,
             });
             onConversationCreated(conversation);
+
+            // Actualizar lista local de leads si no estaba
+            setLeads(prev => {
+                if (!prev.find(l => l.id === lead.id)) {
+                    return [lead, ...prev];
+                }
+                return prev;
+            });
+
             onOpenChange(false);
+
+            // Reset forms
+            setNewLeadForm({ name: "", phone: "", email: "", companyName: "" });
+
             toast.success("Conversación iniciada", {
                 description: `Ahora puedes ${selectedChannel === "WHATSAPP" ? "chatear" : "enviar emails"} a ${lead.name}`,
             });
@@ -136,6 +155,7 @@ export function NewConversationModal({
             });
         } finally {
             setCreatingConversation(false);
+            setCreatingLead(false);
         }
     };
 
@@ -147,52 +167,84 @@ export function NewConversationModal({
             return;
         }
 
-        // Validar según el canal seleccionado
+        // Validaciones requeridas
         if (selectedChannel === "WHATSAPP" && !newLeadForm.phone.trim()) {
-            toast.error("Teléfono requerido", {
-                description: "El número de teléfono es necesario para WhatsApp",
-            });
+            toast.error("Teléfono requerido", { description: "Para WhatsApp se requiere teléfono" });
             return;
         }
-        if (selectedChannel === "EMAIL" && !newLeadForm.email.trim()) {
-            toast.error("Email requerido", {
-                description: "El email es necesario para esta conversación",
-            });
+
+        // Email siempre requerido ahora
+        if (!newLeadForm.email.trim()) {
+            toast.error("Email requerido", { description: "El email es obligatorio para crear el contacto" });
             return;
         }
 
         try {
             setCreatingLead(true);
 
-            // 1. Crear el lead
-            const newLead = await leadService.create({
+            // Validar existencia previa usando contactService
+            // NOTA: contactService.getAll acepta filtros (name, email)
+            // Podríamos implementar una búsqueda mejor, pero por ahora esto funciona
+
+            // Intentamos crear directamente. Si es duplicado, el backend nos dirá.
+
+            const leadData: any = {
                 name: newLeadForm.name.trim(),
                 phone: newLeadForm.phone.trim() || undefined,
-                email: newLeadForm.email.trim() || undefined,
+                email: newLeadForm.email.trim(),
                 channel: selectedChannel,
-            });
+                tagIds: [], // Enviar array vacío explícitamente por si acaso
+                // Por ahora no enviamos account hasta tener claro el endpoint correcto
+                // account: newLeadForm.companyName.trim() ? { companyName: newLeadForm.companyName.trim() } : undefined
+            };
 
-            // 2. Crear la conversación
-            const conversation = await conversationService.create({
-                leadId: newLead.id,
-                channel: selectedChannel,
-                assignedUserId: user?.id,
-            });
+            let newLead;
+            try {
+                // Usamos contactService que está más completo
+                newLead = await contactService.create(leadData);
+            } catch (error: any) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
 
-            onConversationCreated(conversation);
-            onOpenChange(false);
+                // Si es error de duplicado (ID)
+                if (errorMessage.includes("already exists") || errorMessage.includes("ya existe") || errorMessage.includes("constraint")) {
+                    toast.info("El contacto ya existe, conectando...", {
+                        description: "Detectamos que el contacto ya existe en la base de datos."
+                    });
 
-            // Resetear form
-            setNewLeadForm({ name: "", phone: "", email: "" });
+                    // Buscar el existente
+                    const allContacts = await contactService.getAll();
+                    const existing = allContacts.find(c =>
+                        (leadData.email && c.email === leadData.email) ||
+                        (leadData.phone && c.phone === leadData.phone)
+                    );
 
-            toast.success("Contacto y conversación creados", {
-                description: `Ahora puedes ${selectedChannel === "WHATSAPP" ? "chatear" : "enviar emails"} a ${newLead.name}`,
-            });
-        } catch (error) {
+                    if (existing) {
+                        newLead = existing; // Usar el existente
+                    } else {
+                        throw new Error("El contacto existe pero no pudimos encontrarlo. Por favor búscalo manualmente.");
+                    }
+                } else {
+                    throw error; // Relanzar otros errores
+                }
+            }
+
+            if (newLead) {
+                // Adapt CrmLeadDTO to LeadData (handle nulls)
+                const leadForState: LeadData = {
+                    ...newLead,
+                    phone: newLead.phone || "",
+                    status: newLead.status || "ACTIVE_LEAD",
+                    account: newLead.account
+                };
+                await startConversationWithLead(leadForState);
+            }
+
+        } catch (error: any) {
+            console.error("Error creating lead:", error);
             toast.error("Error al crear contacto", {
-                description: error instanceof Error ? error.message : "Intenta nuevamente",
+                description: `Detalle: ${error instanceof Error ? error.message : String(error)}`,
+                duration: 5000
             });
-        } finally {
             setCreatingLead(false);
         }
     };
@@ -200,14 +252,14 @@ export function NewConversationModal({
     const resetAndClose = () => {
         setSearch("");
         setActiveTab("select");
-        setNewLeadForm({ name: "", phone: "", email: "" });
+        setNewLeadForm({ name: "", phone: "", email: "", companyName: "" });
         setSelectedChannel("WHATSAPP");
         onOpenChange(false);
     };
 
     return (
         <Dialog open={open} onOpenChange={resetAndClose}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="w-[95vw] sm:max-w-md gap-4">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         {selectedChannel === "WHATSAPP" ? (
@@ -227,8 +279,8 @@ export function NewConversationModal({
                     <button
                         onClick={() => setSelectedChannel("WHATSAPP")}
                         className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${selectedChannel === "WHATSAPP"
-                                ? "bg-white text-green-700 shadow-sm"
-                                : "text-slate-600 hover:text-slate-900"
+                            ? "bg-white text-green-700 shadow-sm"
+                            : "text-slate-600 hover:text-slate-900"
                             }`}
                     >
                         <MessageCircle className="h-4 w-4" />
@@ -237,8 +289,8 @@ export function NewConversationModal({
                     <button
                         onClick={() => setSelectedChannel("EMAIL")}
                         className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${selectedChannel === "EMAIL"
-                                ? "bg-white text-blue-700 shadow-sm"
-                                : "text-slate-600 hover:text-slate-900"
+                            ? "bg-white text-blue-700 shadow-sm"
+                            : "text-slate-600 hover:text-slate-900"
                             }`}
                     >
                         <Mail className="h-4 w-4" />
@@ -269,7 +321,7 @@ export function NewConversationModal({
                             />
                         </div>
 
-                        <ScrollArea className="h-64">
+                        <ScrollArea className="h-[50vh] sm:h-64">
                             {loadingLeads ? (
                                 <div className="flex items-center justify-center py-8">
                                     <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
@@ -348,7 +400,7 @@ export function NewConversationModal({
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="email">Email (opcional)</Label>
+                                <Label htmlFor="email">Email *</Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -359,7 +411,6 @@ export function NewConversationModal({
                                     }
                                 />
                             </div>
-
                             <div className="flex gap-2 pt-2">
                                 <Button
                                     type="button"

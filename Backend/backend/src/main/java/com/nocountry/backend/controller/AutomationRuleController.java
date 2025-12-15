@@ -1,5 +1,6 @@
 package com.nocountry.backend.controller;
 
+import com.nocountry.backend.dto.AssignContactsDTO;
 import com.nocountry.backend.dto.AutomationRuleDTO;
 import com.nocountry.backend.dto.CreateUpdateAutomationRuleDTO;
 import com.nocountry.backend.entity.User;
@@ -15,11 +16,13 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/automation-rules")
 @RequiredArgsConstructor
-// Asumo que solo usuarios autenticados (y quizás con rol ADMIN) pueden manejar reglas
+// Asumo que solo usuarios autenticados (y quizás con rol ADMIN) pueden manejar
+// reglas
 @PreAuthorize("isAuthenticated()")
 public class AutomationRuleController {
 
@@ -54,7 +57,8 @@ public class AutomationRuleController {
     // R: Obtener por ID
     @GetMapping("/{id}")
     public ResponseEntity<AutomationRuleDTO> getById(@PathVariable Long id) {
-        // Se recomienda agregar lógica de seguridad para verificar la propiedad de la regla
+        // Se recomienda agregar lógica de seguridad para verificar la propiedad de la
+        // regla
         return ResponseEntity.ok(ruleService.findById(id));
     }
 
@@ -75,6 +79,23 @@ public class AutomationRuleController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
         ruleService.deleteRule(id);
+    }
+
+    // Assign contacts to an automation rule
+    @PostMapping("/{id}/contacts")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> assignContacts(
+            @PathVariable Long id,
+            @RequestBody AssignContactsDTO dto) {
+        ruleService.assignContacts(id, dto.getContactIds());
+        return ResponseEntity.ok().build();
+    }
+
+    // Get assigned contacts for an automation rule
+    @GetMapping("/{id}/contacts")
+    public ResponseEntity<Map<String, List<Long>>> getAssignedContacts(@PathVariable Long id) {
+        List<Long> contactIds = ruleService.getAssignedContacts(id);
+        return ResponseEntity.ok(Map.of("contactIds", contactIds));
     }
 
 }

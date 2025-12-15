@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Search, UserPlus, Filter, Download, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ContactTable } from "@/components/contacts/contact-table";
@@ -9,7 +10,10 @@ import { AddContactModal, NewContactData } from "@/components/contacts/add-conta
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { contactService, CrmLeadDTO } from "@/services/contact.service";
 import { tagService, TagData } from "@/services/tag.service";
+import { conversationService } from "@/services/conversation.service";
+import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import { generateContactsListPDF } from "@/utils/pdf-generator";
 
 const STAGES = ["All Stages", "Active Lead", "Follow-up", "Client"];
 
@@ -40,6 +44,8 @@ const getInitials = (name: string): string => {
 };
 
 export default function ContactPage() {
+  const router = useRouter();
+  const { user } = useAuth();
   const [contacts, setContacts] = useState<CrmLeadDTO[]>([]);
   const [allTags, setAllTags] = useState<TagData[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -150,6 +156,93 @@ export default function ContactPage() {
     }
   };
 
+  // Handle WhatsApp action - create or find conversation and navigate to messages
+  const handleWhatsAppAction = async (contact: CrmLeadDTO) => {
+    if (!contact.phone) {
+      toast.error("Este contacto no tiene número de teléfono", {
+        description: "Necesitas agregar un teléfono para usar WhatsApp"
+      });
+      return;
+    }
+
+    try {
+      // Try to find existing conversation
+      const existingConversation = await conversationService.findByLeadId(contact.id);
+      
+      if (existingConversation && existingConversation.channel === "WHATSAPP") {
+        // Navigate to messages page with conversation selected
+        router.push(`/messages?conversationId=${existingConversation.id}`);
+        toast.success("Conversación abierta", {
+          description: `Abriendo conversación de WhatsApp con ${contact.name}`
+        });
+      } else {
+        // Create new conversation
+        const newConversation = await conversationService.create({
+          leadId: contact.id,
+          channel: "WHATSAPP",
+          assignedUserId: user?.id,
+        });
+        router.push(`/messages?conversationId=${newConversation.id}`);
+        toast.success("Conversación creada", {
+          description: `Nueva conversación de WhatsApp con ${contact.name}`
+        });
+      }
+    } catch (error) {
+      console.error("Error handling WhatsApp action:", error);
+      toast.error("Error al crear conversación", {
+        description: error instanceof Error ? error.message : "No se pudo crear la conversación"
+      });
+    }
+  };
+
+  // Handle Email action - create or find conversation and navigate to messages
+  const handleEmailAction = async (contact: CrmLeadDTO) => {
+    if (!contact.email) {
+      toast.error("Este contacto no tiene email", {
+        description: "Necesitas agregar un email para enviar correos"
+      });
+      return;
+    }
+
+    try {
+      // Try to find existing conversation
+      const existingConversation = await conversationService.findByLeadId(contact.id);
+      
+      if (existingConversation && existingConversation.channel === "EMAIL") {
+        // Navigate to messages page with conversation selected
+        router.push(`/messages?conversationId=${existingConversation.id}`);
+        toast.success("Conversación abierta", {
+          description: `Abriendo conversación de Email con ${contact.name}`
+        });
+      } else {
+        // Create new conversation
+        const newConversation = await conversationService.create({
+          leadId: contact.id,
+          channel: "EMAIL",
+          assignedUserId: user?.id,
+        });
+        router.push(`/messages?conversationId=${newConversation.id}`);
+        toast.success("Conversación creada", {
+          description: `Nueva conversación de Email con ${contact.name}`
+        });
+      }
+    } catch (error) {
+      console.error("Error handling Email action:", error);
+      toast.error("Error al crear conversación", {
+        description: error instanceof Error ? error.message : "No se pudo crear la conversación"
+      });
+    }
+  };
+
+  // Handle Create Task action - navigate to tasks page with contact pre-selected
+  const handleCreateTask = (contact: CrmLeadDTO) => {
+    // Navigate to tasks page with contact ID in query params
+    router.push(`/tasks?contactId=${contact.id}&contactName=${encodeURIComponent(contact.name)}`);
+    toast.info("Redirigiendo a crear tarea", {
+      description: `Se abrirá el formulario de tarea para ${contact.name}`
+    });
+  };
+
   const filteredContacts = contacts
     .map((contact) => {
       const mappedTags = getTagsForContact(contact.tagIds);
@@ -167,6 +260,50 @@ export default function ContactPage() {
       const matchesStage = stageFilter === "All Stages" || contact.stage === stageFilter;
       return matchesSearch && matchesStage;
     });
+
+  const handleExportAll = () => {
+    if (filteredContacts.length === 0) {
+      toast.error("No hay contactos para exportar");
+      return;
+    }
+    generateContactsListPDF(filteredContacts);
+    toast.success("Lista de contactos exportada");
+  };
+
+  const handleExportCSV = () => {
+    if (filteredContacts.length === 0) {
+      toast.error("No hay contactos para exportar");
+      return;
+    }
+
+    const headers = ["ID", "Nombre", "Teléfono", "Email", "Canal", "Etapa", "Etiquetas", "Fecha Creación"];
+    let csvContent = headers.join(",") + "\n";
+
+    filteredContacts.forEach(contact => {
+      const tags = contact.tags?.map(t => t.name).join(";") || "";
+      const row = [
+        contact.id,
+        `"${contact.name || ''}"`,
+        `"${contact.phone || ''}"`,
+        `"${contact.email || ''}"`,
+        contact.channel,
+        contact.stage,
+        `"${tags}"`,
+        contact.createdAt ? new Date(contact.createdAt).toLocaleDateString() : ''
+      ];
+      csvContent += row.join(",") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `contactos_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    toast.success("Lista de contactos exportada a CSV");
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -198,7 +335,23 @@ export default function ContactPage() {
               <DropdownMenuContent align="end" className="w-48"><DropdownMenuLabel>Filtrar por etapa</DropdownMenuLabel><DropdownMenuSeparator />{STAGES.map((stage) => (<DropdownMenuItem key={stage} onClick={() => setStageFilter(stage)} className="justify-between">{stage}{stageFilter === stage && <Check className="h-4 w-4 text-purple-600" />}</DropdownMenuItem>))}</DropdownMenuContent>
             </DropdownMenu>
 
-            <Button variant="outline"><Download className="h-4 w-4 mr-2" /> Exportar</Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="h-4 w-4 mr-2" /> Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Opciones de exportación</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleExportAll}>
+                  Exportar a PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportCSV}>
+                  Exportar a CSV
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
@@ -211,13 +364,28 @@ export default function ContactPage() {
         ) : (
           <>
             <div className="hidden xl:block">
-              <ContactTable contacts={filteredContacts} onEdit={handleOpenEdit} onDelete={handleDeleteContact} />
+              <ContactTable 
+                contacts={filteredContacts} 
+                onEdit={handleOpenEdit} 
+                onDelete={handleDeleteContact}
+                onWhatsApp={handleWhatsAppAction}
+                onEmail={handleEmailAction}
+                onCreateTask={handleCreateTask}
+              />
             </div>
             <div className="xl:hidden space-y-4">
               <p className="text-sm text-gray-500 mb-2">Mostrando {filteredContacts.length} contactos {stageFilter !== "All Stages" && ` en ${stageFilter}`}</p>
               <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                 {filteredContacts.map(contact => (
-                  <ContactCard key={contact.id} contact={contact as any} onEdit={handleOpenEdit} onDelete={handleDeleteContact} />
+                  <ContactCard 
+                    key={contact.id} 
+                    contact={contact as any} 
+                    onEdit={handleOpenEdit} 
+                    onDelete={handleDeleteContact}
+                    onWhatsApp={handleWhatsAppAction}
+                    onEmail={handleEmailAction}
+                    onCreateTask={handleCreateTask}
+                  />
                 ))}
                 {filteredContacts.length === 0 && <div className="col-span-full text-center py-12 text-gray-500">No se encontraron contactos que coincidan con tus filtros.</div>}
               </div>

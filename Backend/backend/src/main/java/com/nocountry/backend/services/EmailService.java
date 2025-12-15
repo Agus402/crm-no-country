@@ -1,10 +1,16 @@
 package com.nocountry.backend.services;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nocountry.backend.dto.SendEmailRequest;
 import com.nocountry.backend.entity.*;
+import com.nocountry.backend.enums.IntegrationType;
 import com.nocountry.backend.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -13,9 +19,11 @@ import jakarta.mail.internet.MimeMessage;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Properties;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class EmailService {
 
     private final EmailTemplateRepository emailTemplateRepository;
@@ -23,7 +31,12 @@ public class EmailService {
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
-    private final JavaMailSender javaMailSender;
+    private final IntegrationConfigRepository integrationConfigRepository;
+    private final ObjectMapper objectMapper;
+
+    // JavaMailSender es opcional - puede venir de Spring o crearse dinámicamente
+    @Autowired(required = false)
+    private JavaMailSender springMailSender;
 
     /**
      * Enviar email; si viene templateId usa esa plantilla (sino usa subject/body).
@@ -115,8 +128,16 @@ public class EmailService {
      * @param references Lista de Message-IDs del thread (puede ser null)
      */
     public void sendHtmlEmail(String to, String subject, String htmlBody, String inReplyTo, String references) {
+        JavaMailSender mailSender = getMailSender();
+
+        if (mailSender == null) {
+            throw new RuntimeException(
+                    "Email service is not configured. " +
+                            "Please configure email credentials in Settings > Integrations > Email.");
+        }
+
         try {
-            MimeMessage mime = javaMailSender.createMimeMessage();
+            MimeMessage mime = mailSender.createMimeMessage();
 
             // Agregar headers de threading si existen
             if (inReplyTo != null && !inReplyTo.isEmpty()) {
@@ -130,9 +151,69 @@ public class EmailService {
             helper.setTo(to);
             helper.setSubject(subject == null ? "" : subject);
             helper.setText(htmlBody == null ? "" : htmlBody, true);
-            javaMailSender.send(mime);
+            mailSender.send(mime);
         } catch (Exception e) {
             throw new RuntimeException("Failed to send email: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Get JavaMailSender - first try from DB config, then from Spring config
+     */
+    private JavaMailSender getMailSender() {
+        // Try to get config from database first
+        try {
+            IntegrationConfig emailConfig = integrationConfigRepository
+                    .findByIntegrationType(IntegrationType.EMAIL)
+                    .orElse(null);
+
+            if (emailConfig != null && emailConfig.isConnected() && emailConfig.getCredentials() != null) {
+                return createMailSenderFromConfig(emailConfig);
+            }
+        } catch (Exception e) {
+            log.warn("Error loading email config from DB: {}", e.getMessage());
+        }
+
+        // Fallback to Spring auto-configured sender
+        return springMailSender;
+    }
+
+    /**
+     * Create JavaMailSender from IntegrationConfig credentials
+     */
+    private JavaMailSender createMailSenderFromConfig(IntegrationConfig config) {
+        try {
+            JsonNode credentials = objectMapper.readTree(config.getCredentials());
+
+            String username = credentials.has("username") ? credentials.get("username").asText() : null;
+            String password = credentials.has("password") ? credentials.get("password").asText() : null;
+            String host = credentials.has("host") ? credentials.get("host").asText() : "smtp.gmail.com";
+            int port = credentials.has("port") ? credentials.get("port").asInt() : 587;
+
+            if (username == null || password == null) {
+                log.warn("Email credentials incomplete in DB config");
+                return null;
+            }
+
+            JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
+            mailSender.setHost(host);
+            mailSender.setPort(port);
+            mailSender.setUsername(username);
+            mailSender.setPassword(password);
+
+            Properties props = mailSender.getJavaMailProperties();
+            props.put("mail.transport.protocol", "smtp");
+            props.put("mail.smtp.auth", "true");
+            props.put("mail.smtp.starttls.enable", "true");
+            props.put("mail.smtp.starttls.required", "true");
+            props.put("mail.smtp.connectiontimeout", "5000");
+            props.put("mail.smtp.timeout", "5000");
+
+            log.debug("Created JavaMailSender from DB config for user: {}", username);
+            return mailSender;
+        } catch (Exception e) {
+            log.error("Error creating mail sender from config: {}", e.getMessage());
+            return null;
         }
     }
 

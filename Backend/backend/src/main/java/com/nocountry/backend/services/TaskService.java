@@ -66,8 +66,7 @@ public class TaskService {
         LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
 
         List<Task> tasks = taskRepository.findByAssignedToIdAndDueDateBetween(
-                userId, startOfDay, endOfDay
-        );
+                userId, startOfDay, endOfDay);
 
         return taskMapper.toDTOList(tasks);
     }
@@ -97,7 +96,8 @@ public class TaskService {
 
         Task savedTask = taskRepository.save(task);
 
-        // Create notification if enableReminder is true (force create, skip preferences)
+        // Create notification if enableReminder is true (force create, skip
+        // preferences)
         if (Boolean.TRUE.equals(taskDTO.enableReminder()) && task.getDueDate() != null) {
             notificationService.createNotification(
                     assignedTo,
@@ -106,16 +106,17 @@ public class TaskService {
                     "Reminder: " + task.getTitle() + " due at " + task.getDueDate(),
                     true // forceCreate = true to skip preference check
             );
-        } else if (task.getDueDate() != null && assignedTo.getPreferences() != null && assignedTo.getPreferences().isNotifyTaskReminders()) {
-            // Original logic: create notification if user preferences allow and task is due within 24 hours
+        } else if (task.getDueDate() != null && assignedTo.getPreferences() != null
+                && assignedTo.getPreferences().isNotifyTaskReminders()) {
+            // Original logic: create notification if user preferences allow and task is due
+            // within 24 hours
             long hoursToDue = LocalDateTime.now().until(task.getDueDate(), java.time.temporal.ChronoUnit.HOURS);
             if (hoursToDue <= 24) {
                 notificationService.createNotification(
                         assignedTo,
                         task.getCrmLead(),
                         NotificationType.TASK_DUE,
-                        "Upcoming task: " + task.getTitle() + " due at " + task.getDueDate()
-                );
+                        "Upcoming task: " + task.getTitle() + " due at " + task.getDueDate());
             }
         }
 
@@ -131,17 +132,17 @@ public class TaskService {
         try {
             // Create a simple automation rule for this automated task
             String actionsJson = String.format(
-                "{\"waitDays\":0,\"waitHours\":0,\"actions\":[{\"type\":\"create_task\",\"template\":\"%s\"}]}",
-                task.getTitle()
-            );
+                    "{\"waitDays\":0,\"waitHours\":0,\"actions\":[{\"type\":\"create_task\",\"template\":\"%s\"}]}",
+                    task.getTitle());
 
             CreateUpdateAutomationRuleDTO ruleDTO = new CreateUpdateAutomationRuleDTO(
-                "Auto: " + task.getTitle(),
-                TriggerEvent.LEAD_CREATED,
-                null,
-                actionsJson,
-                true
-            );
+                    "Auto: " + task.getTitle(),
+                    TriggerEvent.LEAD_CREATED,
+                    null,
+                    0, // waitDays
+                    0, // waitHours
+                    actionsJson,
+                    true);
 
             automationRuleService.createRule(ruleDTO, creator.getId());
         } catch (Exception e) {

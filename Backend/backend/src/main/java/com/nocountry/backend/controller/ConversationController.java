@@ -65,4 +65,11 @@ public class ConversationController {
         conversationService.deleteConversation(id);
         return ResponseEntity.noContent().build();
     }
+
+    // POST /api/conversations/{id}/read: Marcar conversación como leída
+    @PostMapping("/{id}/read")
+    public ResponseEntity<Void> markAsRead(@PathVariable Long id) {
+        conversationService.markAsRead(id);
+        return ResponseEntity.ok().build();
+    }
 }

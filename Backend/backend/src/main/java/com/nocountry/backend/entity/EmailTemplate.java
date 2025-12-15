@@ -1,5 +1,6 @@
 package com.nocountry.backend.entity;
 
+import com.nocountry.backend.enums.Channel;
 import com.nocountry.backend.enums.EmailTemplateType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -20,14 +21,19 @@ public class EmailTemplate {
     @Column(nullable = false)
     private String name;
 
-    private String subject;
+    private String subject; // Email subject OR WhatsApp header
 
     @Column(columnDefinition = "TEXT")
     private String body;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private EmailTemplateType type;
 
-}
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private Channel channel = Channel.EMAIL;
 
+    @Builder.Default
+    private Boolean isActive = true;
+}

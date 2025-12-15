@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MessageCircle, Mail, Phone, MoreVertical, Pencil, Trash, FileDown } from "lucide-react";
+import { MessageCircle, Mail, Phone, MoreVertical, Pencil, Trash, FileDown, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
@@ -33,9 +33,12 @@ interface ContactCardProps {
   contact: Contact;
   onEdit: (contact: any) => void;
   onDelete?: (id: number) => void;
+  onWhatsApp?: (contact: any) => void;
+  onEmail?: (contact: any) => void;
+  onCreateTask?: (contact: any) => void;
 }
 
-export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
+export function ContactCard({ contact, onEdit, onDelete, onWhatsApp, onEmail, onCreateTask }: ContactCardProps) {
   return (
     <Card className="mb-4">
       <CardContent className="p-4 space-y-4">
@@ -61,6 +64,12 @@ export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
               <DropdownMenuItem onClick={() => onEdit(contact)}>
                 <Pencil className="mr-2 h-4 w-4" /> Editar contacto
               </DropdownMenuItem>
+
+              {onCreateTask && (
+                <DropdownMenuItem onClick={() => onCreateTask(contact)}>
+                  <CheckSquare className="mr-2 h-4 w-4" /> Crear tarea
+                </DropdownMenuItem>
+              )}
 
               <DropdownMenuItem><FileDown className="mr-2 h-4 w-4" /> Exportar a PDF</DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -95,8 +104,24 @@ export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
         <div className="pt-2 flex items-center justify-between border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs text-gray-500">{contact.channel === "WhatsApp" ? <MessageCircle className="h-3 w-3 text-green-600" /> : <Mail className="h-3 w-3 text-blue-600" />}{contact.channel}</div>
           <div className="flex gap-2">
-            <Button size="icon" variant="outline" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"><MessageCircle className="h-4 w-4" /></Button>
-            <Button size="icon" variant="outline" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"><Mail className="h-4 w-4" /></Button>
+            <Button 
+              size="icon" 
+              variant="outline" 
+              className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+              onClick={() => onWhatsApp && onWhatsApp(contact)}
+              title="Abrir WhatsApp"
+            >
+              <MessageCircle className="h-4 w-4" />
+            </Button>
+            <Button 
+              size="icon" 
+              variant="outline" 
+              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              onClick={() => onEmail && onEmail(contact)}
+              title="Abrir Email"
+            >
+              <Mail className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </CardContent>

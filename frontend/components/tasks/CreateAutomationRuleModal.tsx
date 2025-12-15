@@ -22,7 +22,7 @@ import { Zap, Filter, Clock, Plus, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 type TriggerType = "new-lead" | "demo-completed" | "invoice-sent" | "no-response" | "contract-signed" | "payment-received";
-type ActionType = "send-email" | "send-whatsapp" | "create-task" | "move-segment" | "send-sms";
+type ActionType = "send-email" | "send-whatsapp" | "create-task" | "move-segment";
 type TemplateType = "welcome" | "follow-up" | "reminder" | "thank-you";
 
 interface Action {
@@ -60,18 +60,18 @@ export default function CreateAutomationRuleModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Manual validation
     if (!trigger) {
       alert("Please select a trigger event");
       return;
     }
-    
+
     if (actions.some(action => !action.type)) {
       alert("Please select an action type for all actions");
       return;
     }
-    
+
     onCreateRule({
       name: ruleName,
       trigger,
@@ -111,12 +111,12 @@ export default function CreateAutomationRuleModal({
 
   const getTriggerDisplay = (): string => {
     const triggers: Record<TriggerType, string> = {
-      "new-lead": "New Lead Created",
-      "demo-completed": "Demo Completed",
-      "invoice-sent": "Invoice Sent",
-      "no-response": "No Response for 7 Days",
-      "contract-signed": "Contract Signed",
-      "payment-received": "Payment Received",
+      "new-lead": "Nuevo Lead Creado",
+      "demo-completed": "Demo Completada",
+      "invoice-sent": "Factura Enviada",
+      "no-response": "Sin Respuesta (7 días)",
+      "contract-signed": "Contrato Firmado",
+      "payment-received": "Pago Recibido",
     };
     return trigger ? triggers[trigger as TriggerType] || trigger : "a trigger occurs";
   };
@@ -124,7 +124,10 @@ export default function CreateAutomationRuleModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-[90vw] md:max-w-[680px]">
+      <DialogContent
+        className="max-w-[calc(100vw-2rem)] sm:max-w-[90vw] md:max-w-[680px]"
+        data-testid="create-rule-modal"
+      >
         <DialogHeader>
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
@@ -147,6 +150,7 @@ export default function CreateAutomationRuleModal({
               value={ruleName}
               onChange={(e) => setRuleName(e.target.value)}
               required
+              data-testid="rule-name-input"
               className="text-sm"
             />
           </div>
@@ -163,7 +167,7 @@ export default function CreateAutomationRuleModal({
                   Trigger Event
                 </Label>
                 <Select value={trigger} onValueChange={(value) => setTrigger(value as TriggerType)}>
-                  <SelectTrigger id="trigger" className="bg-white text-sm">
+                  <SelectTrigger id="trigger" className="bg-white text-sm" data-testid="trigger-select">
                     <SelectValue placeholder="Select a trigger" />
                   </SelectTrigger>
                   <SelectContent>
@@ -205,6 +209,7 @@ export default function CreateAutomationRuleModal({
                     min="0"
                     value={waitDays}
                     onChange={(e) => setWaitDays(e.target.value)}
+                    data-testid="wait-days-input"
                     className="bg-white text-sm"
                   />
                 </div>
@@ -219,6 +224,7 @@ export default function CreateAutomationRuleModal({
                     max="23"
                     value={waitHours}
                     onChange={(e) => setWaitHours(e.target.value)}
+                    data-testid="wait-hours-input"
                     className="bg-white text-sm"
                   />
                 </div>
@@ -239,6 +245,7 @@ export default function CreateAutomationRuleModal({
                   size="sm"
                   variant="outline"
                   onClick={addAction}
+                  data-testid="add-action"
                   className="text-[10px] sm:text-xs h-6 sm:h-7 px-2 bg-white hover:bg-green-100 border-green-300"
                 >
                   <Plus className="h-3 w-3 mr-0.5 sm:mr-1" />
@@ -273,54 +280,52 @@ export default function CreateAutomationRuleModal({
                         updateAction(action.id, "type", value)
                       }
                     >
-                      <SelectTrigger className="bg-white text-sm">
+                      <SelectTrigger className="bg-white text-sm" data-testid={`action-type-${action.id}`}>
                         <SelectValue placeholder="Select action" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="send-email">Send Email</SelectItem>
+                        <SelectItem value="send-email">Enviar Email</SelectItem>
                         <SelectItem value="send-whatsapp">
-                          Send WhatsApp
+                          Enviar WhatsApp
                         </SelectItem>
-                        <SelectItem value="create-task">Create Task</SelectItem>
+                        <SelectItem value="create-task">Crear Tarea</SelectItem>
                         <SelectItem value="move-segment">
-                          Move to Segment
+                          Mover a Segmento
                         </SelectItem>
-                        <SelectItem value="send-sms">Send SMS</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   {(action.type === "send-email" ||
-                    action.type === "send-whatsapp" ||
-                    action.type === "send-sms") && (
-                    <div className="space-y-1">
-                      <Label className="text-xs sm:text-sm">Message Template</Label>
-                      <Select
-                        value={action.template}
-                        onValueChange={(value) =>
-                          updateAction(action.id, "template", value)
-                        }
-                      >
-                        <SelectTrigger className="bg-white text-sm">
-                          <SelectValue placeholder="Select template" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="welcome">
-                            Welcome Message
-                          </SelectItem>
-                          <SelectItem value="follow-up">
-                            Follow-up Message
-                          </SelectItem>
-                          <SelectItem value="reminder">
-                            Reminder Message
-                          </SelectItem>
-                          <SelectItem value="thank-you">
-                            Thank You Message
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
+                    action.type === "send-whatsapp") && (
+                      <div className="space-y-1">
+                        <Label className="text-xs sm:text-sm">Message Template</Label>
+                        <Select
+                          value={action.template}
+                          onValueChange={(value) =>
+                            updateAction(action.id, "template", value)
+                          }
+                        >
+                          <SelectTrigger className="bg-white text-sm" data-testid={`action-template-${action.id}`}>
+                            <SelectValue placeholder="Select template" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="welcome">
+                              Welcome Message
+                            </SelectItem>
+                            <SelectItem value="follow-up">
+                              Follow-up Message
+                            </SelectItem>
+                            <SelectItem value="reminder">
+                              Reminder Message
+                            </SelectItem>
+                            <SelectItem value="thank-you">
+                              Thank You Message
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                 </div>
               ))}
             </div>
@@ -374,6 +379,7 @@ export default function CreateAutomationRuleModal({
             </Button>
             <Button
               type="submit"
+              data-testid="submit-rule"
               className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto"
             >
               <Zap className="h-4 w-4 mr-2" />

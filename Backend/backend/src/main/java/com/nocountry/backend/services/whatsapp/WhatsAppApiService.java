@@ -4,12 +4,14 @@ import com.nocountry.backend.dto.whatsapp.*;
 import com.nocountry.backend.entity.Conversation;
 import com.nocountry.backend.entity.CrmLead;
 import com.nocountry.backend.enums.*;
+import com.nocountry.backend.events.LeadCreatedEvent;
 import com.nocountry.backend.repository.ConversationRepository;
 import com.nocountry.backend.repository.CrmLeadRepository;
 import com.nocountry.backend.services.MediaStorageService;
 import com.nocountry.backend.services.MessageService;
 import com.nocountry.backend.services.whatsapp.WhatsAppConfigService.WhatsAppCredentials;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,7 @@ public class WhatsAppApiService {
     private final MessageService messageService;
     private final SimpMessagingTemplate messagingTemplate;
     private final MediaStorageService mediaStorageService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public WhatsAppApiService(
             WhatsAppConfigService configService,
@@ -38,7 +41,8 @@ public class WhatsAppApiService {
             ConversationRepository conversationRepository,
             @Lazy MessageService messageService,
             SimpMessagingTemplate messagingTemplate,
-            MediaStorageService mediaStorageService) {
+            MediaStorageService mediaStorageService,
+            ApplicationEventPublisher eventPublisher) {
 
         this.configService = configService;
         this.crmLeadRepository = crmLeadRepository;
@@ -46,6 +50,7 @@ public class WhatsAppApiService {
         this.messageService = messageService;
         this.messagingTemplate = messagingTemplate;
         this.mediaStorageService = mediaStorageService;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -71,15 +76,29 @@ public class WhatsAppApiService {
      * Envía un mensaje de texto simple a través de la API de WhatsApp Cloud.
      */
     public Map<String, String> sendTextMessage(String recipientPhoneNumber, String message) {
+        return sendTextMessage(recipientPhoneNumber, message, null);
+    }
+
+    /**
+     * Envía un mensaje de texto como respuesta a otro mensaje (quoted reply).
+     */
+    public Map<String, String> sendTextMessage(String recipientPhoneNumber, String message, String replyToExternalId) {
 
         WhatsAppCredentials credentials = getCredentialsOrThrow();
         RestClient restClient = createRestClient(credentials);
 
-        Map<String, Object> requestBody = Map.of(
-                "messaging_product", "whatsapp",
-                "to", recipientPhoneNumber,
-                "type", "text",
-                "text", Map.of("body", message));
+        // Build request body
+        java.util.Map<String, Object> requestBody = new java.util.HashMap<>();
+        requestBody.put("messaging_product", "whatsapp");
+        requestBody.put("to", recipientPhoneNumber);
+        requestBody.put("type", "text");
+        requestBody.put("text", Map.of("body", message));
+
+        // Add context for reply-to (quoted message)
+        if (replyToExternalId != null && !replyToExternalId.isEmpty()) {
+            requestBody.put("context", Map.of("message_id", replyToExternalId));
+            log.info("📝 Enviando respuesta citando mensaje: {}", replyToExternalId);
+        }
 
         log.info("Enviando mensaje de WhatsApp a: {}", recipientPhoneNumber);
 
@@ -124,6 +143,19 @@ public class WhatsAppApiService {
             MessageType messageType,
             String caption,
             String filename) {
+        return sendMediaMessage(recipientPhoneNumber, mediaUrl, messageType, caption, filename, null);
+    }
+
+    /**
+     * Envía un mensaje con multimedia como respuesta a otro mensaje (quoted reply).
+     */
+    public Map<String, String> sendMediaMessage(
+            String recipientPhoneNumber,
+            String mediaUrl,
+            MessageType messageType,
+            String caption,
+            String filename,
+            String replyToExternalId) {
 
         WhatsAppCredentials credentials = getCredentialsOrThrow();
         RestClient restClient = createRestClient(credentials);
@@ -151,11 +183,18 @@ public class WhatsAppApiService {
             mediaObject.put("filename", filename);
         }
 
-        Map<String, Object> requestBody = Map.of(
-                "messaging_product", "whatsapp",
-                "to", recipientPhoneNumber,
-                "type", waMediaType,
-                waMediaType, mediaObject);
+        // Build request body (mutable map for adding context)
+        java.util.Map<String, Object> requestBody = new java.util.HashMap<>();
+        requestBody.put("messaging_product", "whatsapp");
+        requestBody.put("to", recipientPhoneNumber);
+        requestBody.put("type", waMediaType);
+        requestBody.put(waMediaType, mediaObject);
+
+        // Add context for reply-to (quoted message)
+        if (replyToExternalId != null && !replyToExternalId.isEmpty()) {
+            requestBody.put("context", Map.of("message_id", replyToExternalId));
+            log.info("📝 Enviando respuesta con media citando mensaje: {}", replyToExternalId);
+        }
 
         log.info("📤 Enviando {} a WhatsApp: {} -> {}", waMediaType, recipientPhoneNumber, mediaUrl);
 
@@ -358,23 +397,35 @@ public class WhatsAppApiService {
             }
 
             // 7. Find or create Lead
-            CrmLead lead = crmLeadRepository.findByPhone(normalizedPhone)
-                    .orElseGet(() -> {
-                        log.info("Lead no encontrado. Creando nuevo Lead para: {}", normalizedPhone);
-                        String placeholderEmail = normalizedPhone + "@whatsapp.generated";
-                        CrmLead newLead = CrmLead.builder()
-                                .phone(normalizedPhone)
-                                .name(contactName)
-                                .email(placeholderEmail)
-                                .channel(Channel.WHATSAPP)
-                                .stage(Stage.ACTIVE_LEAD)
-                                .status("active")
-                                .createdAt(LocalDateTime.now())
-                                .updatedAt(LocalDateTime.now())
-                                .deleted(false)
-                                .build();
-                        return crmLeadRepository.save(newLead);
-                    });
+            boolean isNewLead = false;
+            CrmLead leadTemp = crmLeadRepository.findByPhone(normalizedPhone).orElse(null);
+
+            if (leadTemp == null) {
+                log.info("Lead no encontrado. Creando nuevo Lead para: {}", normalizedPhone);
+                String placeholderEmail = normalizedPhone + "@whatsapp.generated";
+                leadTemp = CrmLead.builder()
+                        .phone(normalizedPhone)
+                        .name(contactName)
+                        .email(placeholderEmail)
+                        .channel(Channel.WHATSAPP)
+                        .stage(Stage.ACTIVE_LEAD)
+                        .status("active")
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
+                        .deleted(false)
+                        .build();
+                leadTemp = crmLeadRepository.save(leadTemp);
+                isNewLead = true;
+            }
+
+            // Make effectively final for use in lambda
+            final CrmLead lead = leadTemp;
+
+            // Publish event for automation engine if this is a new lead
+            if (isNewLead) {
+                log.info("🚀 Publishing LeadCreatedEvent for new lead: {} ({})", lead.getId(), lead.getName());
+                eventPublisher.publishEvent(new LeadCreatedEvent(this, lead));
+            }
 
             // 8. Find or create Conversation
             Conversation conversation = conversationRepository
@@ -393,7 +444,20 @@ public class WhatsAppApiService {
                         return conversationRepository.save(newConversation);
                     });
 
-            // 9. Save inbound message with media
+            // 9. Extract context (quoted message) if present
+            com.nocountry.backend.entity.Message replyToMessage = null;
+            if (inboundMessage.context() != null && inboundMessage.context().id() != null) {
+                String quotedMessageId = inboundMessage.context().id();
+                log.info("📝 Mensaje cita a: {}", quotedMessageId);
+                replyToMessage = messageService.findByExternalMessageId(quotedMessageId);
+                if (replyToMessage != null) {
+                    log.info("✅ Mensaje citado encontrado: ID {}", replyToMessage.getId());
+                } else {
+                    log.warn("⚠️ Mensaje citado no encontrado en DB: {}", quotedMessageId);
+                }
+            }
+
+            // 10. Save inbound message with media and reply context
             LocalDateTime messageSentAt = LocalDateTime.ofEpochSecond(
                     Long.parseLong(timestamp), 0, ZoneOffset.UTC);
 
@@ -406,13 +470,15 @@ public class WhatsAppApiService {
                     mediaUrl,
                     mediaFileName,
                     mimeType,
-                    mediaCaption);
+                    mediaCaption,
+                    replyToMessage);
 
             // 10. Update conversation
             conversation.setLastMessageText(messageContent);
             conversation.setLastMessageAt(messageSentAt);
             conversation.setLastMessageDirection(Direction.INBOUND);
-            conversation.setUnreadCount(conversation.getUnreadCount() + 1);
+            int currentUnread = conversation.getUnreadCount() != null ? conversation.getUnreadCount() : 0;
+            conversation.setUnreadCount(currentUnread + 1);
             conversationRepository.save(conversation);
 
             // 11. Send WebSocket notification
