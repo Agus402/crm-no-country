@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -22,4 +23,17 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
      */
     @Query("SELECT c FROM Conversation c WHERE c.crm_lead.id = :leadId AND c.channel = :channel")
     Optional<Conversation> findByLeadIdAndChannel(@Param("leadId") Long leadId, @Param("channel") Channel channel);
+
+    // ==================== USER-FILTERED QUERIES ====================
+
+    /**
+     * Busca todas las conversaciones asignadas a un usuario específico.
+     */
+    List<Conversation> findByAssignedUserId(Long userId);
+
+    /**
+     * Busca todas las conversaciones asignadas a un usuario, ordenadas por último
+     * mensaje.
+     */
+    List<Conversation> findByAssignedUserIdOrderByLastMessageAtDesc(Long userId);
 }

@@ -34,8 +34,14 @@ public class CrmLeadService {
 
     public CrmLeadDTO create(CreateCrmLeadDTO dto) {
 
-        if (crmLeadRepository.existsByEmailIgnoreCase(dto.email())) {
-            throw new RuntimeException("A lead with this email already exists");
+        // Obtener el usuario autenticado
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User owner = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
+
+        // Validar que el email no exista para ESTE usuario específico
+        if (crmLeadRepository.existsByOwnerIdAndEmailIgnoreCase(owner.getId(), dto.email())) {
+            throw new RuntimeException("You already have a lead with this email");
         }
 
         CrmLead crmLead = crmLeadMapper.toEntity(dto);
@@ -44,10 +50,6 @@ public class CrmLeadService {
 
         Set<Tag> tags = new HashSet<>(tagRepository.findAllById(dto.tagIds()));
         crmLead.setTag(tags);
-
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User owner = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
 
         crmLead.setOwner(owner);
 
@@ -73,8 +75,10 @@ public class CrmLeadService {
                 .orElseThrow(() -> new RuntimeException("Crm Lead not found"));
 
         if (dto.email() != null && !dto.email().equalsIgnoreCase(crmLead.getEmail())) {
-            if (crmLeadRepository.existsByEmailIgnoreCase(dto.email())) {
-                throw new RuntimeException("A lead with this email already exists");
+            // Validar que el email no exista para ESTE usuario específico (excluyendo el
+            // lead actual)
+            if (crmLeadRepository.existsByOwnerIdAndEmailIgnoreCase(crmLead.getOwner().getId(), dto.email())) {
+                throw new RuntimeException("You already have a lead with this email");
             }
         }
         if (dto.ownerId() != null) {
@@ -147,6 +151,42 @@ public class CrmLeadService {
                 crmLeads = crmLeadRepository.findByDeletedFalseAndEmailContainingIgnoreCase(email);
             } else {
                 crmLeads = crmLeadRepository.findByDeletedFalse();
+            }
+        }
+
+        return crmLeads.stream()
+                .map(crmLeadMapper::toDTO)
+                .toList();
+    }
+
+    /**
+     * Obtiene todos los leads filtrados por usuario propietario.
+     */
+    public List<CrmLeadDTO> getAllByUser(Long userId, String name, String email, Stage stage) {
+
+        boolean hasName = name != null && !name.isBlank();
+        boolean hasEmail = email != null && !email.isBlank();
+        boolean hasStage = stage != null;
+
+        List<CrmLead> crmLeads;
+
+        if (hasStage) {
+            if (hasName) {
+                crmLeads = crmLeadRepository.findByOwnerIdAndDeletedFalseAndNameContainingIgnoreCaseAndStage(userId,
+                        name, stage);
+            } else if (hasEmail) {
+                crmLeads = crmLeadRepository.findByOwnerIdAndDeletedFalseAndEmailContainingIgnoreCaseAndStage(userId,
+                        email, stage);
+            } else {
+                crmLeads = crmLeadRepository.findByOwnerIdAndDeletedFalseAndStage(userId, stage);
+            }
+        } else {
+            if (hasName) {
+                crmLeads = crmLeadRepository.findByOwnerIdAndDeletedFalseAndNameContainingIgnoreCase(userId, name);
+            } else if (hasEmail) {
+                crmLeads = crmLeadRepository.findByOwnerIdAndDeletedFalseAndEmailContainingIgnoreCase(userId, email);
+            } else {
+                crmLeads = crmLeadRepository.findByOwnerIdAndDeletedFalse(userId);
             }
         }
 

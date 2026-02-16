@@ -305,6 +305,10 @@ public class MessageService {
                 .build();
     }
 
+    // TODO: Implementar getMessageMetrics(Long userId) cuando se agreguen los
+    // métodos
+    // necesarios en MessageRepository (countByMessageDirectionAndUserId, etc.)
+
     // --- GET MESSAGE METRICS BY CHANNEL ---
     /**
      * Calcula métricas de mensajes separadas por canal (WhatsApp y Email)

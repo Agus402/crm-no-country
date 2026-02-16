@@ -7,6 +7,7 @@ import com.nocountry.backend.dto.WeeklyMetricsDTO;
 import com.nocountry.backend.enums.Channel;
 import com.nocountry.backend.services.MessageService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +23,7 @@ import java.util.List;
  * Proporciona endpoints para obtener estadísticas sobre mensajes enviados y
  * tasa de respuesta.
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/messages/metrics")
 @RequiredArgsConstructor
@@ -43,6 +45,8 @@ public class MessageMetricsController {
      */
     @GetMapping
     public ResponseEntity<MessageMetricsDTO> getMessageMetrics() {
+        // TODO: Implementar filtrado por usuario cuando MessageRepository tenga los
+        // métodos necesarios
         MessageMetricsDTO metrics = messageService.getMessageMetrics();
         return ResponseEntity.ok(metrics);
     }

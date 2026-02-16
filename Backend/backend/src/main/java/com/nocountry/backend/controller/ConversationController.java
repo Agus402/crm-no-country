@@ -5,6 +5,7 @@ import com.nocountry.backend.dto.CreateConversationDTO;
 import com.nocountry.backend.dto.MessageDTO;
 import com.nocountry.backend.entity.User;
 import com.nocountry.backend.services.ConversationService;
+import com.nocountry.backend.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,10 +37,11 @@ public class ConversationController {
         return new ResponseEntity<>(newConversation, HttpStatus.CREATED);
     }
 
-    // GET /api/conversations: LEER (Listar todas las conversaciones)
+    // GET /api/conversations: LEER (Listar todas las conversaciones del usuario)
     @GetMapping
     public ResponseEntity<List<ConversationDTO>> getAllConversations() {
-        List<ConversationDTO> conversations = conversationService.findAllConversations();
+        Long userId = SecurityUtils.getCurrentUserId();
+        List<ConversationDTO> conversations = conversationService.getAllByUser(userId);
         return ResponseEntity.ok(conversations);
     }
 

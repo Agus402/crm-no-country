@@ -1,4 +1,5 @@
 package com.nocountry.backend.entity;
+
 import com.nocountry.backend.enums.Channel;
 import com.nocountry.backend.enums.Stage;
 import jakarta.persistence.*;
@@ -8,8 +9,11 @@ import java.util.Set;
 
 @Entity
 @Table(name = "crm_lead")
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class CrmLead {
 
     @Id
@@ -18,7 +22,7 @@ public class CrmLead {
 
     private String name;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private String email;
 
     private String phone;
@@ -32,6 +36,7 @@ public class CrmLead {
     private String status;
 
     private LocalDateTime createdAt;
+
     private LocalDateTime updatedAt;
 
     @Column(nullable = false)
@@ -41,18 +46,12 @@ public class CrmLead {
     @JoinColumn(name = "owner_id")
     private User owner;
 
-
     @ManyToMany
-    @JoinTable(
-            name = "lead_tag",
-            joinColumns = @JoinColumn(name = "lead_id"),
-            inverseJoinColumns = @JoinColumn(name = "tag_id")
-    )
+    @JoinTable(name = "lead_tag", joinColumns = @JoinColumn(name = "lead_id"), inverseJoinColumns = @JoinColumn(name = "tag_id"))
     private Set<Tag> tag;
 
     @ManyToOne
     @JoinColumn(name = "account_id")
     private Account account;
-
 
 }

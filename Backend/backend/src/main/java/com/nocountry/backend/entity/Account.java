@@ -2,6 +2,7 @@ package com.nocountry.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.nocountry.backend.enums.AccountType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -37,6 +38,11 @@ public class Account {
     private String timeZone;
 
     private String dateFormat;
+
+    // TODO: Descomentar después de ejecutar APPLY_ALL_MIGRATIONS.sql en MySQL
+    // @Enumerated(EnumType.STRING)
+    // @Column(name = "account_type")
+    // private AccountType accountType;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
