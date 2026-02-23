@@ -3,6 +3,7 @@ package com.nocountry.backend.controller;
 import com.nocountry.backend.dto.*;
 import com.nocountry.backend.enums.Stage;
 import com.nocountry.backend.services.CrmLeadService;
+import com.nocountry.backend.utils.SecurityUtils;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +24,6 @@ public class CRMLeadController {
         return crmLeadService.create(dto);
     }
 
-
     @GetMapping("/{id}")
     public CrmLeadDTO getById(@PathVariable Long id) {
         return crmLeadService.getById(id);
@@ -43,17 +43,14 @@ public class CRMLeadController {
     public List<CrmLeadDTO> getAll(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,
-            @RequestParam(required = false) Stage stage
-    ) {
-        return crmLeadService.getAll(name, email, stage);
+            @RequestParam(required = false) Stage stage) {
+        Long userId = SecurityUtils.getCurrentUserId();
+        return crmLeadService.getAllByUser(userId, name, email, stage);
     }
+
     @GetMapping("/deleted")
     public List<CrmLeadDTO> getDeleted() {
         return crmLeadService.getDeleted();
     }
-
-
-
-
 
 }

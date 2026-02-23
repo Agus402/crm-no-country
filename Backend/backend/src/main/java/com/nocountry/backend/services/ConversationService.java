@@ -75,6 +75,15 @@ public class ConversationService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Obtiene todas las conversaciones filtradas por usuario asignado.
+     */
+    public List<ConversationDTO> getAllByUser(Long userId) {
+        return conversationRepository.findByAssignedUserIdOrderByLastMessageAtDesc(userId).stream()
+                .map(conversationMapper::toDTO)
+                .collect(Collectors.toList());
+    }
+
     // --- READ BY ID (GET) ---
     public ConversationDTO findConversationById(Long id) {
         Conversation conversation = conversationRepository.findById(id)
