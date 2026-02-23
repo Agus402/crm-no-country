@@ -54,29 +54,26 @@ public class UserService {
         Account account = accountRepository.findById(userDTO.accountId())
                 .orElseThrow(() -> new RuntimeException("Cuenta (Account) no encontrada."));
 
-        // 3. Determinar el rol (temporalmente deshabilitado hasta que se ejecute la
-        // migración)
-        // TODO: Descomentar después de ejecutar APPLY_ALL_MIGRATIONS.sql
+        // 3. Determinar el rol
         Role assignedRole = (userDTO.role() != null) ? userDTO.role() : Role.USER;
 
-        /*
-         * DESCOMENTAR DESPUÉS DE LA MIGRACIÓN:
-         * Role assignedRole;
-         * if (account.getAccountType() != null) {
-         * switch (account.getAccountType()) {
-         * case CLIENT:
-         * assignedRole = Role.USER;
-         * break;
-         * case COMPANY:
-         * assignedRole = Role.ADMIN;
-         * break;
-         * default:
-         * assignedRole = (userDTO.role() != null) ? userDTO.role() : Role.USER;
-         * }
-         * } else {
-         * assignedRole = (userDTO.role() != null) ? userDTO.role() : Role.USER;
-         * }
-         */
+
+        //Role assignedRole;
+        if (account.getAccountType() != null) {
+            switch (account.getAccountType()) {
+                case CLIENT:
+                    assignedRole = Role.USER;
+                    break;
+                case COMPANY:
+                    assignedRole = Role.ADMIN;
+                    break;
+                default:
+                    assignedRole = (userDTO.role() != null) ? userDTO.role() : Role.USER;
+            }
+        } else {
+            assignedRole = (userDTO.role() != null) ? userDTO.role() : Role.USER;
+        }
+
 
         // 4. Construir la entidad User
         User newUser = User.builder()

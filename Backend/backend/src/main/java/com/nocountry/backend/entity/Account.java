@@ -39,10 +39,9 @@ public class Account {
 
     private String dateFormat;
 
-    // TODO: Descomentar después de ejecutar APPLY_ALL_MIGRATIONS.sql en MySQL
-    // @Enumerated(EnumType.STRING)
-    // @Column(name = "account_type")
-    // private AccountType accountType;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "account_type")
+    private AccountType accountType;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

@@ -6,7 +6,7 @@ public record AccountDTO(
 
         Long id,
 
-        String name,
+        String companyName,
 
         String industry,
 
